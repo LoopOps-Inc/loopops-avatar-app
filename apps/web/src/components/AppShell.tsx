@@ -6,9 +6,23 @@ function usePathname(): string {
   return window.location.pathname;
 }
 
-export function AppShell({ children }: { children: ReactNode }) {
+type AppShellProps = {
+  children: ReactNode;
+  /** Hide nav and fill the viewport. Use for webview embeds (`?embed=1`). */
+  embedded?: boolean;
+};
+
+export function AppShell({ children, embedded = false }: AppShellProps) {
   const { t } = useTranslation();
   const pathname = usePathname();
+
+  if (embedded) {
+    return (
+      <div className="bg-surface text-content flex h-dvh flex-col overflow-hidden">
+        <main className="relative h-full min-h-0 flex-1 overflow-hidden">{children}</main>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-surface text-content flex min-h-dvh flex-col">
@@ -39,7 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </a>
         </nav>
       </header>
-      <main className="flex flex-1 flex-col">{children}</main>
+      <main className="flex min-h-0 flex-1 flex-col">{children}</main>
     </div>
   );
 }

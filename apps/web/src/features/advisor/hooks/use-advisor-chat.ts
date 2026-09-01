@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SessionResponse, UIComponent } from '@loopops/contracts';
 import { createAdvisorSession, sendAdvisorMessage } from '@/services/advisor-service';
 import { appEnv } from '@/config/env';
+import { t } from '@/i18n';
 import { sendMockAdvisorMessage } from '@/services/advisor-mock';
 import type { AdvisorMessage, AdvisorPhase } from '../types';
 
@@ -9,7 +10,13 @@ function newId(): string {
   return crypto.randomUUID();
 }
 
-export function useAdvisorChat() {
+type UseAdvisorChatOptions = {
+  /** Called with the assistant narrative when a turn finishes (for avatar lip-sync). */
+  onAssistantSpeech?: (text: string) => void;
+};
+
+export function useAdvisorChat(options: UseAdvisorChatOptions = {}) {
+  const { onAssistantSpeech } = options;
   const [session, setSession] = useState<SessionResponse | null>(null);
   const [messages, setMessages] = useState<AdvisorMessage[]>([]);
   const [phase, setPhase] = useState<AdvisorPhase>('loading_session');
@@ -27,7 +34,7 @@ export function useAdvisorChat() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Error desconocido');
+          setError(err instanceof Error ? err.message : t('advisor.error_unknown'));
           setPhase('error');
         }
       }
@@ -69,11 +76,13 @@ export function useAdvisorChat() {
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
+      let assistantSpeech = '';
 
       try {
         const runMock = appEnv.advisorMock;
         const handlers = {
           onToken: (chunk: string) => {
+            assistantSpeech += chunk;
             setMessages((prev) =>
               prev.map((m) => (m.id === assistantId ? { ...m, text: m.text + chunk } : m)),
             );
@@ -93,6 +102,10 @@ export function useAdvisorChat() {
               prev.map((m) => (m.id === assistantId ? { ...m, streaming: false } : m)),
             );
             setPhase('ready');
+            const speech = assistantSpeech.trim();
+            if (speech) {
+              onAssistantSpeech?.(speech);
+            }
           },
         };
 
@@ -113,12 +126,12 @@ export function useAdvisorChat() {
         }
       } catch (err) {
         if (controller.signal.aborted) return;
-        setError(err instanceof Error ? err.message : 'Error desconocido');
+        setError(err instanceof Error ? err.message : t('advisor.error_unknown'));
         setPhase('error');
         setMessages((prev) => prev.filter((m) => m.id !== assistantId));
       }
     },
-    [session, phase],
+    [session, phase, onAssistantSpeech],
   );
 
   return {

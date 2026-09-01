@@ -29,10 +29,10 @@ Mirrors `../loopops-web-app` conventions. i18n via `apps/web/src/i18n` (es/en, `
 
 ```sh
 npm install
-cp apps/web/.env.example apps/web/.env
+cp apps/web/.env.example .env   # repo root — Vite loads env from here
 ```
 
-Set `LIVEAVATAR_API_KEY` in `apps/web/.env` (from https://app.liveavatar.com, Developers page). The Vite dev proxy injects it as `X-API-KEY`, so the key never reaches the client bundle.
+Set `LIVEAVATAR_API_KEY` in `.env` at the **repo root** (from https://app.liveavatar.com, Developers page). The Vite dev proxy injects it as `X-API-KEY`, so the key never reaches the client bundle.
 
 ## Run
 

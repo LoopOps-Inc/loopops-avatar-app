@@ -58,6 +58,15 @@
   --color-warning: var(--color-warning);
   --color-info: var(--color-info);
 
+  --radius-xs: 8px;
+  --radius-sm: 16px;
+  --radius-md: 24px;
+  --radius-lg: 32px;
+  --radius-cta: 26.5px;
+
+  --color-overlay-thumb: var(--neutral-0);
+  --color-overlay-thumb-fg: var(--neutral-90);
+
   --font-heading: 'Funnel Display', sans-serif;
   --font-body: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
@@ -76,5 +85,44 @@
   :focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
+  }
+}
+
+/* Frosted glass (from loopops-website crystal pattern) */
+@layer utilities {
+  .crystal {
+    isolation: isolate;
+    background-color: var(--color-white-a-80);
+    border: 1px solid var(--color-white-a-70);
+    box-shadow:
+      inset 1px 0 0 var(--color-white-a-80),
+      inset -1px 0 0 var(--color-white-a-20),
+      inset 0 1px 0 var(--color-white-a-80),
+      0 1px 3px var(--color-black-a-5);
+  }
+
+  @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    .crystal,
+    .crystal-dark,
+    .crystal-dark-strong {
+      -webkit-backdrop-filter: blur(20px) saturate(1.4);
+      backdrop-filter: blur(20px) saturate(1.4);
+    }
+  }
+
+  /* Gray frost for overlays on video. Light crystal is for light surfaces only. */
+  .crystal-dark {
+    isolation: isolate;
+    background-color: var(--color-crystal-overlay);
+    border: 1px solid color-mix(in srgb, var(--neutral-55) 70%, transparent);
+    box-shadow: inset 0 1px 0 var(--color-white-a-10);
+  }
+
+  /* Nested controls on video. Stronger gray so they read on light clothing. */
+  .crystal-dark-strong {
+    isolation: isolate;
+    background-color: var(--color-crystal-overlay-strong);
+    border: 1px solid color-mix(in srgb, var(--neutral-40) 45%, transparent);
+    box-shadow: inset 0 1px 0 var(--color-white-a-10);
   }
 }

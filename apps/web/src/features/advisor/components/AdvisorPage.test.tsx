@@ -1,7 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
-import { AvatarDemoRoute } from './AvatarDemoPage';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { AdvisorRoute } from './AdvisorPage';
+import { createAdvisorSession } from '@/services/advisor-service';
 import { createSandboxSessionToken } from '@/services/liveavatar-service';
+import { createMockAdvisorSession } from '@/services/advisor-mock';
 import { setLocale } from '@/i18n';
 
 vi.mock('@heygen/liveavatar-web-sdk', () => {
@@ -48,50 +50,43 @@ vi.mock('@heygen/liveavatar-web-sdk', () => {
   return { SessionState, ConnectionQuality, SessionEvent, AgentEventsEnum, LiveAvatarSession };
 });
 
+vi.mock('@/services/advisor-service', () => ({
+  createAdvisorSession: vi.fn(),
+  sendAdvisorMessage: vi.fn(),
+}));
+
 vi.mock('@/services/liveavatar-service', () => ({
   createSandboxSessionToken: vi.fn(),
 }));
 
-describe('AvatarDemoRoute', () => {
+const mockSession = createMockAdvisorSession();
+
+describe('AdvisorRoute', () => {
   beforeEach(() => {
+    vi.mocked(createAdvisorSession).mockReset();
     vi.mocked(createSandboxSessionToken).mockReset();
+    vi.mocked(createAdvisorSession).mockResolvedValue(mockSession);
     setLocale('es');
   });
 
-  it('renders the sandbox start screen', () => {
-    render(<AvatarDemoRoute />);
+  it('renders the advisor screen after session loads', async () => {
+    render(<AdvisorRoute />);
 
-    expect(screen.getByRole('heading', { name: 'Demo LiveAvatar' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Iniciar sandbox' })).toBeInTheDocument();
+    expect(await screen.findByText(/Rodrigo/i)).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Video' })).toBeInTheDocument();
   });
 
-  it('starts a session panel after minting a sandbox token', async () => {
+  it('starts a sandbox avatar session when video mode is selected', async () => {
     vi.mocked(createSandboxSessionToken).mockResolvedValue('sandbox-token');
 
-    render(<AvatarDemoRoute />);
-    fireEvent.click(screen.getByRole('button', { name: 'Iniciar sandbox' }));
+    render(<AdvisorRoute />);
+    await screen.findByText(/Rodrigo/i);
 
+    fireEvent.click(screen.getByRole('radio', { name: 'Video' }));
+
+    await waitFor(() => {
+      expect(createSandboxSessionToken).toHaveBeenCalledTimes(1);
+    });
     expect(await screen.findByText('Conectando...')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Terminar' })).toBeInTheDocument();
-    expect(createSandboxSessionToken).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows the error message when the token request fails', async () => {
-    vi.mocked(createSandboxSessionToken).mockRejectedValue(new Error('boom'));
-
-    render(<AvatarDemoRoute />);
-    fireEvent.click(screen.getByRole('button', { name: 'Iniciar sandbox' }));
-
-    expect(await screen.findByText('boom')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Iniciar sandbox' })).toBeInTheDocument();
-  });
-
-  it('renders copy in english when the locale changes', () => {
-    setLocale('en');
-
-    render(<AvatarDemoRoute />);
-
-    expect(screen.getByRole('heading', { name: 'LiveAvatar Demo' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Start sandbox' })).toBeInTheDocument();
   });
 });

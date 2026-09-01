@@ -1,5 +1,6 @@
 import { appEnv } from '@/config/env';
 import { liveAvatarSandbox } from '@/config/avatar';
+import { t } from '@/i18n';
 
 type SessionTokenResponse = {
   code: number;
@@ -28,13 +29,13 @@ export async function createSandboxSessionToken(): Promise<string> {
   });
 
   if (!res.ok) {
-    throw new Error(`LiveAvatar token request failed (${res.status})`);
+    throw new Error(t('demo.error_token', { status: res.status }));
   }
 
   const json = (await res.json()) as SessionTokenResponse;
   const token = json.data?.session_token;
   if (!token) {
-    throw new Error(json.message || 'LiveAvatar did not return a session token');
+    throw new Error(json.message || t('demo.error_unknown'));
   }
   return token;
 }
