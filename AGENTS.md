@@ -29,9 +29,10 @@ apps/agent/         # Python BFF — not implemented; see apps/agent/README.md
 packages/contracts/ # Shared API contract (TypeScript + Zod)
 ```
 
-- **HeyGen LiveAvatar** for video/voice output ([docs.liveavatar.com](https://docs.liveavatar.com/)), via `@heygen/liveavatar-web-sdk` (FULL mode)
+- **HeyGen LiveAvatar** for video output ([docs.liveavatar.com](https://docs.liveavatar.com/)), via `@heygen/liveavatar-web-sdk`. FULL mode at `/demo` (sandbox dev only); LITE mode on `/advisor` (product, Phase 2b).
 - **Custom backend** (Python or TypeScript) with LangChain / LangGraph + **Gemini** — see reference architecture in the sibling repo `actinver-ai-advisor`
-- **Two interaction modes**: chat (typed) and conversation (voice)
+- **Unified advisor screen** (`/advisor`): one chat thread with optional talking avatar toggle. Embeds use `?embed=1`. See [`knowledge/unified-advisor-avatar.md`](./knowledge/unified-advisor-avatar.md).
+- **Input modes** (Phase 3 for voice): typed chat and conversation (voice) share the same `thread_id`
 - Investment portfolio Q&A, product recommendations, and guided invest/retire/sell flows
 - PWA-ready; desktop and mobile browsers
 

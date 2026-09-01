@@ -19,6 +19,8 @@ type UseLiveAvatarSessionResult = {
   stop: () => Promise<void>;
   attach: (element: HTMLMediaElement) => void;
   sendMessage: (message: string) => Promise<unknown>;
+  /** Lip-sync the given text without invoking the vendor LLM. */
+  repeat: (message: string) => string;
   interrupt: () => unknown;
   keepAlive: () => Promise<unknown>;
 };
@@ -37,9 +39,7 @@ type UseLiveAvatarSessionResult = {
 export function useLiveAvatarSession(sessionToken: string): UseLiveAvatarSessionResult {
   const startAttemptedRef = useRef(false);
 
-  const [session] = useState(
-    () => new LiveAvatarSession(sessionToken, { voiceChat: false }),
-  );
+  const [session] = useState(() => new LiveAvatarSession(sessionToken, { voiceChat: false }));
 
   const [sessionState, setSessionState] = useState<SessionState>(SessionState.INACTIVE);
   const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>(
@@ -121,13 +121,23 @@ export function useLiveAvatarSession(sessionToken: string): UseLiveAvatarSession
     await session.stop();
   }, [session]);
 
-  const attach = useCallback((element: HTMLMediaElement) => {
-    session.attach(element);
-  }, [session]);
+  const attach = useCallback(
+    (element: HTMLMediaElement) => {
+      session.attach(element);
+    },
+    [session],
+  );
 
   const sendMessage = useCallback(
     async (message: string) => {
       return session.message(message);
+    },
+    [session],
+  );
+
+  const repeat = useCallback(
+    (message: string) => {
+      return session.repeat(message);
     },
     [session],
   );
@@ -151,6 +161,7 @@ export function useLiveAvatarSession(sessionToken: string): UseLiveAvatarSession
     stop,
     attach,
     sendMessage,
+    repeat,
     interrupt,
     keepAlive,
   };

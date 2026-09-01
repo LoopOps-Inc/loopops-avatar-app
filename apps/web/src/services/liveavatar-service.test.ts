@@ -39,7 +39,7 @@ describe('createSandboxSessionToken', () => {
   it('throws on HTTP error status', async () => {
     fetchMock.mockResolvedValueOnce(new Response('{}', { status: 401 }));
 
-    await expect(createSandboxSessionToken()).rejects.toThrow('failed (401)');
+    await expect(createSandboxSessionToken()).rejects.toThrow('LiveAvatar (401)');
   });
 
   it('throws the API message when no token is returned', async () => {
