@@ -1,6 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
 import type { EmbedCommand } from '@loopops/contracts';
 import { AppShell } from '@/components/AppShell';
+import { LIVEAVATAR_UI_PREVIEW_TOKEN } from '@/config/avatar';
+import { appEnv } from '@/config/env';
 import { useEmbedBridge } from '@/features/embed/hooks/use-embed-bridge';
 import { useTranslation } from '@/i18n';
 import { SessionPanel, type PanelCommands } from './SessionPanel';
@@ -30,6 +32,15 @@ export function LiveSessionRoute() {
     setStarting(true);
     setError(null);
     setEndedByServer(false);
+
+    if (appEnv.liveAvatarUiOnly) {
+      setVoiceEnabled(false);
+      setMicUnavailable(false);
+      setSessionToken(LIVEAVATAR_UI_PREVIEW_TOKEN);
+      setStarting(false);
+      return;
+    }
+
     let micAvailable = false;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });

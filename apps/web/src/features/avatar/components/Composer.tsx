@@ -26,7 +26,7 @@ export function Composer({ disabled = false, onSend }: ComposerProps) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-1">
-      <div className="flex h-14 min-h-11 w-full items-center rounded-full border border-[#9398A5] bg-[#F7F8FA] pr-1.5 pl-4">
+      <div className="flex h-14 min-h-11 w-full items-center rounded-full border border-[#E2E4E9] bg-[#F7F8FA] pr-1.5 pl-4">
         <label htmlFor="chat-input" className="sr-only">
           {t('live.input_label')}
         </label>

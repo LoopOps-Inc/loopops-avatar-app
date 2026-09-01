@@ -7,11 +7,14 @@ import {
   SessionEvent,
   SessionState,
 } from '@heygen/liveavatar-web-sdk';
+import { LIVEAVATAR_UI_PREVIEW_TOKEN } from '@/config/avatar';
 import type { ChatMessage, MessageSender, SessionEndReason } from '../types';
 
 type UseLiveAvatarSessionOptions = {
   /** Enable mic input (voice mode). The session must be created with it. */
   voiceChat?: boolean;
+  /** Skip the SDK: connected UI with no stream (see LIVEAVATAR_UI_PREVIEW_TOKEN). */
+  preview?: boolean;
 };
 
 type UseLiveAvatarSessionResult = {
@@ -23,6 +26,7 @@ type UseLiveAvatarSessionResult = {
   isMicMuted: boolean;
   messages: ChatMessage[];
   endReason: SessionEndReason | null;
+  isPreview: boolean;
   start: () => Promise<void>;
   stop: () => Promise<void>;
   attach: (element: HTMLMediaElement) => void;
@@ -62,16 +66,21 @@ export function useLiveAvatarSession(
   options: UseLiveAvatarSessionOptions = {},
 ): UseLiveAvatarSessionResult {
   const voiceChat = options.voiceChat ?? false;
+  const preview = options.preview ?? sessionToken === LIVEAVATAR_UI_PREVIEW_TOKEN;
 
   const startAttemptedRef = useRef(false);
   const userStoppedRef = useRef(false);
   const userMutedRef = useRef(false);
 
-  const [session] = useState(() => new LiveAvatarSession(sessionToken, { voiceChat }));
+  const [session] = useState(() =>
+    preview ? null : new LiveAvatarSession(sessionToken, { voiceChat }),
+  );
 
-  const [sessionState, setSessionState] = useState<SessionState>(SessionState.INACTIVE);
+  const [sessionState, setSessionState] = useState<SessionState>(
+    preview ? SessionState.CONNECTED : SessionState.INACTIVE,
+  );
   const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>(
-    ConnectionQuality.UNKNOWN,
+    preview ? ConnectionQuality.GOOD : ConnectionQuality.UNKNOWN,
   );
   const [isStreamReady, setIsStreamReady] = useState(false);
   const [isUserTalking, setIsUserTalking] = useState(false);
@@ -82,6 +91,8 @@ export function useLiveAvatarSession(
   const currentSenderRef = useRef<MessageSender | null>(null);
 
   useEffect(() => {
+    if (preview || !session) return;
+
     const handleStateChanged = (state: SessionState) => {
       setSessionState(state);
       if (state === SessionState.DISCONNECTED) {
@@ -139,12 +150,12 @@ export function useLiveAvatarSession(
     return () => {
       session.removeAllListeners();
     };
-  }, [session]);
+  }, [preview, session]);
 
   // Echo guard: mute the mic while the avatar speaks, restore afterwards
   // unless the user muted it manually. Only for voice sessions.
   useEffect(() => {
-    if (!voiceChat || !isAvatarTalking) return;
+    if (preview || !session || !voiceChat || !isAvatarTalking) return;
     void session.voiceChat
       .mute()
       .then(() => setIsMicMuted(true))
@@ -157,20 +168,21 @@ export function useLiveAvatarSession(
           .catch(() => {});
       }
     };
-  }, [isAvatarTalking, session, voiceChat]);
+  }, [isAvatarTalking, preview, session, voiceChat]);
 
   // Keep idle-but-active sessions alive while the page is visible.
   useEffect(() => {
-    if (sessionState !== SessionState.CONNECTED) return;
+    if (preview || !session || sessionState !== SessionState.CONNECTED) return;
     const id = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
         void session.keepAlive().catch(() => {});
       }
     }, 25_000);
     return () => window.clearInterval(id);
-  }, [sessionState, session]);
+  }, [preview, session, sessionState]);
 
   const start = useCallback(async () => {
+    if (preview || !session) return;
     if (startAttemptedRef.current) return;
     startAttemptedRef.current = true;
     try {
@@ -179,53 +191,63 @@ export function useLiveAvatarSession(
       startAttemptedRef.current = false;
       throw err;
     }
-  }, [session]);
+  }, [preview, session]);
 
   const stop = useCallback(async () => {
     userStoppedRef.current = true;
     setEndReason('user');
+    if (preview || !session) return;
     await session.stop();
-  }, [session]);
+  }, [preview, session]);
 
   const attach = useCallback(
     (element: HTMLMediaElement) => {
+      if (preview || !session) return;
       session.attach(element);
     },
-    [session],
+    [preview, session],
   );
 
   const sendMessage = useCallback(
     (message: string) => {
+      if (preview || !session) return '';
       return session.message(message);
     },
-    [session],
+    [preview, session],
   );
 
   const repeat = useCallback(
     (message: string) => {
+      if (preview || !session) return '';
       return session.repeat(message);
     },
-    [session],
+    [preview, session],
   );
 
   const interrupt = useCallback(() => {
+    if (preview || !session) return;
     return session.interrupt();
-  }, [session]);
+  }, [preview, session]);
 
   const keepAlive = useCallback(async () => {
+    if (preview || !session) return;
     return session.keepAlive();
-  }, [session]);
+  }, [preview, session]);
 
   const setMicMuted = useCallback(
     (muted: boolean) => {
       userMutedRef.current = muted;
+      if (preview || !session) {
+        setIsMicMuted(muted);
+        return;
+      }
       const action = muted ? session.voiceChat.mute : session.voiceChat.unmute;
       void action
         .call(session.voiceChat)
         .then(() => setIsMicMuted(muted))
         .catch(() => setIsMicMuted(session.voiceChat.isMuted));
     },
-    [session],
+    [preview, session],
   );
 
   return {
@@ -237,6 +259,7 @@ export function useLiveAvatarSession(
     isMicMuted,
     messages,
     endReason,
+    isPreview: preview,
     start,
     stop,
     attach,

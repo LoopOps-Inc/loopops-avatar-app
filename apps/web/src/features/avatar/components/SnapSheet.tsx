@@ -127,7 +127,7 @@ export function SnapSheet({
           dragElastic={0.12}
           dragMomentum={false}
           onDragEnd={handleDragEnd}
-          className={`text-content flex h-full w-full flex-col overflow-hidden rounded-t-lg border-t bg-white shadow-2xl sm:rounded-lg ${className}`}
+          className={`text-content flex h-full w-full flex-col overflow-hidden rounded-t-[32px] border-t bg-white shadow-2xl sm:rounded-[32px] ${className}`}
         >
           <div
             onPointerDown={(event) => dragControls.start(event)}

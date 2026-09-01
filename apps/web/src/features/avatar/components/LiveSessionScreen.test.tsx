@@ -7,6 +7,14 @@ import * as HeyGenSDK from '@heygen/liveavatar-web-sdk';
 
 vi.mock('@heygen/liveavatar-web-sdk', async () => await import('@/test/liveavatar-sdk-stub'));
 
+const { mockAppEnv } = vi.hoisted(() => ({
+  mockAppEnv: { liveAvatarUiOnly: false },
+}));
+
+vi.mock('@/config/env', () => ({
+  appEnv: mockAppEnv,
+}));
+
 const { __emitEvent } = HeyGenSDK as unknown as {
   __emitEvent: (event: string, payload: unknown) => void;
 };
@@ -17,6 +25,7 @@ vi.mock('@/services/liveavatar-service', () => ({
 
 describe('LiveSessionRoute', () => {
   beforeEach(() => {
+    mockAppEnv.liveAvatarUiOnly = false;
     vi.mocked(createSandboxSessionToken).mockReset();
     Object.defineProperty(window.navigator, 'mediaDevices', {
       configurable: true,
@@ -98,5 +107,16 @@ describe('LiveSessionRoute', () => {
     render(<LiveSessionRoute />);
     expect(screen.getByRole('heading', { name: 'Talk with Tino' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start conversation' })).toBeInTheDocument();
+  });
+
+  it('opens the live UI without minting a sandbox token when ui-only mode is on', async () => {
+    mockAppEnv.liveAvatarUiOnly = true;
+
+    render(<LiveSessionRoute />);
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversación' }));
+
+    expect(await screen.findByRole('region', { name: 'Consulta con Tino' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Mensaje para el avatar')).toBeInTheDocument();
+    expect(createSandboxSessionToken).not.toHaveBeenCalled();
   });
 });

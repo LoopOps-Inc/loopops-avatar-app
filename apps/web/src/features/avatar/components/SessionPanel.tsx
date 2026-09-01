@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { ConnectionQuality, SessionState } from '@heygen/liveavatar-web-sdk';
 import type { EmbedEvent } from '@loopops/contracts';
+import { actinverAvatar } from '@/config/avatar';
 import { useAdvisorChat } from '../hooks/use-advisor-chat';
 import { useTranslation } from '@/i18n';
 import { sessionStateClass, sessionStateLabel } from '../lib/session-status';
@@ -59,6 +60,7 @@ export function SessionPanel({
     isUserTalking,
     isMicMuted,
     endReason,
+    isPreview,
     start,
     stop,
     attach,
@@ -126,20 +128,30 @@ export function SessionPanel({
       label={t('live.title')}
       above={
         <>
-          <video ref={videoRef} autoPlay playsInline className="h-full w-full object-cover" />
-          {!isConnected && (
-            <div
-              role="status"
-              aria-label={t('live.connecting')}
-              className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-black/50 via-black/30 to-black/70"
-            >
-              <div className="flex h-16 w-16 animate-pulse items-center justify-center rounded-full border border-white/20 bg-white/5 motion-reduce:animate-none">
-                <Loader2
-                  className="h-6 w-6 animate-spin text-white/80 motion-reduce:animate-none"
-                  aria-hidden="true"
-                />
-              </div>
-            </div>
+          {isPreview ? (
+            <img
+              src={actinverAvatar.previewImageUrl}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <>
+              <video ref={videoRef} autoPlay playsInline className="h-full w-full object-cover" />
+              {!isConnected && (
+                <div
+                  role="status"
+                  aria-label={t('live.connecting')}
+                  className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-black/50 via-black/30 to-black/70"
+                >
+                  <div className="flex h-16 w-16 animate-pulse items-center justify-center rounded-full border border-white/20 bg-white/5 motion-reduce:animate-none">
+                    <Loader2
+                      className="h-6 w-6 animate-spin text-white/80 motion-reduce:animate-none"
+                      aria-hidden="true"
+                    />
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </>
       }

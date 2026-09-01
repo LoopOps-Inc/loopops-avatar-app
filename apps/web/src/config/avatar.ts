@@ -32,6 +32,9 @@ export const liveAvatarSandbox = {
   language: actinverAvatar.language,
 } as const;
 
+/** Placeholder token: opens the live UI without minting a sandbox session. */
+export const LIVEAVATAR_UI_PREVIEW_TOKEN = '__ui_preview__';
+
 /** Look ID passed to HeyGen video / Live Avatar session APIs */
 export function getAvatarLookId(orientation: 'landscape' | 'portrait' = 'portrait') {
   return actinverAvatar.lookIds[orientation];
