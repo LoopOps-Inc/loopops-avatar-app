@@ -29,6 +29,7 @@ from actinver_agent.graph.state import (
     ProvenanceEntry,
     ToolResult,
 )
+from actinver_agent.llm.stub import extract_amount
 from actinver_agent.observability.setup import get_metrics, node_span
 from actinver_agent.tools.registry import derived_keys, record_provenance
 
@@ -63,7 +64,7 @@ async def plan(state: AdvisorState, deps: Dependencies) -> dict[str, Any]:
                 timeout=deps.settings.limits.model_timeout_s,
             )
         except Exception as exc:
-            log.warning("plan.failed", reason=type(exc).__name__)
+            log.warning("plan.failed", reason=type(exc).__name__, detail=str(exc)[:240])
             calls = []
     limit = deps.settings.limits.max_tool_calls_per_turn - state.get("tool_calls_made", 0)
     planned = [
@@ -74,7 +75,7 @@ async def plan(state: AdvisorState, deps: Dependencies) -> dict[str, Any]:
     dropped = len(calls) - len(planned)
     if dropped:
         log.info("plan.calls_dropped", dropped=dropped, intent=intent)
-    planned = _ensure_suitability_check(state, planned)
+    planned = _ensure_transactional_tools(state, planned)
     return {
         "planned_calls": planned,
         "needs_more_tools": False,
@@ -102,29 +103,78 @@ def _client_input_provenance(state: AdvisorState) -> dict[str, ProvenanceEntry]:
     return entries
 
 
-def _ensure_suitability_check(
+_TRANSACT_OPERATION: dict[Intent, str] = {
+    Intent.TRANSACT_BUY: "BUY",
+    Intent.TRANSACT_SELL: "SELL",
+    Intent.TRANSACT_SWITCH: "SWITCH",
+    Intent.TRANSACT_REDEEM: "REDEEM",
+}
+_PRODUCT_CODE = re.compile(r"\b[A-Z][A-Z0-9]{2,}(?:-[A-Z0-9]+)*\b")
+
+
+def _derive_product_and_amount(
+    state: AdvisorState, planned: list[dict[str, Any]]
+) -> tuple[str | None, str | None]:
+    """Product id and amount, taken from whatever call the planner did emit, then
+    from ``proposed_amount`` and the client's own words. The model reliably names
+    the product in one call even when it omits the requirements call."""
+    product_id: str | None = None
+    amount: str | None = None
+    for call in planned:
+        args = call.get("args", {})
+        product_id = product_id or args.get("target_product_id") or args.get("product_id")
+        if amount is None and args.get("amount") is not None:
+            amount = str(args["amount"])
+    if amount is None and (proposed := state.get("proposed_amount")) is not None:
+        amount = str(proposed.amount)
+    if product_id is None:
+        match = _PRODUCT_CODE.search(state.get("client_input_text", ""))
+        product_id = match.group(0) if match else None
+    return product_id, amount
+
+
+def _ensure_transactional_tools(
     state: AdvisorState, planned: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
-    """A buy or switch is never planned without razonabilidad (ADR-0005): if the
-    planner omitted ``check_suitability`` the graph adds it structurally."""
-    if state.get("intent") not in (Intent.TRANSACT_BUY, Intent.TRANSACT_SWITCH):
+    """The transaction FormSpec is built from ``get_transaction_requirements`` and,
+    for a buy or switch, ``check_suitability`` (ADR-0005). ``mode=ANY`` function
+    calling returns a single call, so a real model routinely emits one of the two
+    and drops the other. The graph adds the missing calls structurally rather than
+    trusting the model to plan the full set."""
+    intent = state.get("intent")
+    if intent is Intent.ADVISORY_RECOMMEND:
+        # A regulated recommendation needs products to evaluate. mode=ANY returns
+        # a single call, so the model may skip the search: add it structurally,
+        # filtered to the client's risk band and horizon so the candidates can pass.
+        if not any(c["name"] == "search_investment_products" for c in planned):
+            return [
+                *planned,
+                {"name": "search_investment_products", "args": _search_filters(state)},
+            ]
         return planned
-    if any(c["name"] == "check_suitability" for c in planned):
+    if intent not in TRANSACTIONAL_INTENTS:
         return planned
-    requirements = next((c for c in planned if c["name"] == "get_transaction_requirements"), None)
-    if requirements is None:
+    product_id, amount = _derive_product_and_amount(state, planned)
+    if not product_id:
         return planned
-    args = requirements.get("args", {})
-    product_id = args.get("target_product_id") or args.get("product_id")
-    amount = args.get("amount")
-    if amount is None and (proposed := state.get("proposed_amount")) is not None:
-        amount = proposed.amount
-    if not product_id or amount is None:
-        return planned
-    return [
-        *planned,
-        {"name": "check_suitability", "args": {"product_id": product_id, "amount": str(amount)}},
-    ]
+    out = list(planned)
+    if not any(c["name"] == "get_transaction_requirements" for c in out):
+        args: dict[str, Any] = {
+            "product_id": product_id,
+            "operation": _TRANSACT_OPERATION.get(Intent(str(intent)), "BUY"),
+        }
+        if amount is not None:
+            args["amount"] = amount
+        out.append({"name": "get_transaction_requirements", "args": args})
+    if (
+        intent in (Intent.TRANSACT_BUY, Intent.TRANSACT_SWITCH)
+        and amount is not None
+        and not any(c["name"] == "check_suitability" for c in out)
+    ):
+        out.append(
+            {"name": "check_suitability", "args": {"product_id": product_id, "amount": amount}}
+        )
+    return out
 
 
 async def tool_execution(state: AdvisorState, deps: Dependencies) -> dict[str, Any]:
@@ -318,18 +368,60 @@ async def agent_core(state: AdvisorState, deps: Dependencies) -> dict[str, Any]:
         update["error"] = AgentError(code="BLOCKED_OUTPUT", message_es=MODEL_DOWN_ES, escalate=True)
 
     if intent in ADVISORY_INTENTS or intent in TRANSACTIONAL_INTENTS:
-        update["candidate_products"] = await _resolve_candidates(
-            generation.candidate_product_ids, state, deps
-        )
+        candidate_ids = generation.candidate_product_ids or _candidate_ids_from_tools(state)
+        update["candidate_products"] = await _resolve_candidates(candidate_ids, state, deps)
         amount = generation.proposed_amount
         if amount is None and (existing := state.get("proposed_amount")) is not None:
             amount = existing.decimal
+        if amount is None:
+            # The model did not emit the <monto> block: take the figure the client
+            # stated ("200 mil"), so the suitability engine evaluates a real amount
+            # instead of zero (which fails every minimum-investment rule).
+            amount = extract_amount(state.get("client_input_text", ""))
         if amount is not None:
             currency = "MXN"
             if update["candidate_products"]:
                 currency = update["candidate_products"][0].currency
             update["proposed_amount"] = Money.of(Decimal(amount), currency)
     return update
+
+
+def _search_filters(state: AdvisorState) -> dict[str, Any]:
+    """Profile-scoped product search for a forced advisory recommendation: the
+    client's risk ceiling and horizon, so the returned products can survive the
+    suitability engine (an unfiltered search returns products the profile rejects)."""
+    filters: dict[str, Any] = {"limit": 8}
+    profile = state.get("investor_profile")
+    if profile is not None:
+        ceiling = {
+            "bajo": ["bajo"],
+            "medio": ["bajo", "medio"],
+            "alto": ["bajo", "medio", "alto"],
+        }
+        filters["risk_level"] = ceiling.get(str(profile.max_risk), ["bajo", "medio"])
+        filters["horizon_months_max"] = profile.horizon_months
+    return filters
+
+
+def _candidate_ids_from_tools(state: AdvisorState) -> list[str]:
+    """Product ids present in this turn's tool results, in order, deduplicated.
+
+    Fallback for when the model did not emit the ``<candidatos>`` block: the
+    suitability engine still decides razonabilidad, so proposing the search hits
+    is safe. Capped at four (the committee-profile ceiling)."""
+    ids: list[str] = []
+    for name in ("search_investment_products", "get_product_detail", "get_product_risk_profile"):
+        result = state.get("tool_results", {}).get(name)
+        if result is None or not result.ok or not isinstance(result.data, dict):
+            continue
+        items = result.data.get("items")
+        if isinstance(items, list):
+            ids.extend(
+                str(i["product_id"]) for i in items if isinstance(i, dict) and i.get("product_id")
+            )
+        elif result.data.get("product_id"):
+            ids.append(str(result.data["product_id"]))
+    return list(dict.fromkeys(ids))[:4]
 
 
 async def _resolve_candidates(

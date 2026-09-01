@@ -119,6 +119,35 @@ corpora, split-channel, provenance), `tests/assertions/` (no SDK outside
 `adapters/`, flags unexpired, exact disclosure strings, no vendor secrets in
 `apps/web/src`, UI component types closed).
 
+## Real vendor keys locally (Gemini, LiveAvatar)
+
+Everything runs offline by default (`LLM_PROVIDER=stub`, `LIVEAVATAR_PROVIDER=stub`,
+`VOICE_PROVIDER=stub`). To test against the real vendors from your machine:
+
+```sh
+cp .env.example .env          # Compose reads this file automatically
+# edit .env:
+#   GEMINI_API_KEY=<AI Studio key>
+#   LIVEAVATAR_API_KEY=<HeyGen sandbox key>
+#   LIVEAVATAR_PROVIDER=real
+docker compose up -d floci-init                          # seeds the keys into the local Secrets Manager
+docker compose --profile gemini up -d agent-gemini        # real Gemini on http://localhost:8444
+.venv/bin/python scripts/postman_env.py --base-url http://localhost:8444
+```
+
+The processes never see the key values: `.env` is read by Compose, `floci-init`
+stores the keys in the emulated Secrets Manager, and the services resolve the
+`secretsmanager://` references at start-up, exactly as in the cloud. The stub
+`agent` on :8443 keeps running; use :8444 for the real model
+(`BASE_URL=http://localhost:8444 make postman-check` runs the whole collection
+against it). Sandbox/trial LiveAvatar accounts cap `max_session_duration` well
+below the contracted 1800 s; the broker reads the cap from the vendor's 400 and
+retries once with it, so the session still starts. `gemini_api` is
+accepted only with `ENVIRONMENT=local`; every other environment uses Vertex AI
+with workload identity. `VOICE_PROVIDER=google` additionally needs a Google
+service account mounted into the container
+(`GOOGLE_APPLICATION_CREDENTIALS_IN_CONTAINER`).
+
 ## Testing by hand (Postman)
 
 `docs/postman/actinver-agent.postman_collection.json` walks the full client flow
@@ -172,3 +201,5 @@ suitability deployment only.
 | Checkpoint partitioning | monthly partitions | DDL provided in `ops/sql/checkpoint_partitioning.sql` as a DBA runbook | LangGraph creates its tables itself; partitioning is a deployment-time operation. |
 | Object Lock | AWS compliance mode | floci emulation locally; `OBJECT_STORE_LOCK_MODE=GOVERNANCE` in local/staging, `COMPLIANCE` enforced in prod by posture validation | records written in error must be recoverable outside production (ADR-0012). |
 | Legal texts | legal-approved | `api/disclosure_docs.py` placeholders marked for Legal approval; disclosure texts from the reference `disclosures.es-MX.md` | Legal sign-off is an `[ACTINVER-INPUT]` item in the docs. |
+| Structured plan completeness | model plans the full tool set and emits `<candidatos>`/`<monto>` blocks | the graph enforces it: `mode=ANY` returns a single call and a real model does not always emit the blocks, so the graph structurally forces `get_transaction_requirements`/`check_suitability`/`search_investment_products` and falls back to tool results and the client's stated amount (`graph/nodes/agent_core.py`) | the compliance flow must not depend on model prose compliance; the deterministic gates (suitability, guardrail, audit) still decide. |
+| LiveAvatar session length | `max_session_duration` 1800 s | the broker honours the vendor's cap when a sandbox/trial account rejects 1800 s (retries once with the cap) | sandbox accounts cap sessions at 60 s; the session must still start (`clients/liveavatar.py`). |

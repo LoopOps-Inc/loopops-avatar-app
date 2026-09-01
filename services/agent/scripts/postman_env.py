@@ -15,6 +15,8 @@ import argparse
 import json
 import subprocess
 import sys
+import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,18 +43,21 @@ def main() -> None:
     client = _token(["--client", args.client])
     officer = _token(["--client", "officer_1", "--roles", "compliance,risk"])
     values = [
-        {"key": "base_url", "value": args.base_url, "enabled": True},
-        {"key": "token", "value": client["access_token"], "enabled": True, "type": "secret"},
-        {"key": "officer_token", "value": officer["access_token"], "enabled": True, "type": "secret"},
-        {"key": "device_jwk", "value": json.dumps(client["public_jwk"]), "enabled": True},
-        {"key": "client_id", "value": args.client, "enabled": True},
+        {"key": "base_url", "value": args.base_url, "type": "default", "enabled": True},
+        {"key": "token", "value": client["access_token"], "type": "default", "enabled": True},
+        {"key": "officer_token", "value": officer["access_token"], "type": "default", "enabled": True},
+        {"key": "device_jwk", "value": json.dumps(client["public_jwk"]), "type": "default", "enabled": True},
+        {"key": "client_id", "value": args.client, "type": "default", "enabled": True},
         # filled by the requests' test scripts / by hand (step 5.2)
-        {"key": "assertion", "value": "", "enabled": True},
+        {"key": "assertion", "value": "", "type": "default", "enabled": True},
     ]
     environment = {
+        "id": str(uuid.uuid4()),
         "name": f"actinver-agent local ({args.client})",
         "values": values,
         "_postman_variable_scope": "environment",
+        "_postman_exported_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+        "_postman_exported_using": "actinver-agent/scripts/postman_env.py",
     }
     Path(args.out).write_text(json.dumps(environment, indent=2, ensure_ascii=False))
     print(f"wrote {args.out}")

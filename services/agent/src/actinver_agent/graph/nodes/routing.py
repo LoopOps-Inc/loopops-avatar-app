@@ -69,9 +69,19 @@ def _history(state: AdvisorState) -> list[str]:
 async def intent_router(state: AdvisorState, deps: Dependencies) -> dict[str, Any]:
     text = state.get("client_input_text", "")
     with node_span("intent_router", turn_id=state.get("turn_id")):
-        result = await deps.classifier.classify(
-            text=text, history=_history(state), locale=state.get("locale", "es-MX")
-        )
+        try:
+            result = await deps.classifier.classify(
+                text=text, history=_history(state), locale=state.get("locale", "es-MX")
+            )
+        except Exception as exc:
+            # Documented degradation (ADR-0003): the deterministic rules router
+            # takes over when the model provider fails or returns garbage.
+            log.warning("router.fallback", reason=type(exc).__name__)
+            from actinver_agent.llm.stub import RulesIntentClassifier
+
+            result = await RulesIntentClassifier().classify(
+                text=text, history=_history(state), locale=state.get("locale", "es-MX")
+            )
 
     intent = result.intent
     profile_filtered = result.profile_filtered
