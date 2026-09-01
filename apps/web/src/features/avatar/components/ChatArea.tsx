@@ -41,7 +41,9 @@ export function ChatArea({
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // block: 'nearest' keeps the latest message visible without scrolling
+    // ancestor containers (which would visibly nudge the sheet).
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [messages]);
 
   return (

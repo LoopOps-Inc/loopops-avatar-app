@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Send } from 'lucide-react';
 import { useTranslation } from '@/i18n';
@@ -11,6 +11,7 @@ type ComposerProps = {
 export function Composer({ disabled = false, onSend }: ComposerProps) {
   const { t } = useTranslation();
   const [input, setInput] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -18,6 +19,9 @@ export function Composer({ disabled = false, onSend }: ComposerProps) {
     if (!trimmed) return;
     onSend(trimmed);
     setInput('');
+    // Tapping the send button moves focus away on mobile, which collapses
+    // the keyboard and drops the sheet. Re-focus to keep both alive.
+    inputRef.current?.focus();
   };
 
   return (
@@ -26,12 +30,14 @@ export function Composer({ disabled = false, onSend }: ComposerProps) {
         {t('live.input_label')}
       </label>
       <input
+        ref={inputRef}
         id="chat-input"
         type="text"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         placeholder={t('live.input_placeholder')}
         autoComplete="off"
+        enterKeyHint="send"
         className="min-h-11 flex-1 rounded-full border border-white/20 bg-black/50 px-4 text-sm text-white backdrop-blur-sm transition-colors placeholder:text-white/50 focus:border-white/50 focus:outline-none"
       />
       <button

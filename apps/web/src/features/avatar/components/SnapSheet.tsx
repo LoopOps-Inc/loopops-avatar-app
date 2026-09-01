@@ -100,10 +100,12 @@ export function SnapSheet({
   };
 
   return (
-    <div
+    <motion.div
       ref={wrapperRef}
       className="absolute inset-x-0 bottom-0 z-20 h-full"
-      style={ready ? { transform: `translateY(-${keyboardInset}px)` } : undefined}
+      initial={false}
+      animate={ready ? { y: -keyboardInset } : { y: 0 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 40 }}
     >
       {above && (
         <motion.div
@@ -137,6 +139,6 @@ export function SnapSheet({
           {children}
         </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }
