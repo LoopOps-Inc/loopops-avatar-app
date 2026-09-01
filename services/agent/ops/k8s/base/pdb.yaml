@@ -1,0 +1,46 @@
+# minAvailable 60 % so a node drain cannot take a service down
+# (docs/04-backend/01 §7).
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: agent-orchestrator
+spec:
+  minAvailable: 60%
+  selector:
+    matchLabels: { app: agent-orchestrator }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: suitability-service
+spec:
+  minAvailable: 60%
+  selector:
+    matchLabels: { app: suitability-service }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: guardrail-service
+spec:
+  minAvailable: 60%
+  selector:
+    matchLabels: { app: guardrail-service }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: audit-service
+spec:
+  minAvailable: 60%
+  selector:
+    matchLabels: { app: audit-service }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: transaction-service
+spec:
+  minAvailable: 60%
+  selector:
+    matchLabels: { app: transaction-service }

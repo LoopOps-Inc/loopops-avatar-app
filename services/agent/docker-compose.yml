@@ -1,0 +1,354 @@
+# Local development stack. Production runs on Kubernetes (ADR-0011, ops/k8s).
+#
+# One image, five processes (docs/04-backend/01 §1 packaging):
+#   agent        = bff-mobile + agent-orchestrator + avatar-broker + voice-pipeline + tool-gateway
+#   suitability  = suitability-service   (owns the verdict HMAC key; the agent does NOT get it)
+#   guardrail    = guardrail-service     (fail-closed input/output filters)
+#   audit        = audit-service         (WORM evidence writer, hash chain, spool)
+#   transaction  = transaction-service   (step-up, idempotent execution, re-validation)
+# Backing services: PostgreSQL 16 + pgvector, Redis 7, floci (AWS emulator: S3
+# with Object Lock, Secrets Manager), OpenTelemetry collector.
+#
+# Usage:
+#   cp .env.example .env            # optional; every value has a local default
+#   docker compose up -d --build
+#   docker compose --profile gemini up -d agent     # real Gemini via AI Studio key (local only)
+#   docker compose --profile langfuse up -d         # self-hosted LLM tracing (CONFIDENTIAL store)
+
+x-hardened: &hardened
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  tmpfs:
+    - /tmp:size=64m
+
+x-app-image: &app-image
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: actinver-agent:local
+  user: "65532:65532"
+  <<: *hardened
+
+# Environment shared by every process built from this repository. Values are
+# either non-secret configuration or *references*; the values behind the
+# references live in the emulated Secrets Manager (seeded by floci-init).
+x-common-env: &common-env
+  ENVIRONMENT: local
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  DATABASE_URL: postgresql+asyncpg://postgres:local_only_not_a_secret@postgres:5432/actinver_agent
+  REDIS_URL: redis://redis:6379/0
+  CACHE_PROVIDER: redis
+  CHECKPOINTER_PROVIDER: postgres
+  OTLP_ENDPOINT: http://otel-collector:4317
+  SECRETS_MANAGER_ENDPOINT: http://floci:4566
+  SECRETS_MANAGER_REGION: us-east-1
+  OBJECT_STORE_PROVIDER: s3
+  OBJECT_STORE_ENDPOINT: http://floci:4566
+  OBJECT_STORE_REGION: us-east-1
+  OBJECT_STORE_BUCKET: actinver-evidence-local
+  OBJECT_STORE_LOCK_MODE: GOVERNANCE
+  OBJECT_STORE_ACCESS_KEY_REF: env://AWS_ACCESS_KEY_ID
+  OBJECT_STORE_SECRET_KEY_REF: env://AWS_SECRET_ACCESS_KEY
+  AWS_ACCESS_KEY_ID: test
+  AWS_SECRET_ACCESS_KEY: test
+  AWS_DEFAULT_REGION: us-east-1
+  CLIENT_HASH_SALT_REF: secretsmanager://actinver/client-hash-salt
+  FORM_SPEC_SIGNING_KEY_REF: kms://actinver/formspec-hmac
+  PROMPT_VERSION: ${PROMPT_VERSION:-advisor-es-MX@2026-08-20}
+  PROMPTS_DIR: /app/prompts
+  SUITABILITY_RULESET_VERSION: ${SUITABILITY_RULESET_VERSION:-14}
+  CORE_PROVIDER: ${CORE_PROVIDER:-synthetic}
+
+services:
+  # ── Data zone ────────────────────────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: actinver_agent
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: local_only_not_a_secret
+    ports: ["${POSTGRES_HOST_PORT:-15432}:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./ops/sql/00-roles.sql:/docker-entrypoint-initdb.d/00-roles.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d actinver_agent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    security_opt: [no-new-privileges:true]
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--save", ""]
+    ports: ["${REDIS_HOST_PORT:-16379}:6379"]
+    volumes: ["redisdata:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    cap_drop: [ALL]
+    cap_add: [SETGID, SETUID]
+    security_opt: [no-new-privileges:true]
+
+  # AWS emulator: S3 (Object Lock, versioning), Secrets Manager, KMS. Replaces
+  # LocalStack. Any non-empty credentials are accepted.
+  floci:
+    image: floci/floci:latest
+    ports: ["${FLOCI_HOST_PORT:-14566}:4566"]
+    environment:
+      FLOCI_STORAGE_BACKEND: ${FLOCI_STORAGE_BACKEND:-memory}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4566/ >/dev/null 2>&1 || curl -sf http://127.0.0.1:4566/ >/dev/null 2>&1 || exit 0"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    security_opt: [no-new-privileges:true]
+
+  floci-init:
+    image: amazon/aws-cli:2.22.35
+    depends_on:
+      floci:
+        condition: service_started
+    entrypoint: ["/bin/sh", "/init/init.sh"]
+    environment:
+      AWS_ENDPOINT_URL: http://floci:4566
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      OBJECT_STORE_BUCKET: actinver-evidence-local
+      ANCHOR_BUCKET: actinver-anchor-local
+      # Host-provided sandbox key; a placeholder is seeded when absent so the
+      # stub vendor and every reference still resolve.
+      LIVEAVATAR_API_KEY: ${LIVEAVATAR_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      DEV_SIGNING_KEY: ${DEV_SIGNING_KEY:-}
+    volumes:
+      - ./ops/floci:/init:ro
+    restart: "no"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.120.0
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes: ["./ops/otel/config.yaml:/etc/otel/config.yaml:ro"]
+    ports: ["${OTLP_HOST_PORT:-14317}:4317"]
+    <<: *hardened
+
+  # ── Schema migrations: forward-only, backward-compatible for one release ─────
+  migrate:
+    <<: *app-image
+    command: ["migrate"]
+    environment:
+      <<: *common-env
+      SERVICE_ROLE: agent
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # ── Fail-closed controls (separate processes, separate key material) ────────
+  suitability:
+    <<: *app-image
+    command: ["serve", "--role", "suitability", "--port", "8443"]
+    environment:
+      <<: *common-env
+      SERVICE_ROLE: suitability
+      SERVICE_NAME: suitability-service
+      # The verdict signing key is readable by THIS process only (ADR-0005).
+      SUITABILITY_SIGNING_KEY_REF: kms://actinver/suitability-hmac
+    depends_on:
+      floci-init:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+    expose: ["8443"]
+
+  guardrail:
+    <<: *app-image
+    command: ["serve", "--role", "guardrail", "--port", "8443"]
+    environment:
+      <<: *common-env
+      SERVICE_ROLE: guardrail
+      SERVICE_NAME: guardrail-service
+    depends_on:
+      floci-init:
+        condition: service_completed_successfully
+    expose: ["8443"]
+
+  audit:
+    <<: *app-image
+    command: ["serve", "--role", "audit", "--port", "8443"]
+    environment:
+      <<: *common-env
+      SERVICE_ROLE: audit
+      SERVICE_NAME: audit-service
+    depends_on:
+      floci-init:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+    expose: ["8443"]
+
+  transaction:
+    <<: *app-image
+    command: ["serve", "--role", "transaction", "--port", "8443"]
+    environment:
+      <<: *common-env
+      SERVICE_ROLE: transaction
+      SERVICE_NAME: transaction-service
+      SVC_SUITABILITY_URL: http://suitability:8443
+      SVC_AUDIT_URL: http://audit:8443
+    depends_on:
+      floci-init:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+      audit:
+        condition: service_started
+    expose: ["8443"]
+
+  # ── bff-mobile + agent-orchestrator + avatar-broker + voice-pipeline + tool-gateway
+  agent:
+    <<: *app-image
+    command: ["serve", "--role", "agent", "--port", "8443"]
+    ports: ["8443:8443"]
+    environment:
+      <<: *common-env
+      SERVICE_ROLE: agent
+      SERVICE_NAME: agent-orchestrator
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8443}
+      CORS_ORIGINS: '["http://localhost:8080","http://127.0.0.1:8080"]'
+      # Internal fail-closed dependencies live in their own containers.
+      SVC_SUITABILITY_URL: http://suitability:8443
+      SVC_GUARDRAIL_URL: http://guardrail:8443
+      SVC_AUDIT_URL: http://audit:8443
+      SVC_TRANSACTION_URL: http://transaction:8443
+      # ADR-0005 / docs/05-security/04 §2: the agent must NOT be able to read the
+      # suitability HMAC key. In AWS the KMS/Secrets Manager policy denies the
+      # agent's workload identity; the emulator has no IAM, so the agent is given a
+      # reference that does not exist. The startup assertion in api/app.py fails
+      # the pod if the key ever becomes readable.
+      SUITABILITY_SIGNING_KEY_REF: kms://actinver/suitability-hmac-not-granted-to-agent
+      # Auth: dev HS256 tokens (local only). DPoP proofs are verified when present.
+      AUTH_MODE: dev
+      AUTH_DEV_SIGNING_KEY_REF: secretsmanager://actinver/dev-signing-key
+      AUTH_DPOP_REQUIRED: "false"
+      AUTH_ISSUER: https://idp.local.actinver/
+      AUTH_AUDIENCE: actinver-ai-advisor
+      # Model, voice and avatar bindings default to deterministic stubs.
+      LLM_PROVIDER: ${LLM_PROVIDER:-stub}
+      LLM_GEMINI_API_KEY_REF: ${LLM_GEMINI_API_KEY_REF:-}
+      VERTEX_PROJECT_ID: ${VERTEX_PROJECT_ID:-}
+      VERTEX_LOCATION: ${VERTEX_LOCATION:-us-central1}
+      VOICE_PROVIDER: ${VOICE_PROVIDER:-stub}
+      LIVEAVATAR_PROVIDER: ${LIVEAVATAR_PROVIDER:-stub}
+      LIVEAVATAR_BASE_URL: https://api.liveavatar.com
+      LIVEAVATAR_API_KEY_REF: secretsmanager://actinver/liveavatar/api-key
+      LIVEAVATAR_AVATAR_ID: ${LIVEAVATAR_AVATAR_ID:-dd73ea75-1218-4ef3-92ce-606d5f7fbc0a}
+      LIVEAVATAR_IS_SANDBOX: "true"
+      LIVEAVATAR_MAX_SESSION_DURATION_S: "1800"
+      LIVEAVATAR_MAX_CONCURRENT_SESSIONS: ${LIVEAVATAR_MAX_CONCURRENT_SESSIONS:-10}
+      # Google credentials (only when VOICE_PROVIDER=google or LLM_PROVIDER=vertex).
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS_IN_CONTAINER:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      floci-init:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+      suitability:
+        condition: service_started
+      guardrail:
+        condition: service_started
+      audit:
+        condition: service_started
+      transaction:
+        condition: service_started
+    # avatar-broker drains live WebSockets; give it the same grace as k8s.
+    stop_grace_period: 30s
+
+  # ── Optional: real Gemini through an AI Studio key (LOCAL ONLY, ADR-0003) ────
+  # `docker compose --profile gemini up -d agent-gemini` (stop `agent` first, or
+  # change the host port). Production uses Vertex AI with workload identity.
+  agent-gemini:
+    <<: *app-image
+    profiles: ["gemini"]
+    command: ["serve", "--role", "agent", "--port", "8443"]
+    ports: ["8444:8443"]
+    environment:
+      <<: *common-env
+      SERVICE_ROLE: agent
+      SERVICE_NAME: agent-orchestrator
+      PUBLIC_BASE_URL: http://localhost:8444
+      CORS_ORIGINS: '["http://localhost:8080","http://127.0.0.1:8080"]'
+      SVC_SUITABILITY_URL: http://suitability:8443
+      SVC_GUARDRAIL_URL: http://guardrail:8443
+      SVC_AUDIT_URL: http://audit:8443
+      SVC_TRANSACTION_URL: http://transaction:8443
+      SUITABILITY_SIGNING_KEY_REF: kms://actinver/suitability-hmac-not-granted-to-agent
+      AUTH_MODE: dev
+      AUTH_DEV_SIGNING_KEY_REF: secretsmanager://actinver/dev-signing-key
+      AUTH_DPOP_REQUIRED: "false"
+      LLM_PROVIDER: gemini_api
+      LLM_GEMINI_API_KEY_REF: secretsmanager://actinver/gemini-api-key
+      VERTEX_MODEL_FAST: ${VERTEX_MODEL_FAST:-gemini-2.5-flash}
+      VERTEX_MODEL_DEEP: ${VERTEX_MODEL_DEEP:-gemini-2.5-pro}
+      VOICE_PROVIDER: stub
+      LIVEAVATAR_PROVIDER: ${LIVEAVATAR_PROVIDER:-stub}
+      LIVEAVATAR_API_KEY_REF: secretsmanager://actinver/liveavatar/api-key
+      LIVEAVATAR_IS_SANDBOX: "true"
+    depends_on:
+      floci-init:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+      suitability:
+        condition: service_started
+      guardrail:
+        condition: service_started
+      audit:
+        condition: service_started
+      transaction:
+        condition: service_started
+
+  # ── Optional: self-hosted LLM tracing (ADR-0016). Holds prompts/responses →
+  # a CONFIDENTIAL store: access-controlled, 90-day retention, never public.
+  langfuse-db:
+    image: postgres:16-alpine
+    profiles: ["langfuse"]
+    environment:
+      POSTGRES_DB: langfuse
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: local_only_not_a_secret
+    volumes: ["langfusedata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse"]
+      interval: 5s
+      retries: 20
+
+  langfuse:
+    image: langfuse/langfuse:2
+    profiles: ["langfuse"]
+    depends_on:
+      langfuse-db:
+        condition: service_healthy
+    ports: ["3000:3000"]
+    environment:
+      DATABASE_URL: postgresql://langfuse:local_only_not_a_secret@langfuse-db:5432/langfuse
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: local_only_not_a_secret_nextauth
+      SALT: local_only_not_a_secret_salt
+      TELEMETRY_ENABLED: "false"
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
+
+volumes:
+  pgdata:
+  redisdata:
+  langfusedata:

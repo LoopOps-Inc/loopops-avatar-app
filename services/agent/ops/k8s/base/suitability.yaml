@@ -1,0 +1,65 @@
+# suitability-service: owned by Compliance. Separate deploy cadence, separate
+# signing key (mounted here and nowhere else), separate review (ADR-0005).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: suitability-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: suitability-service
+  labels: { app: suitability-service, zone: application }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: suitability-service }
+  template:
+    metadata:
+      labels: { app: suitability-service, zone: application }
+    spec:
+      serviceAccountName: suitability-service
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: suitability
+          image: actinver-agent
+          args: ["serve", "--role", "suitability", "--port", "8443"]
+          ports: [{ name: https, containerPort: 8443 }]
+          envFrom:
+            - configMapRef: { name: advisor-common }
+            - configMapRef: { name: advisor-suitability }
+          volumeMounts:
+            - { name: secrets-common, mountPath: /var/run/secrets/actinver, readOnly: true }
+            - { name: secrets-suitability, mountPath: /var/run/secrets/actinver/suitability, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+          livenessProbe:
+            httpGet: { path: /healthz, port: https }
+          readinessProbe:
+            httpGet: { path: /readyz, port: https }
+          resources:
+            requests: { cpu: "100m", memory: "192Mi" }
+            limits: { cpu: "500m", memory: "384Mi" }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+      volumes:
+        - name: secrets-common
+          secret: { secretName: advisor-common }
+        - name: secrets-suitability
+          secret: { secretName: advisor-suitability }
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: suitability-service
+spec:
+  selector: { app: suitability-service }
+  ports: [{ name: https, port: 8443, targetPort: https }]

@@ -1,0 +1,43 @@
+# dev overlay: synthetic data, LiveAvatar sandbox, Vertex dev project,
+# governance-mode object lock. Deployed by CI on merge to main.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: actinver-advisor-dev
+
+resources:
+  - ../../base
+
+images:
+  - name: actinver-agent
+    newName: registry.actinver.internal/advisor/actinver-agent
+    newTag: "main"
+
+patches:
+  - target:
+      kind: ConfigMap
+      name: advisor-common
+    patch: |-
+      - op: replace
+        path: /data/ENVIRONMENT
+        value: "dev"
+      - op: replace
+        path: /data/OBJECT_STORE_LOCK_MODE
+        value: "GOVERNANCE"
+  - target:
+      kind: ConfigMap
+      name: advisor-agent
+    patch: |-
+      - op: replace
+        path: /data/LIVEAVATAR_IS_SANDBOX
+        value: "true"
+      - op: replace
+        path: /data/CORE_PROVIDER
+        value: "synthetic"
+  - target:
+      kind: Deployment
+      name: agent-orchestrator
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1

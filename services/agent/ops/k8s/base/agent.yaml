@@ -1,0 +1,97 @@
+# agent = bff-mobile + agent-orchestrator + avatar-broker + voice-pipeline +
+# tool-gateway. Session-affine because the broker holds a live vendor WebSocket
+# per avatar session; drains with a 15-minute grace (docs/04-backend/01 §1, §7).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agent-orchestrator
+  annotations:
+    # Workload identity federation for Vertex AI (no service-account key files).
+    iam.gke.io/gcp-service-account: advisor-agent@actinver-ai-dev.iam.gserviceaccount.com
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-orchestrator
+  labels: { app: agent-orchestrator, zone: application }
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels: { app: agent-orchestrator }
+  template:
+    metadata:
+      labels: { app: agent-orchestrator, zone: application }
+    spec:
+      serviceAccountName: agent-orchestrator
+      automountServiceAccountToken: false
+      # avatar-broker drain: live sessions are pinned, never migrated.
+      terminationGracePeriodSeconds: 900
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      initContainers:
+        # Migrations: forward-only, backward-compatible for one release.
+        - name: migrate
+          image: actinver-agent
+          args: ["migrate"]
+          envFrom:
+            - configMapRef: { name: advisor-common }
+            - configMapRef: { name: advisor-agent }
+          volumeMounts:
+            - { name: secrets-common, mountPath: /var/run/secrets/actinver, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+          securityContext: &ctr-sec
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+      containers:
+        - name: agent
+          image: actinver-agent
+          args: ["serve", "--role", "agent", "--port", "8443"]
+          ports: [{ name: https, containerPort: 8443 }]
+          envFrom:
+            - configMapRef: { name: advisor-common }
+            - configMapRef: { name: advisor-agent }
+          volumeMounts:
+            - { name: secrets-common, mountPath: /var/run/secrets/actinver, readOnly: true }
+            - { name: secrets-agent, mountPath: /var/run/secrets/actinver/agent, readOnly: true }
+            - { name: core-mtls, mountPath: /etc/certs, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+          livenessProbe:
+            httpGet: { path: /healthz, port: https }
+            periodSeconds: 10
+          readinessProbe:
+            # Fails when a fail-closed dependency (suitability, guardrail,
+            # audit) is unreachable, so the pod stops receiving traffic.
+            httpGet: { path: /readyz, port: https }
+            periodSeconds: 5
+            failureThreshold: 2
+          # From measured p95; never unbounded (docs/04-backend/01 §7).
+          resources:
+            requests: { cpu: "500m", memory: "768Mi" }
+            limits: { cpu: "2", memory: "1536Mi" }
+          securityContext: *ctr-sec
+      volumes:
+        - name: secrets-common
+          secret: { secretName: advisor-common }
+        - name: secrets-agent
+          secret: { secretName: advisor-agent }
+        - name: core-mtls
+          secret: { secretName: core-mtls-client-cert }
+        - name: tmp
+          emptyDir: { sizeLimit: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent-orchestrator
+  labels: { app: agent-orchestrator }
+spec:
+  selector: { app: agent-orchestrator }
+  ports: [{ name: https, port: 8443, targetPort: https }]

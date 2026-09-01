@@ -1,0 +1,29 @@
+# Kustomize base for the five processes (ADR-0011: Kubernetes only, one
+# namespace per environment). Overlays set the image tag, replica counts,
+# ExternalSecret backends and the environment posture (docs/DEPLOY.md).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: actinver-advisor
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - externalsecrets.yaml
+  - networkpolicies.yaml
+  - agent.yaml
+  - suitability.yaml
+  - guardrail.yaml
+  - audit.yaml
+  - transaction.yaml
+  - httproute.yaml
+  - pdb.yaml
+  - hpa.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: actinver-ai-advisor
+
+images:
+  - name: actinver-agent
+    newName: registry.actinver.internal/advisor/actinver-agent
+    newTag: "0.1.0"

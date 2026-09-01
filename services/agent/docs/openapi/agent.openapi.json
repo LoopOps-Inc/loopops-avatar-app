@@ -1,0 +1,4579 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Actinver AI Advisor - Agent API",
+    "description": "Mobile/web-facing API of the Actinver AI Advisor (bff-mobile + agent-orchestrator + avatar-broker). Path-versioned (`/v1/`), RFC 9457 errors with a Spanish `message`, `Idempotency-Key` on every mutating endpoint, cursor pagination, SSE for chat turns and a WebSocket for the bidirectional audio path. Auth: `Authorization: DPoP <token>` plus a `DPoP` proof header (plain `Bearer` accepted in local only).",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Liveness probe",
+        "description": "Returns 200 while the process is alive. Carries no dependency state.",
+        "operationId": "liveness_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Readiness probe",
+        "description": "Probes every dependency. Returns 503 when a fail-closed dependency (database, redis, suitability, guardrail, audit) is unreachable.",
+        "operationId": "readiness_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A fail-closed dependency is down",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions": {
+      "post": {
+        "tags": [
+          "sessions"
+        ],
+        "summary": "Establish an app session",
+        "description": "Creates or resumes the client's thread for the requested channel and returns the capabilities the app may render, the disclosures that still need acknowledgement, and mode defaults. Requires `Authorization: DPoP <token>` + `DPoP` proof (a plain Bearer token is accepted in local only).",
+        "operationId": "create_session_v1_sessions_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/threads/{thread_id}/messages": {
+      "post": {
+        "tags": [
+          "threads"
+        ],
+        "summary": "Send a chat message (SSE response)",
+        "description": "Responds with `text/event-stream`. Events: `token`, `ui`, `form_spec`, `citations`, `error`, `done`. `done` always fires, including after `error`. Guardrail refusals (`BLOCKED_INPUT`, `BLOCKED_OUTPUT`, `NOT_ENTITLED_ADVISORY`, `NOT_ENTITLED_EXECUTION`, `PROFILE_EXPIRED`, `NO_SUITABLE_PRODUCT`, `LOW_CONFIDENCE`) arrive as in-stream `error` events with HTTP 200. See `GET /v1/docs/sse-events` for the JSON schema.",
+        "operationId": "send_message_v1_threads__thread_id__messages_post",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SSE stream",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {}
+            }
+          },
+          "403": {
+            "description": "CONSENT_REQUIRED - first-turn disclosures not acknowledged"
+          },
+          "404": {
+            "description": "Unknown thread"
+          },
+          "423": {
+            "description": "THREAD_FROZEN"
+          },
+          "429": {
+            "description": "RATE_LIMITED"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/threads/{thread_id}": {
+      "get": {
+        "tags": [
+          "threads"
+        ],
+        "summary": "Thread history (cursor pagination)",
+        "description": "Returns turns oldest-first. Pass `next_cursor` back as `cursor` for the next page.",
+        "operationId": "get_thread_v1_threads__thread_id__get",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/docs/sse-events": {
+      "get": {
+        "tags": [
+          "threads"
+        ],
+        "summary": "JSON schema of the SSE event payloads",
+        "description": "Documentation endpoint: the shapes of `token`, `ui`, `form_spec`, `citations`, `error`, `done`.",
+        "operationId": "sse_events_schema_v1_docs_sse_events_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Sse Events Schema V1 Docs Sse Events Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/threads/{thread_id}/forms/{form_id}/submit": {
+      "post": {
+        "tags": [
+          "forms"
+        ],
+        "summary": "Submit a Form Spec with a step-up assertion",
+        "description": "Requires `Idempotency-Key`. The server re-verifies the spec signature and TTL, re-enters the suitability gate if the amount changed, verifies the step-up signature against the registered device key and only then places the order. Errors: `FORM_EXPIRED` 409, `FORM_SIGNATURE_INVALID` 400, `FORM_ALREADY_USED` 409, `ACK_REQUIRED` 422, `STEP_UP_REQUIRED` 401, `LIMIT_EXCEEDED` 422, `NO_SUITABLE_PRODUCT` 422.",
+        "operationId": "submit_form_v1_threads__thread_id__forms__form_id__submit_post",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          },
+          {
+            "name": "form_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Form Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FormSubmitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormSubmitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/step-up/challenge": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Issue a single-use step-up challenge",
+        "description": "Requires `Idempotency-Key`. The challenge is bound to `form_id` and the declared amount and expires in 120 s. Sign the raw challenge bytes with the device key (ES256, raw r||s) and send the base64url signature as `step_up_assertion`.",
+        "operationId": "step_up_challenge_v1_auth_step_up_challenge_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StepUpChallengeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StepUpChallengeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/avatar/preflight": {
+      "get": {
+        "tags": [
+          "avatar"
+        ],
+        "summary": "Media-path reachability check before billing starts",
+        "description": "Call before offering voice mode. `udp_available` is measured client-side and is therefore null here; `media_reachable` and `estimated_rtt_ms` are measured from the broker to the vendor. `voice_offered` folds in flags, capacity and vendor reachability.",
+        "operationId": "preflight_v1_avatar_preflight_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreflightResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/avatar/session": {
+      "post": {
+        "tags": [
+          "avatar"
+        ],
+        "summary": "Start an avatar session (LITE mode)",
+        "description": "Requires `Idempotency-Key` and the `VOICE_RECORDING` consent at its current version. Returns the LiveKit URL and a room-scoped client token only. Errors: `VOICE_CONSENT_REQUIRED` 403, `VOICE_UNAVAILABLE` 503, `AVATAR_CAPACITY` 503, `AVATAR_BUDGET_EXHAUSTED` 429, `KILL_SWITCH` 503.",
+        "operationId": "start_session_v1_avatar_session_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvatarSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvatarSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/avatar/session/stop": {
+      "post": {
+        "tags": [
+          "avatar"
+        ],
+        "summary": "Stop an avatar session",
+        "description": "Idempotent. `reason=background` applies the 30 s grace before teardown.",
+        "operationId": "stop_session_v1_avatar_session_stop_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvatarStopRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvatarStopResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/consents": {
+      "get": {
+        "tags": [
+          "consents"
+        ],
+        "summary": "Consent and acknowledgement state",
+        "operationId": "list_consents_v1_consents_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "consents"
+        ],
+        "summary": "Record an acknowledgement or consent",
+        "description": "Requires `Idempotency-Key`. `version` must equal the current version of the document (see `GET /v1/consents`). `MODEL_IMPROVEMENT` is opt-in and off by default; it is never bundled with voice recording.",
+        "operationId": "acknowledge_v1_consents_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentAckRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/consents/{consent_type}": {
+      "delete": {
+        "tags": [
+          "consents"
+        ],
+        "summary": "Revoke a consent",
+        "description": "Revoking `voice_recording` stops any active avatar session immediately; chat mode remains fully available. Revoking `model_improvement` changes nothing functionally.",
+        "operationId": "revoke_v1_consents__consent_type__delete",
+        "parameters": [
+          {
+            "name": "consent_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ConsentType"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/disclosures/{disclosure_id}": {
+      "get": {
+        "tags": [
+          "consents"
+        ],
+        "summary": "Verbatim disclosure or consent text with its version",
+        "description": "Accepts a consent document id (`PRIVACY_NOTICE`, `SERVICES_GUIDE`, `AI_ASSISTANT`, `VOICE_RECORDING`, `MODEL_IMPROVEMENT`) or a mandatory disclosure id (`PAST_PERF`, `NO_GUARANTEE`, `COSTS`, `NOT_A_RECOMMENDATION`, ...).",
+        "operationId": "disclosure_v1_disclosures__disclosure_id__get",
+        "parameters": [
+          {
+            "name": "disclosure_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Disclosure Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisclosureText"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/config": {
+      "get": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Client configuration and kill-switch poll",
+        "description": "Polled by the app every ``poll_interval_s``. When ``kill_switch`` is true the app hides the chat and voice entry points and shows ``kill_switch_message``. Flag state propagates in under 30 s without a deploy.",
+        "operationId": "client_config_v1_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientConfigResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/telemetry": {
+      "post": {
+        "tags": [
+          "telemetry"
+        ],
+        "summary": "Ingest client telemetry",
+        "description": "Accepts up to 200 events. Known sensitive field names are dropped server-side.",
+        "operationId": "ingest_v1_telemetry_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelemetryBatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/compliance/evidence": {
+      "get": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Query the evidence index (scoped, never bulk)",
+        "description": "Requires role `compliance`, `security` or `risk` and an `X-Reason` header. At least one of `client_id`, `thread_id` or a `since`/`until` window is required. Access is logged.",
+        "operationId": "list_evidence_v1_compliance_evidence_get",
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Client Id"
+            }
+          },
+          {
+            "name": "thread_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Thread Id"
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "name": "service_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service Type"
+            }
+          },
+          {
+            "name": "product_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Product Id"
+            }
+          },
+          {
+            "name": "refused",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Refused"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "X-Reason",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500,
+              "title": "X-Reason"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/compliance/evidence/verify/{thread_id}": {
+      "get": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Re-walk a thread's hash chain",
+        "description": "Any divergence is a security incident (control EV-02).",
+        "operationId": "verify_chain_v1_compliance_evidence_verify__thread_id__get",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          },
+          {
+            "name": "X-Reason",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500,
+              "title": "X-Reason"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChainVerifyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/compliance/evidence/{evidence_id}": {
+      "get": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Read one evidence record",
+        "description": "Returns the raw WORM record. Requires `X-Reason`; access is logged.",
+        "operationId": "get_evidence_v1_compliance_evidence__evidence_id__get",
+        "parameters": [
+          {
+            "name": "evidence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evidence Id"
+            }
+          },
+          {
+            "name": "X-Reason",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500,
+              "title": "X-Reason"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Evidence V1 Compliance Evidence  Evidence Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/compliance/summary": {
+      "get": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Supervision summary for a window",
+        "description": "Turn volumes by service type, suitability outcomes, guardrail blocks, escalations, degradations, model/prompt versions.",
+        "operationId": "summary_v1_compliance_summary_get",
+        "parameters": [
+          {
+            "name": "since",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Since"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Until"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplianceSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/compliance/flags": {
+      "get": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Feature flag inventory and live values",
+        "operationId": "list_flags_v1_compliance_flags_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FlagView"
+                  },
+                  "title": "Response List Flags V1 Compliance Flags Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/compliance/flags/{name}": {
+      "put": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Change a flag without a deploy",
+        "description": "Authority follows the flag owner: Compliance flags → role `compliance`; `advisor.kill_switch` → `risk` (or the on-call `sre`); Product/Engineering flags → `compliance`, `risk` or `sre`. The reason is logged. Propagates in under 30 s.",
+        "operationId": "set_flag_v1_compliance_flags__name__put",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlagUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlagView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/compliance/sessions/revoke": {
+      "post": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Revoke sessions for a cohort",
+        "description": "Rejects tokens issued before `issued_before` (default now) for each client and stops their avatar sessions.",
+        "operationId": "revoke_sessions_v1_compliance_sessions_revoke_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeSessionsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Revoke Sessions V1 Compliance Sessions Revoke Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/compliance/threads/{thread_id}/freeze": {
+      "post": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Freeze a thread and place its evidence under legal hold",
+        "operationId": "freeze_thread_v1_compliance_threads__thread_id__freeze_post",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          },
+          {
+            "name": "X-Reason",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500,
+              "title": "X-Reason"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Freeze Thread V1 Compliance Threads  Thread Id  Freeze Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/compliance/threads/{thread_id}/unfreeze": {
+      "post": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Lift a thread freeze (dual authorisation is a process control)",
+        "operationId": "unfreeze_thread_v1_compliance_threads__thread_id__unfreeze_post",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          },
+          {
+            "name": "X-Reason",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500,
+              "title": "X-Reason"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Unfreeze Thread V1 Compliance Threads  Thread Id  Unfreeze Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/compliance/arco": {
+      "post": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Open and fulfil a data-subject (ARCO) request",
+        "description": "`acceso`/`portabilidad`: machine-readable JSON export written to the object store under `exports/dsr/{request_id}/` with a 90-day expiry and a presigned URL. `cancelacion`: revokes the model-improvement consent and returns the retained-data statement (evidence under DCGSI Art. 26 is retained). `rectificacion`: appends a correction note, never rewrites. `oposicion`: revokes non-necessary purposes. Every request is logged with timestamps for the 20-day SLA.",
+        "operationId": "arco_v1_compliance_arco_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArcoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArcoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "ARCO request log with response times",
+        "operationId": "list_arco_v1_compliance_arco_get",
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Client Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "DPoP",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpop"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response List Arco V1 Compliance Arco Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ArcoRequest": {
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "title": "Client Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "acceso",
+              "rectificacion",
+              "cancelacion",
+              "oposicion",
+              "portabilidad"
+            ],
+            "title": "Kind"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "client_id",
+          "kind",
+          "reason"
+        ],
+        "title": "ArcoRequest"
+      },
+      "ArcoResponse": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "opened_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Opened At"
+          },
+          "export_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Export Url"
+          },
+          "export_expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Export Expires At"
+          },
+          "retained_data_statement_es": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retained Data Statement Es"
+          },
+          "retained_categories": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Retained Categories"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "kind",
+          "opened_at"
+        ],
+        "title": "ArcoResponse"
+      },
+      "AvatarSessionRequest": {
+        "properties": {
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id"
+          },
+          "orientation": {
+            "type": "string",
+            "enum": [
+              "landscape",
+              "portrait"
+            ],
+            "title": "Orientation",
+            "default": "portrait"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "thread_id"
+        ],
+        "title": "AvatarSessionRequest"
+      },
+      "AvatarSessionResponse": {
+        "properties": {
+          "avatar_session_id": {
+            "type": "string",
+            "title": "Avatar Session Id"
+          },
+          "livekit_url": {
+            "type": "string",
+            "title": "Livekit Url"
+          },
+          "livekit_client_token": {
+            "type": "string",
+            "title": "Livekit Client Token"
+          },
+          "max_session_duration_s": {
+            "type": "integer",
+            "title": "Max Session Duration S"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "audio_ws_path": {
+            "type": "string",
+            "title": "Audio Ws Path"
+          },
+          "emulated": {
+            "type": "boolean",
+            "title": "Emulated",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "avatar_session_id",
+          "livekit_url",
+          "livekit_client_token",
+          "max_session_duration_s",
+          "expires_at",
+          "audio_ws_path"
+        ],
+        "title": "AvatarSessionResponse"
+      },
+      "AvatarStopRequest": {
+        "properties": {
+          "avatar_session_id": {
+            "type": "string",
+            "title": "Avatar Session Id"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "user",
+              "background",
+              "logout",
+              "navigation",
+              "error"
+            ],
+            "title": "Reason",
+            "default": "user"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "avatar_session_id"
+        ],
+        "title": "AvatarStopRequest"
+      },
+      "AvatarStopResponse": {
+        "properties": {
+          "avatar_session_id": {
+            "type": "string",
+            "title": "Avatar Session Id"
+          },
+          "stopped": {
+            "type": "boolean",
+            "title": "Stopped"
+          },
+          "duration_s": {
+            "type": "number",
+            "title": "Duration S"
+          },
+          "speaking_s": {
+            "type": "number",
+            "title": "Speaking S"
+          }
+        },
+        "type": "object",
+        "required": [
+          "avatar_session_id",
+          "stopped",
+          "duration_s",
+          "speaking_s"
+        ],
+        "title": "AvatarStopResponse"
+      },
+      "Capabilities": {
+        "properties": {
+          "chat": {
+            "type": "boolean",
+            "title": "Chat"
+          },
+          "voice": {
+            "type": "boolean",
+            "title": "Voice"
+          },
+          "advisory": {
+            "type": "boolean",
+            "title": "Advisory"
+          },
+          "transactional": {
+            "type": "boolean",
+            "title": "Transactional"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chat",
+          "voice",
+          "advisory",
+          "transactional"
+        ],
+        "title": "Capabilities"
+      },
+      "ChainVerifyResponse": {
+        "properties": {
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "records": {
+            "type": "integer",
+            "title": "Records"
+          },
+          "first_divergent_evidence_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Divergent Evidence Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "thread_id",
+          "ok",
+          "records",
+          "first_divergent_evidence_id"
+        ],
+        "title": "ChainVerifyResponse"
+      },
+      "ClientConfigResponse": {
+        "properties": {
+          "kill_switch": {
+            "type": "boolean",
+            "title": "Kill Switch"
+          },
+          "kill_switch_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kill Switch Message"
+          },
+          "voice_mode": {
+            "type": "boolean",
+            "title": "Voice Mode"
+          },
+          "avatar": {
+            "type": "boolean",
+            "title": "Avatar"
+          },
+          "advisory": {
+            "type": "boolean",
+            "title": "Advisory"
+          },
+          "transactional": {
+            "type": "boolean",
+            "title": "Transactional"
+          },
+          "disclosure_versions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Disclosure Versions"
+          },
+          "promotor": {
+            "$ref": "#/components/schemas/PromotorContact"
+          },
+          "poll_interval_s": {
+            "type": "integer",
+            "title": "Poll Interval S",
+            "default": 30
+          }
+        },
+        "type": "object",
+        "required": [
+          "kill_switch",
+          "kill_switch_message",
+          "voice_mode",
+          "avatar",
+          "advisory",
+          "transactional",
+          "disclosure_versions",
+          "promotor"
+        ],
+        "title": "ClientConfigResponse"
+      },
+      "ComplianceSummary": {
+        "properties": {
+          "window": {
+            "additionalProperties": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "type": "object",
+            "title": "Window"
+          },
+          "turns_by_service_type": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Turns By Service Type"
+          },
+          "suitability_outcomes": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Suitability Outcomes"
+          },
+          "guardrail_blocks_by_reason": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Guardrail Blocks By Reason"
+          },
+          "escalations": {
+            "type": "integer",
+            "title": "Escalations"
+          },
+          "degradations": {
+            "type": "integer",
+            "title": "Degradations"
+          },
+          "refusals": {
+            "type": "integer",
+            "title": "Refusals"
+          },
+          "evidence_records": {
+            "type": "integer",
+            "title": "Evidence Records"
+          },
+          "model_versions": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Model Versions"
+          },
+          "prompt_versions": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Prompt Versions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "window",
+          "turns_by_service_type",
+          "suitability_outcomes",
+          "guardrail_blocks_by_reason",
+          "escalations",
+          "degradations",
+          "refusals",
+          "evidence_records",
+          "model_versions",
+          "prompt_versions"
+        ],
+        "title": "ComplianceSummary"
+      },
+      "ConsentAckRequest": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/ConsentType"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "granted": {
+            "type": "boolean",
+            "title": "Granted",
+            "default": true
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "chat",
+              "voice",
+              "app"
+            ],
+            "title": "Channel",
+            "default": "app"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "version"
+        ],
+        "title": "ConsentAckRequest"
+      },
+      "ConsentType": {
+        "type": "string",
+        "enum": [
+          "privacy_notice",
+          "investment_services_guide",
+          "ai_disclosure",
+          "voice_recording",
+          "model_improvement"
+        ],
+        "title": "ConsentType"
+      },
+      "ConsentView": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/ConsentType"
+          },
+          "public_id": {
+            "type": "string",
+            "title": "Public Id"
+          },
+          "current_version": {
+            "type": "string",
+            "title": "Current Version"
+          },
+          "granted": {
+            "type": "boolean",
+            "title": "Granted"
+          },
+          "granted_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Granted Version"
+          },
+          "granted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Granted At"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "required_for": {
+            "type": "string",
+            "enum": [
+              "first_turn",
+              "voice",
+              "optional"
+            ],
+            "title": "Required For"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "public_id",
+          "current_version",
+          "granted",
+          "granted_version",
+          "granted_at",
+          "revoked_at",
+          "required_for"
+        ],
+        "title": "ConsentView"
+      },
+      "ConsentsResponse": {
+        "properties": {
+          "consents": {
+            "items": {
+              "$ref": "#/components/schemas/ConsentView"
+            },
+            "type": "array",
+            "title": "Consents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "consents"
+        ],
+        "title": "ConsentsResponse"
+      },
+      "CreateSessionRequest": {
+        "properties": {
+          "channel": {
+            "type": "string",
+            "enum": [
+              "chat",
+              "voice"
+            ],
+            "title": "Channel",
+            "default": "chat"
+          },
+          "device_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Id"
+          },
+          "attestation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attestation"
+          },
+          "locale": {
+            "type": "string",
+            "title": "Locale",
+            "default": "es-MX"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CreateSessionRequest"
+      },
+      "DisclosureRequired": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "examples": [
+              "SERVICES_GUIDE"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "examples": [
+              "2026-06"
+            ]
+          },
+          "acknowledged": {
+            "type": "boolean",
+            "title": "Acknowledged"
+          },
+          "required_for": {
+            "type": "string",
+            "enum": [
+              "first_turn",
+              "voice",
+              "optional"
+            ],
+            "title": "Required For"
+          },
+          "text_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "acknowledged",
+          "required_for"
+        ],
+        "title": "DisclosureRequired"
+      },
+      "DisclosureText": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "text"
+        ],
+        "title": "DisclosureText"
+      },
+      "EvidenceListItem": {
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "title": "Evidence Id"
+          },
+          "client_hash": {
+            "type": "string",
+            "title": "Client Hash"
+          },
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id"
+          },
+          "turn_id": {
+            "type": "string",
+            "title": "Turn Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "service_type": {
+            "type": "string",
+            "title": "Service Type"
+          },
+          "service_subtype": {
+            "type": "string",
+            "title": "Service Subtype"
+          },
+          "intent": {
+            "type": "string",
+            "title": "Intent"
+          },
+          "product_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Product Ids"
+          },
+          "content_hash": {
+            "type": "string",
+            "title": "Content Hash"
+          },
+          "legal_hold": {
+            "type": "boolean",
+            "title": "Legal Hold"
+          },
+          "refused": {
+            "type": "boolean",
+            "title": "Refused"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evidence_id",
+          "client_hash",
+          "thread_id",
+          "turn_id",
+          "created_at",
+          "service_type",
+          "service_subtype",
+          "intent",
+          "product_ids",
+          "content_hash",
+          "legal_hold",
+          "refused"
+        ],
+        "title": "EvidenceListItem"
+      },
+      "EvidenceListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "EvidenceListResponse"
+      },
+      "FlagUpdateRequest": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value",
+          "reason"
+        ],
+        "title": "FlagUpdateRequest"
+      },
+      "FlagView": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "default": {
+            "type": "string",
+            "title": "Default"
+          },
+          "owner": {
+            "type": "string",
+            "title": "Owner"
+          },
+          "expires_at": {
+            "type": "string",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "value",
+          "default",
+          "owner",
+          "expires_at"
+        ],
+        "title": "FlagView"
+      },
+      "FormSubmitRequest": {
+        "properties": {
+          "values": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Values"
+          },
+          "acknowledgements": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Acknowledgements"
+          },
+          "challenge_id": {
+            "type": "string",
+            "title": "Challenge Id"
+          },
+          "step_up_assertion": {
+            "type": "string",
+            "title": "Step Up Assertion",
+            "description": "base64url ES256 signature over the challenge"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "values",
+          "challenge_id",
+          "step_up_assertion"
+        ],
+        "title": "FormSubmitRequest"
+      },
+      "FormSubmitResponse": {
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "title": "Order Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "settlement_date": {
+            "type": "string",
+            "title": "Settlement Date"
+          },
+          "evidence_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Id"
+          },
+          "ui_payload": {
+            "items": {
+              "$ref": "#/components/schemas/UIComponent"
+            },
+            "type": "array",
+            "title": "Ui Payload"
+          },
+          "speech": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speech"
+          }
+        },
+        "type": "object",
+        "required": [
+          "order_id",
+          "status",
+          "settlement_date",
+          "evidence_id"
+        ],
+        "title": "FormSubmitResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse"
+      },
+      "ModeDefaults": {
+        "properties": {
+          "default_mode": {
+            "type": "string",
+            "enum": [
+              "chat",
+              "voice"
+            ],
+            "title": "Default Mode",
+            "default": "chat"
+          },
+          "voice_available": {
+            "type": "boolean",
+            "title": "Voice Available",
+            "default": true
+          },
+          "filler_threshold_ms": {
+            "type": "integer",
+            "title": "Filler Threshold Ms",
+            "default": 400
+          },
+          "thinking_ceiling_s": {
+            "type": "number",
+            "title": "Thinking Ceiling S",
+            "default": 8.0
+          },
+          "background_grace_s": {
+            "type": "integer",
+            "title": "Background Grace S",
+            "default": 30
+          }
+        },
+        "type": "object",
+        "title": "ModeDefaults"
+      },
+      "Money": {
+        "properties": {
+          "amount": {
+            "type": "string",
+            "title": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "MXN",
+              "USD",
+              "EUR"
+            ],
+            "title": "Currency"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "amount",
+          "currency"
+        ],
+        "title": "Money",
+        "description": "Always ``{amount: decimal string, currency}`` - never a bare number\n(docs/04-backend/04 §1). A value without a currency is rejected, not\ndefaulted to MXN (docs/07-data-governance/03 §6)."
+      },
+      "PreflightResponse": {
+        "properties": {
+          "media_reachable": {
+            "type": "boolean",
+            "title": "Media Reachable"
+          },
+          "udp_available": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Udp Available",
+            "description": "Measured client-side; the server cannot know it"
+          },
+          "estimated_rtt_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Rtt Ms"
+          },
+          "voice_offered": {
+            "type": "boolean",
+            "title": "Voice Offered"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "media_reachable",
+          "estimated_rtt_ms",
+          "voice_offered"
+        ],
+        "title": "PreflightResponse"
+      },
+      "PromotorContact": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "phone": {
+            "type": "string",
+            "title": "Phone"
+          },
+          "hours": {
+            "type": "string",
+            "title": "Hours"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "phone",
+          "hours"
+        ],
+        "title": "PromotorContact"
+      },
+      "ReadyResponse": {
+        "properties": {
+          "ready": {
+            "type": "boolean",
+            "title": "Ready"
+          },
+          "checks": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object",
+            "title": "Checks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ready",
+          "checks"
+        ],
+        "title": "ReadyResponse"
+      },
+      "RevokeSessionsRequest": {
+        "properties": {
+          "client_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 1000,
+            "title": "Client Ids"
+          },
+          "issued_before": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued Before"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "RevokeSessionsRequest"
+      },
+      "SendMessageRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "locale": {
+            "type": "string",
+            "title": "Locale",
+            "default": "es-MX"
+          },
+          "client_turn_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Turn Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "SendMessageRequest"
+      },
+      "SessionClient": {
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "risk_category": {
+            "type": "string",
+            "title": "Risk Category"
+          },
+          "profile_expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Expires At"
+          },
+          "register": {
+            "type": "string",
+            "enum": [
+              "tu",
+              "usted"
+            ],
+            "title": "Register",
+            "default": "tu"
+          }
+        },
+        "type": "object",
+        "required": [
+          "first_name",
+          "risk_category"
+        ],
+        "title": "SessionClient"
+      },
+      "SessionResponse": {
+        "properties": {
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/Capabilities"
+          },
+          "disclosures_required": {
+            "items": {
+              "$ref": "#/components/schemas/DisclosureRequired"
+            },
+            "type": "array",
+            "title": "Disclosures Required"
+          },
+          "client": {
+            "$ref": "#/components/schemas/SessionClient"
+          },
+          "mode_defaults": {
+            "$ref": "#/components/schemas/ModeDefaults"
+          },
+          "promotor": {
+            "$ref": "#/components/schemas/PromotorContact"
+          },
+          "kill_switch": {
+            "type": "boolean",
+            "title": "Kill Switch",
+            "default": false
+          },
+          "risk_mode": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "restricted"
+            ],
+            "title": "Risk Mode",
+            "default": "normal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "thread_id",
+          "capabilities",
+          "disclosures_required",
+          "client",
+          "mode_defaults",
+          "promotor"
+        ],
+        "title": "SessionResponse"
+      },
+      "StepUpChallengeRequest": {
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "title": "Form Id"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/Money"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "form_id",
+          "amount"
+        ],
+        "title": "StepUpChallengeRequest"
+      },
+      "StepUpChallengeResponse": {
+        "properties": {
+          "challenge_id": {
+            "type": "string",
+            "title": "Challenge Id"
+          },
+          "challenge": {
+            "type": "string",
+            "title": "Challenge",
+            "description": "base64 nonce; sign it with the device key (ES256)"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "signing_input_hint": {
+            "type": "string",
+            "title": "Signing Input Hint",
+            "default": "ES256 (raw r||s, base64url) over the ASCII bytes of `challenge`"
+          }
+        },
+        "type": "object",
+        "required": [
+          "challenge_id",
+          "challenge",
+          "expires_at"
+        ],
+        "title": "StepUpChallengeResponse"
+      },
+      "TelemetryBatch": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/TelemetryEvent"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "events"
+        ],
+        "title": "TelemetryBatch"
+      },
+      "TelemetryEvent": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          },
+          "attributes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Attributes"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "TelemetryEvent"
+      },
+      "ThreadResponse": {
+        "properties": {
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "frozen": {
+            "type": "boolean",
+            "title": "Frozen"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/ThreadTurn"
+            },
+            "type": "array",
+            "title": "Turns"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "thread_id",
+          "channel",
+          "frozen",
+          "turns",
+          "next_cursor"
+        ],
+        "title": "ThreadResponse"
+      },
+      "ThreadTurn": {
+        "properties": {
+          "turn_id": {
+            "type": "string",
+            "title": "Turn Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "client_text": {
+            "type": "string",
+            "title": "Client Text"
+          },
+          "speech": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speech"
+          },
+          "ui_payload": {
+            "items": {
+              "$ref": "#/components/schemas/UIComponent"
+            },
+            "type": "array",
+            "title": "Ui Payload"
+          },
+          "evidence_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Id"
+          },
+          "service_type": {
+            "type": "string",
+            "title": "Service Type"
+          },
+          "intent": {
+            "type": "string",
+            "title": "Intent"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "turn_id",
+          "created_at",
+          "channel",
+          "client_text",
+          "speech",
+          "ui_payload",
+          "evidence_id",
+          "service_type",
+          "intent",
+          "error_code"
+        ],
+        "title": "ThreadTurn"
+      },
+      "UIComponent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "portfolio_summary",
+              "portfolio_positions",
+              "attribution_bars",
+              "cash_summary",
+              "product_list",
+              "product_detail",
+              "product_comparison",
+              "quote_table",
+              "news_list",
+              "research_list",
+              "calendar_list",
+              "simulation_chart",
+              "fee_breakdown",
+              "transaction_list",
+              "statement_link",
+              "accounts_list",
+              "services_guide",
+              "suitability_summary",
+              "warning_banner",
+              "form_spec",
+              "citations",
+              "escalation_offer",
+              "escalation_card",
+              "complaint_card",
+              "order_receipt",
+              "disclosure",
+              "profile_update_offer"
+            ],
+            "title": "Type"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "payload"
+        ],
+        "title": "UIComponent",
+        "description": "Every component carries ``source`` and ``as_of`` so the client can render\nstaleness and an auditor can trace it (docs/07-data-governance/01 §5)."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ProblemDetails": {
+        "properties": {
+          "type": {
+            "default": "about:blank",
+            "title": "Type",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "integer"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "trace_id": {
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Detail"
+          },
+          "instance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Instance"
+          },
+          "retry_after_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Retry After S"
+          }
+        },
+        "required": [
+          "title",
+          "status",
+          "code",
+          "message",
+          "trace_id"
+        ],
+        "title": "ProblemDetails",
+        "type": "object"
+      },
+      "FormDisclosure": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "ack": {
+            "default": false,
+            "title": "Ack",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "text"
+        ],
+        "title": "FormDisclosure",
+        "type": "object"
+      },
+      "FormExecution": {
+        "additionalProperties": false,
+        "properties": {
+          "cutoff_local": {
+            "title": "Cutoff Local",
+            "type": "string"
+          },
+          "timezone": {
+            "default": "America/Mexico_City",
+            "title": "Timezone",
+            "type": "string"
+          },
+          "settlement": {
+            "title": "Settlement",
+            "type": "string"
+          },
+          "valuation": {
+            "title": "Valuation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cutoff_local",
+          "settlement",
+          "valuation"
+        ],
+        "title": "FormExecution",
+        "type": "object"
+      },
+      "FormField": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "pattern": "^[a-z][a-z0-9_]{0,40}$",
+            "title": "Key",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "money",
+              "select",
+              "boolean",
+              "date",
+              "text",
+              "acknowledgement"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "required": {
+            "default": true,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "enum": [
+                  "MXN",
+                  "USD",
+                  "EUR"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Currency"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Max"
+          },
+          "step": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Step"
+          },
+          "help": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Help"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Options"
+          },
+          "options_source": {
+            "anyOf": [
+              {
+                "pattern": "^tool:[a-z_]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Options Source"
+          },
+          "default": {
+            "default": null,
+            "title": "Default"
+          },
+          "max_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Max Length"
+          }
+        },
+        "required": [
+          "key",
+          "type",
+          "label"
+        ],
+        "title": "FormField",
+        "type": "object"
+      },
+      "FormProduct": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "risk_level": {
+            "$ref": "#/$defs/RiskLevel"
+          },
+          "currency": {
+            "enum": [
+              "MXN",
+              "USD",
+              "EUR"
+            ],
+            "title": "Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "risk_level",
+          "currency"
+        ],
+        "title": "FormProduct",
+        "type": "object"
+      },
+      "RiskLevel": {
+        "enum": [
+          "bajo",
+          "medio",
+          "alto"
+        ],
+        "title": "RiskLevel",
+        "type": "string"
+      },
+      "SseCitationsEvent": {
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SseCitationsEvent",
+        "type": "object"
+      },
+      "SseDoneEvent": {
+        "properties": {
+          "turn_id": {
+            "title": "Turn Id",
+            "type": "string"
+          },
+          "evidence_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Id"
+          },
+          "service_type": {
+            "title": "Service Type",
+            "type": "string"
+          },
+          "service_subtype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Service Subtype"
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Intent"
+          },
+          "degraded_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Degraded From"
+          },
+          "disclosures_shown": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Disclosures Shown",
+            "type": "object"
+          }
+        },
+        "required": [
+          "turn_id",
+          "evidence_id",
+          "service_type"
+        ],
+        "title": "SseDoneEvent",
+        "type": "object"
+      },
+      "SseErrorEvent": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "escalate": {
+            "default": false,
+            "title": "Escalate",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "SseErrorEvent",
+        "type": "object"
+      },
+      "SseFormSpecEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "form_id": {
+            "title": "Form Id",
+            "type": "string"
+          },
+          "client_id": {
+            "title": "Client Id",
+            "type": "string"
+          },
+          "thread_id": {
+            "title": "Thread Id",
+            "type": "string"
+          },
+          "turn_id": {
+            "title": "Turn Id",
+            "type": "string"
+          },
+          "operation": {
+            "enum": [
+              "BUY",
+              "SELL",
+              "SWITCH",
+              "REDEEM",
+              "RECURRING"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "product": {
+            "$ref": "#/$defs/FormProduct"
+          },
+          "target_product": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/FormProduct"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "suitability_verdict_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Suitability Verdict Id"
+          },
+          "approved_amount": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Money"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/$defs/FormField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "disclosures": {
+            "items": {
+              "$ref": "#/$defs/FormDisclosure"
+            },
+            "title": "Disclosures",
+            "type": "array"
+          },
+          "execution": {
+            "$ref": "#/$defs/FormExecution"
+          },
+          "issued_at": {
+            "format": "date-time",
+            "title": "Issued At",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "signature": {
+            "default": "",
+            "title": "Signature",
+            "type": "string"
+          },
+          "signing_key_version": {
+            "default": 1,
+            "title": "Signing Key Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "form_id",
+          "client_id",
+          "thread_id",
+          "turn_id",
+          "operation",
+          "product",
+          "fields",
+          "disclosures",
+          "execution",
+          "issued_at",
+          "expires_at"
+        ],
+        "title": "SseFormSpecEvent",
+        "type": "object"
+      },
+      "SseTokenEvent": {
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "SseTokenEvent",
+        "type": "object"
+      },
+      "SseUiEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "enum": [
+              "portfolio_summary",
+              "portfolio_positions",
+              "attribution_bars",
+              "cash_summary",
+              "product_list",
+              "product_detail",
+              "product_comparison",
+              "quote_table",
+              "news_list",
+              "research_list",
+              "calendar_list",
+              "simulation_chart",
+              "fee_breakdown",
+              "transaction_list",
+              "statement_link",
+              "accounts_list",
+              "services_guide",
+              "suitability_summary",
+              "warning_banner",
+              "form_spec",
+              "citations",
+              "escalation_offer",
+              "escalation_card",
+              "complaint_card",
+              "order_receipt",
+              "disclosure",
+              "profile_update_offer"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "As Of"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source"
+          }
+        },
+        "required": [
+          "type",
+          "payload"
+        ],
+        "title": "SseUiEvent",
+        "type": "object"
+      },
+      "SseEventCatalogue": {
+        "description": "Documentation-only model listing the SSE event names and shapes.",
+        "properties": {
+          "token": {
+            "$ref": "#/$defs/SseTokenEvent"
+          },
+          "ui": {
+            "$ref": "#/$defs/SseUiEvent"
+          },
+          "form_spec": {
+            "$ref": "#/$defs/SseFormSpecEvent"
+          },
+          "citations": {
+            "$ref": "#/$defs/SseCitationsEvent"
+          },
+          "error": {
+            "$ref": "#/$defs/SseErrorEvent"
+          },
+          "done": {
+            "$ref": "#/$defs/SseDoneEvent"
+          }
+        },
+        "required": [
+          "token",
+          "ui",
+          "form_spec",
+          "citations",
+          "error",
+          "done"
+        ],
+        "title": "SseEventCatalogue",
+        "type": "object"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "sessions",
+      "description": "App session, capabilities and required disclosures."
+    },
+    {
+      "name": "threads",
+      "description": "Chat turns over SSE and thread history."
+    },
+    {
+      "name": "forms",
+      "description": "Server-driven transactional forms (ADR-0009)."
+    },
+    {
+      "name": "auth",
+      "description": "Step-up challenges (ADR-0017)."
+    },
+    {
+      "name": "avatar",
+      "description": "LiveAvatar LITE sessions and the audio WebSocket."
+    },
+    {
+      "name": "consents",
+      "description": "Acknowledgements and revocable consents (DCGSI Art. 24/26, LFPDPPP)."
+    },
+    {
+      "name": "config",
+      "description": "Remote config and kill-switch poll (ADR-0015)."
+    },
+    {
+      "name": "telemetry",
+      "description": "Client telemetry ingest."
+    },
+    {
+      "name": "compliance",
+      "description": "Compliance console, flags, incident response, ARCO."
+    },
+    {
+      "name": "health",
+      "description": "Probes."
+    }
+  ],
+  "x-sse-events": {
+    "endpoint": "POST /v1/threads/{thread_id}/messages",
+    "events": [
+      "token",
+      "ui",
+      "form_spec",
+      "citations",
+      "error",
+      "done"
+    ],
+    "note": "done always fires, including after error"
+  },
+  "x-websocket": {
+    "path": "/v1/avatar/{avatar_session_id}/audio",
+    "auth": "?access_token=<jwt> or first message {type:'auth',token}",
+    "client_to_server": [
+      "binary audio frame",
+      "audio_start",
+      "utterance_end",
+      "client.barge_in",
+      "client.background",
+      "client.foreground",
+      "dev.transcript (VOICE_PROVIDER=stub only)"
+    ],
+    "server_to_client": [
+      "transcript.partial",
+      "transcript.final",
+      "agent.thinking",
+      "agent.speaking",
+      "filler",
+      "caption",
+      "ui",
+      "form_spec",
+      "citations",
+      "error",
+      "turn.complete",
+      "session.refreshed",
+      "session.expiring",
+      "session.closed"
+    ],
+    "close_codes": {
+      "4401": "unauthenticated",
+      "4403": "not the owner",
+      "4404": "unknown session"
+    }
+  }
+}

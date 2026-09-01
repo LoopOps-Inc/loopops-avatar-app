@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+# local secrets and generated Postman environment (tokens inside)
+.env
+.env.local
+docs/postman/local.postman_environment.json

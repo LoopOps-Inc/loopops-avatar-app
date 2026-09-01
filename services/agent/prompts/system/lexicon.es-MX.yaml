@@ -1,0 +1,51 @@
+# Approved financial lexicon (ADR-0013). Owned jointly by Marketing and Compliance.
+# `preferred` is the Mexican Spanish term the assistant uses; `avoid` are the
+# variants that read as foreign or loose for a Mexican financial institution.
+version: lexicon-es-MX@2026-08-20
+register:
+  default: "tú"
+  alternative: "usted"
+  rule: "Consistency within a thread is enforced; mixing registers is a REWRITE."
+numbers_in_speech:
+  thousands: "mil doscientos"          # never "un mil doscientos"
+  percentages: "uno punto cinco por ciento"
+  currency_rule: "Always disambiguate pesos vs dólares when both appear; never dólares for MXN."
+terms:
+  - concept: mutual fund
+    preferred: fondo de inversión
+    avoid: [fondo mutuo]
+  - concept: stock / share
+    preferred: acción
+    avoid: [título]
+  - concept: yield
+    preferred: rendimiento
+    avoid: [retorno]
+  - concept: broker-dealer
+    preferred: casa de bolsa
+    avoid: [corredora, sociedad de bolsa]
+  - concept: account statement
+    preferred: estado de cuenta
+    avoid: [extracto]
+  - concept: fee
+    preferred: comisión
+    avoid: [cargo]
+  - concept: to deposit
+    preferred: abonar / depositar
+    avoid: [ingresar]
+  - concept: withdrawal
+    preferred: retiro
+    avoid: [reintegro]
+  - concept: tax withholding
+    preferred: retención de ISR
+    avoid: [impuesto]
+  - concept: maturity
+    preferred: vencimiento
+    avoid: [madurez]
+  - concept: government bill
+    preferred: CETES
+    avoid: [letras del tesoro]
+anglicisms:
+  trading: operación bursátil
+  equity: renta variable
+  asset allocation: distribución de activos
+  portafolio: portafolio   # acceptable and standard

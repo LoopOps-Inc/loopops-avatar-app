@@ -1,0 +1,102 @@
+# Non-secret configuration only. Anything secret is a *reference* resolved at
+# startup through the External Secrets Operator mounts (externalsecrets.yaml).
+# Overlays patch ENVIRONMENT and the provider selections per docs/DEPLOY.md.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: advisor-common
+data:
+  ENVIRONMENT: "dev"
+  LOG_LEVEL: "INFO"
+  CACHE_PROVIDER: "redis"
+  CHECKPOINTER_PROVIDER: "postgres"
+  PROMPTS_DIR: "/app/prompts"
+  PROMPT_VERSION: "advisor-es-MX@2026-08-20"
+  SUITABILITY_RULESET_VERSION: "14"
+  SERVICE_GUIDE_VERSION: "2026-06"
+  AI_DISCLOSURE_VERSION: "2026-08"
+  VOICE_RECORDING_DISCLOSURE_VERSION: "2026-08"
+  OTLP_ENDPOINT: "http://otel-collector.observability.svc:4317"
+  LANGFUSE_HOST: "http://langfuse.observability.svc:3000"
+  # References (values come from ESO mounts, see externalsecrets.yaml)
+  DATABASE_URL: "file://database-url"
+  REDIS_URL: "file://redis-url"
+  CLIENT_HASH_SALT_REF: "file://client-hash-salt"
+  FORM_SPEC_SIGNING_KEY_REF: "file://formspec-hmac"
+  OBJECT_STORE_PROVIDER: "s3"
+  OBJECT_STORE_ENDPOINT: "https://s3.mx-central-1.amazonaws.com"
+  OBJECT_STORE_REGION: "mx-central-1"
+  OBJECT_STORE_BUCKET: "actinver-advisor-evidence-dev"
+  OBJECT_STORE_LOCK_MODE: "GOVERNANCE"   # COMPLIANCE in the prod overlay (ADR-0012)
+  OBJECT_STORE_ACCESS_KEY_REF: "file://object-store-access-key"
+  OBJECT_STORE_SECRET_KEY_REF: "file://object-store-secret-key"
+  SECRETS_FILE_ROOT: "/var/run/secrets/actinver"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: advisor-agent
+data:
+  SERVICE_ROLE: "agent"
+  SERVICE_NAME: "agent-orchestrator"
+  PUBLIC_BASE_URL: "https://api-dev.advisor.actinver.mx"
+  CORS_ORIGINS: '["https://app-dev.advisor.actinver.mx"]'
+  SVC_SUITABILITY_URL: "http://suitability-service:8443"
+  SVC_GUARDRAIL_URL: "http://guardrail-service:8443"
+  SVC_AUDIT_URL: "http://audit-service:8443"
+  SVC_TRANSACTION_URL: "http://transaction-service:8443"
+  AUTH_MODE: "oidc"
+  AUTH_ISSUER: "https://idp.actinver.mx/"
+  AUTH_AUDIENCE: "actinver-ai-advisor"
+  AUTH_JWKS_URL: "https://idp.actinver.mx/.well-known/jwks.json"
+  AUTH_DPOP_REQUIRED: "true"
+  CORE_PROVIDER: "http"
+  CORE_API_BASE_URL: "https://core.internal.actinver.local"
+  CORE_API_MTLS_CERT_PATH: "/etc/certs/agent.crt"
+  CORE_API_MTLS_KEY_PATH: "/etc/certs/agent.key"
+  CORE_API_CA_PATH: "/etc/certs/actinver-ca.pem"
+  LLM_PROVIDER: "vertex"
+  VERTEX_PROJECT_ID: "actinver-ai-dev"
+  VERTEX_LOCATION: "us-central1"
+  VOICE_PROVIDER: "google"
+  LIVEAVATAR_PROVIDER: "real"
+  LIVEAVATAR_IS_SANDBOX: "true"          # false only in prod
+  LIVEAVATAR_API_KEY_REF: "file://liveavatar-api-key"
+  LIVEAVATAR_MAX_CONCURRENT_SESSIONS: "100"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: advisor-suitability
+data:
+  SERVICE_ROLE: "suitability"
+  SERVICE_NAME: "suitability-service"
+  # Only this deployment mounts the verdict signing key (ADR-0005).
+  SUITABILITY_SIGNING_KEY_REF: "file://suitability-hmac"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: advisor-guardrail
+data:
+  SERVICE_ROLE: "guardrail"
+  SERVICE_NAME: "guardrail-service"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: advisor-audit
+data:
+  SERVICE_ROLE: "audit"
+  SERVICE_NAME: "audit-service"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: advisor-transaction
+data:
+  SERVICE_ROLE: "transaction"
+  SERVICE_NAME: "transaction-service"
+  SVC_SUITABILITY_URL: "http://suitability-service:8443"
+  SVC_AUDIT_URL: "http://audit-service:8443"
+  CORE_PROVIDER: "http"

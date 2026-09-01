@@ -24,7 +24,7 @@ Monorepo for the **Actinver** talking-head avatar:
 
 ```
 apps/web/        # Vite + React frontend (this app)
-services/agent/  # agent backend placeholder (Python / FastAPI / LangGraph, reserved)
+services/agent/  # agent backend (Python 3.12 / FastAPI / LangGraph / Gemini); docs in services/agent/docs
 ```
 
 - **HeyGen LiveAvatar** for video/voice output ([docs.liveavatar.com](https://docs.liveavatar.com/)), via `@heygen/liveavatar-web-sdk` (FULL mode)

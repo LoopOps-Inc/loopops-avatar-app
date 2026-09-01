@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: actinver-advisor
+  labels:
+    # Enforced Pod Security Standards: every pod is non-root, read-only,
+    # capability-less (docs/04-backend/02 §5 container hardening).
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+    # Service mesh sidecar injection (mTLS everywhere, SPIFFE identities).
+    istio-injection: enabled

@@ -1,0 +1,663 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Actinver AI Advisor - suitability-service",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/v1/suitability/evaluate": {
+      "post": {
+        "summary": "Evaluate",
+        "operationId": "evaluate_v1_suitability_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuitabilityReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/suitability/verify": {
+      "post": {
+        "summary": "Verify",
+        "operationId": "verify_v1_suitability_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuitabilityReport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/suitability/rulesets": {
+      "get": {
+        "summary": "Rulesets",
+        "operationId": "rulesets_v1_suitability_rulesets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Rulesets V1 Suitability Rulesets Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/suitability/rulesets/{version}": {
+      "get": {
+        "summary": "Ruleset",
+        "operationId": "ruleset_v1_suitability_rulesets__version__get",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Ruleset V1 Suitability Rulesets  Version  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "summary": "Healthz",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Healthz Healthz Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "summary": "Readyz",
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Readyz Readyz Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Complexity": {
+        "type": "string",
+        "enum": [
+          "simple",
+          "moderada",
+          "compleja"
+        ],
+        "title": "Complexity"
+      },
+      "ContextIn": {
+        "properties": {
+          "today": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string",
+                "format": "date"
+              }
+            ],
+            "title": "Today"
+          },
+          "amount": {
+            "type": "string",
+            "title": "Amount"
+          },
+          "portfolio_total": {
+            "type": "string",
+            "title": "Portfolio Total"
+          },
+          "current_weight_by_product": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Current Weight By Product"
+          },
+          "current_weight_by_asset_class": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Current Weight By Asset Class"
+          },
+          "liquid_pct": {
+            "type": "number",
+            "title": "Liquid Pct",
+            "default": 0.0
+          },
+          "diversification_limits": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Diversification Limits"
+          }
+        },
+        "type": "object",
+        "required": [
+          "today",
+          "amount",
+          "portfolio_total"
+        ],
+        "title": "ContextIn"
+      },
+      "EvaluateRequest": {
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "title": "Client Id"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/InvestorProfile"
+          },
+          "products": {
+            "items": {
+              "$ref": "#/components/schemas/ProductProfile"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Products"
+          },
+          "context": {
+            "$ref": "#/components/schemas/ContextIn"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_id",
+          "profile",
+          "products",
+          "context"
+        ],
+        "title": "EvaluateRequest"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InvestorProfile": {
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "risk_category": {
+            "$ref": "#/components/schemas/RiskCategory"
+          },
+          "horizon_months": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Horizon Months"
+          },
+          "knowledge_level": {
+            "$ref": "#/components/schemas/KnowledgeLevel"
+          },
+          "capacity_band": {
+            "type": "string",
+            "title": "Capacity Band",
+            "description": "Band label, never an absolute amount"
+          },
+          "objectives": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Objectives"
+          },
+          "permitted_currencies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Permitted Currencies"
+          },
+          "min_liquidity_pct": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Min Liquidity Pct",
+            "default": 0.0
+          },
+          "is_sophisticated": {
+            "type": "boolean",
+            "title": "Is Sophisticated",
+            "default": false
+          },
+          "assessed_at": {
+            "type": "string",
+            "format": "date",
+            "title": "Assessed At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date",
+            "title": "Expires At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile_id",
+          "version",
+          "risk_category",
+          "horizon_months",
+          "knowledge_level",
+          "capacity_band",
+          "assessed_at",
+          "expires_at"
+        ],
+        "title": "InvestorProfile",
+        "description": "Perfil del inversionista - DCGSI Art. 4, Anexo 3.\n\n``capacity_band`` is a band label; absolute net worth never reaches the\nmodel (docs/06-compliance/04 §9). Non-sophisticated is the default (Art. 2)."
+      },
+      "KnowledgeLevel": {
+        "type": "string",
+        "enum": [
+          "basico",
+          "intermedio",
+          "avanzado"
+        ],
+        "title": "KnowledgeLevel"
+      },
+      "ProductProfile": {
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "title": "Product Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "committee_version": {
+            "type": "integer",
+            "title": "Committee Version"
+          },
+          "risk_level": {
+            "$ref": "#/components/schemas/RiskLevel"
+          },
+          "complexity": {
+            "$ref": "#/components/schemas/Complexity"
+          },
+          "liquidity_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Liquidity Hours"
+          },
+          "min_holding_months": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Min Holding Months"
+          },
+          "minimum_investment": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Minimum Investment"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "MXN",
+              "USD",
+              "EUR"
+            ],
+            "title": "Currency"
+          },
+          "annual_cost_pct": {
+            "type": "number",
+            "title": "Annual Cost Pct"
+          },
+          "asset_class": {
+            "type": "string",
+            "title": "Asset Class"
+          },
+          "approved_at": {
+            "type": "string",
+            "format": "date",
+            "title": "Approved At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "product_id",
+          "name",
+          "committee_version",
+          "risk_level",
+          "complexity",
+          "liquidity_hours",
+          "min_holding_months",
+          "minimum_investment",
+          "currency",
+          "annual_cost_pct",
+          "asset_class",
+          "approved_at"
+        ],
+        "title": "ProductProfile",
+        "description": "Perfil del producto financiero - DCGSI Art. 4, Anexo 4, determined by\nthe product analysis committee (Art. 20). The model never writes any of it\n(control IS-07)."
+      },
+      "RiskCategory": {
+        "type": "string",
+        "enum": [
+          "conservador",
+          "moderado",
+          "crecimiento",
+          "agresivo"
+        ],
+        "title": "RiskCategory"
+      },
+      "RiskLevel": {
+        "type": "string",
+        "enum": [
+          "bajo",
+          "medio",
+          "alto"
+        ],
+        "title": "RiskLevel"
+      },
+      "SuitabilityEvaluation": {
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "title": "Product Id"
+          },
+          "product_profile_version": {
+            "type": "integer",
+            "title": "Product Profile Version"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/SuitabilityOutcome"
+          },
+          "rule_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule Id"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "product_profile_version",
+          "outcome",
+          "rule_id",
+          "rationale"
+        ],
+        "title": "SuitabilityEvaluation"
+      },
+      "SuitabilityOutcome": {
+        "type": "string",
+        "enum": [
+          "APTO",
+          "APTO_CON_ADVERTENCIA",
+          "NO_APTO"
+        ],
+        "title": "SuitabilityOutcome"
+      },
+      "SuitabilityReport": {
+        "properties": {
+          "verdict_id": {
+            "type": "string",
+            "title": "Verdict Id"
+          },
+          "ruleset_version": {
+            "type": "integer",
+            "title": "Ruleset Version"
+          },
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "profile_version": {
+            "type": "integer",
+            "title": "Profile Version"
+          },
+          "amount": {
+            "type": "string",
+            "title": "Amount",
+            "default": "0"
+          },
+          "evaluated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Evaluated At"
+          },
+          "evaluations": {
+            "items": {
+              "$ref": "#/components/schemas/SuitabilityEvaluation"
+            },
+            "type": "array",
+            "title": "Evaluations"
+          },
+          "signature": {
+            "type": "string",
+            "title": "Signature"
+          },
+          "signing_key_version": {
+            "type": "integer",
+            "title": "Signing Key Version",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "verdict_id",
+          "ruleset_version",
+          "profile_id",
+          "profile_version",
+          "evaluated_at",
+          "evaluations",
+          "signature"
+        ],
+        "title": "SuitabilityReport"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VerifyResponse": {
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "title": "Valid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "valid"
+        ],
+        "title": "VerifyResponse"
+      }
+    }
+  }
+}
