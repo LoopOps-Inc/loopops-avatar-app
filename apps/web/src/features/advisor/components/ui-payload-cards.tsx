@@ -46,7 +46,7 @@ function PortfolioSummaryCard({ payload }: { payload: PortfolioSummaryPayload })
       </div>
       <div className="flex items-center justify-between gap-2">
         <dt className="text-content-sub text-[11px] font-medium tracking-wide uppercase">
-          {t('advisor.as_of')}
+          {t('advisor.as_of_label')}
         </dt>
         <dd className="text-content-sub text-xs tabular-nums">{formatDate(payload.as_of)}</dd>
       </div>

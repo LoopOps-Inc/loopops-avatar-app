@@ -1,4 +1,4 @@
-import type { AdvisorService, AdvisorStreamEvent } from '../types';
+import type { AdvisorService, AdvisorStreamEvent } from './types';
 import { INTENT_PATTERNS, MOCK_TURNS, type MockTurn } from './mock-advisor-fixtures';
 
 type CreateMockAdvisorServiceOptions = {

@@ -4,6 +4,9 @@ Monorepo for the Actinver talking-head avatar: web frontend (HeyGen LiveAvatar +
 
 ```
 ├── apps/
+│   └── web/          # Vite + React 19 frontend
+├── services/
+│   └── agent/        # agent backend (Python 3.12 / FastAPI / LangGraph / Gemini) — see services/agent/README.md
 │   ├── web/          # Vite + React 19 frontend
 │   └── agent/        # Python BFF — see README.md + AGENTS.md (backend team)
 ├── packages/
@@ -29,10 +32,10 @@ Mirrors `../loopops-web-app` conventions. i18n via `apps/web/src/i18n` (es/en, `
 
 ```sh
 npm install
-cp apps/web/.env.example apps/web/.env
+cp apps/web/.env.example .env   # repo root — Vite loads env from here
 ```
 
-Set `LIVEAVATAR_API_KEY` in `apps/web/.env` (from https://app.liveavatar.com, Developers page). The Vite dev proxy injects it as `X-API-KEY`, so the key never reaches the client bundle.
+Set `LIVEAVATAR_API_KEY` in `.env` at the **repo root** (from https://app.liveavatar.com, Developers page). The Vite dev proxy injects it as `X-API-KEY`, so the key never reaches the client bundle.
 
 ## Run
 
@@ -79,6 +82,7 @@ For production, remove `is_sandbox`, swap in the Actinver avatar, and mint token
 │   │   ├── main.tsx           # entry point
 │   │   └── router.tsx         # TanStack Router tree
 │   └── index.html
+└── services/agent/        # agent backend: chat/voice API, suitability, guardrails, evidence (docker compose up)
 └── apps/agent/            # Python BFF (backend team)
 ```
 

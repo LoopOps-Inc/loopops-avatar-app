@@ -1,0 +1,512 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Actinver AI Advisor - guardrail-service",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/v1/guardrail/input": {
+      "post": {
+        "summary": "Check Input",
+        "operationId": "check_input_v1_guardrail_input_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InputResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/guardrail/scan": {
+      "post": {
+        "summary": "Scan",
+        "operationId": "scan_v1_guardrail_scan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/guardrail/output": {
+      "post": {
+        "summary": "Check Output",
+        "operationId": "check_output_v1_guardrail_output_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutputRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuardrailVerdict"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/guardrail/disclosures": {
+      "get": {
+        "summary": "Disclosures",
+        "operationId": "disclosures_v1_guardrail_disclosures_get",
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisclosuresResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/guardrail/dlp-ruleset": {
+      "get": {
+        "summary": "Dlp Ruleset",
+        "operationId": "dlp_ruleset_v1_guardrail_dlp_ruleset_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Dlp Ruleset V1 Guardrail Dlp Ruleset Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "summary": "Healthz",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Healthz Healthz Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "summary": "Readyz",
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Readyz Readyz Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DisclosureItem": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "version"
+        ],
+        "title": "DisclosureItem"
+      },
+      "DisclosuresResponse": {
+        "properties": {
+          "items": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DisclosureItem"
+            },
+            "type": "object",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "DisclosuresResponse"
+      },
+      "GuardrailAction": {
+        "type": "string",
+        "enum": [
+          "PASS",
+          "REWRITE",
+          "BLOCK"
+        ],
+        "title": "GuardrailAction"
+      },
+      "GuardrailVerdict": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/GuardrailAction"
+          },
+          "violations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Violations"
+          },
+          "redactions": {
+            "type": "integer",
+            "title": "Redactions",
+            "default": 0
+          },
+          "injection_score": {
+            "type": "number",
+            "title": "Injection Score",
+            "default": 0.0
+          },
+          "disclosures_injected": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Disclosures Injected"
+          },
+          "disclosure_versions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Disclosure Versions"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "GuardrailVerdict"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InputRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 20000,
+            "title": "Text"
+          },
+          "transcript_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript Confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "InputRequest"
+      },
+      "InputResponse": {
+        "properties": {
+          "verdict": {
+            "$ref": "#/components/schemas/GuardrailVerdict"
+          },
+          "redacted_text": {
+            "type": "string",
+            "title": "Redacted Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verdict",
+          "redacted_text"
+        ],
+        "title": "InputResponse"
+      },
+      "OutputRequest": {
+        "properties": {
+          "speech": {
+            "type": "string",
+            "maxLength": 20000,
+            "title": "Speech"
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent"
+          },
+          "locale": {
+            "type": "string",
+            "title": "Locale",
+            "default": "es-MX"
+          },
+          "register": {
+            "type": "string",
+            "title": "Register",
+            "default": "tu"
+          },
+          "provenance_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Provenance Keys"
+          },
+          "stripped_product_terms": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Stripped Product Terms"
+          },
+          "rewrite_attempts": {
+            "type": "integer",
+            "title": "Rewrite Attempts",
+            "default": 0
+          },
+          "max_rewrite_attempts": {
+            "type": "integer",
+            "title": "Max Rewrite Attempts",
+            "default": 2
+          },
+          "sentence_mode": {
+            "type": "boolean",
+            "title": "Sentence Mode",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "speech"
+        ],
+        "title": "OutputRequest"
+      },
+      "ScanRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 200000,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "ScanRequest"
+      },
+      "ScanResponse": {
+        "properties": {
+          "injection": {
+            "type": "boolean",
+            "title": "Injection"
+          }
+        },
+        "type": "object",
+        "required": [
+          "injection"
+        ],
+        "title": "ScanResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

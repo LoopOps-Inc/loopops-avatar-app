@@ -1,4 +1,4 @@
-import { Loader2, PhoneCall } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useTranslation } from '@/i18n';
 import { TinoMark } from './TinoMark';
 

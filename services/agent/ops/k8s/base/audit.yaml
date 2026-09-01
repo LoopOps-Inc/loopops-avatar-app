@@ -1,0 +1,145 @@
+# audit-service: WORM evidence writer, hash chain, spool, daily anchor
+# (ADR-0012). Its write path must survive the agent failing. Workload identity
+# grants s3:PutObject with object lock; no principal holds
+# s3:BypassGovernanceRetention.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: audit-service
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::000000000000:role/advisor-audit-worm-writer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audit-service
+  labels: { app: audit-service, zone: application }
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: audit-service }
+  template:
+    metadata:
+      labels: { app: audit-service, zone: application }
+    spec:
+      serviceAccountName: audit-service
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: audit
+          image: actinver-agent
+          args: ["serve", "--role", "audit", "--port", "8443"]
+          ports: [{ name: https, containerPort: 8443 }]
+          envFrom:
+            - configMapRef: { name: advisor-common }
+            - configMapRef: { name: advisor-audit }
+          volumeMounts:
+            - { name: secrets-common, mountPath: /var/run/secrets/actinver, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+          livenessProbe:
+            httpGet: { path: /healthz, port: https }
+          readinessProbe:
+            httpGet: { path: /readyz, port: https }
+          resources:
+            requests: { cpu: "200m", memory: "256Mi" }
+            limits: { cpu: "1", memory: "512Mi" }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+      volumes:
+        - name: secrets-common
+          secret: { secretName: advisor-common }
+        - name: tmp
+          emptyDir: { sizeLimit: 128Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: audit-service
+spec:
+  selector: { app: audit-service }
+  ports: [{ name: https, port: 8443, targetPort: https }]
+---
+# Daily head-hash anchor to a separate trust domain (EV-03) and spool drain.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: evidence-anchor
+spec:
+  schedule: "15 2 * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels: { app: audit-service, zone: application }
+        spec:
+          serviceAccountName: audit-service
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: anchor
+              image: actinver-agent
+              args: ["anchor"]
+              envFrom:
+                - configMapRef: { name: advisor-common }
+                - configMapRef: { name: advisor-audit }
+              volumeMounts:
+                - { name: secrets-common, mountPath: /var/run/secrets/actinver, readOnly: true }
+                - { name: tmp, mountPath: /tmp }
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: { drop: [ALL] }
+          volumes:
+            - name: secrets-common
+              secret: { secretName: advisor-common }
+            - name: tmp
+              emptyDir: {}
+---
+# Retention: checkpoints/threads 180 d, ARCO exports 90 d (docs/07-data-governance/02).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: retention
+spec:
+  schedule: "45 3 * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels: { app: audit-service, zone: application }
+        spec:
+          serviceAccountName: audit-service
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: retention
+              image: actinver-agent
+              args: ["retention"]
+              envFrom:
+                - configMapRef: { name: advisor-common }
+                - configMapRef: { name: advisor-audit }
+              volumeMounts:
+                - { name: secrets-common, mountPath: /var/run/secrets/actinver, readOnly: true }
+                - { name: tmp, mountPath: /tmp }
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: { drop: [ALL] }
+          volumes:
+            - name: secrets-common
+              secret: { secretName: advisor-common }
+            - name: tmp
+              emptyDir: {}

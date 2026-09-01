@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { UIComponent } from '@loopops/contracts';
 import { createMockAdvisorService } from './mock-advisor-service';
-import type { AdvisorStreamEvent } from '../types';
+import type { AdvisorStreamEvent } from './types';
 
 async function collect(stream: AsyncIterable<AdvisorStreamEvent>): Promise<AdvisorStreamEvent[]> {
   const events: AdvisorStreamEvent[] = [];

@@ -1,18 +1,16 @@
-import type {
-  SseCitationsEvent,
-  SseDoneEvent,
-  SseTokenEvent,
-  UIComponent,
-} from '@loopops/contracts';
+import type { UIComponent } from '@loopops/contracts';
+import type { SuggestionChip } from '@/mocks/schemas';
 
-/** Event shape the real SSE client will emit (mirrors the chat contract). */
-export type AdvisorStreamEvent =
-  | { event: 'token'; data: SseTokenEvent }
-  | { event: 'ui'; data: UIComponent }
-  | { event: 'citations'; data: SseCitationsEvent }
-  | { event: 'done'; data: SseDoneEvent };
+export type AdvisorMessageRole = 'user' | 'assistant';
 
-export interface AdvisorService {
-  sendTurn(message: string): AsyncIterable<AdvisorStreamEvent>;
-  sendGreeting?(): AsyncIterable<AdvisorStreamEvent>;
-}
+export type AdvisorMessage = {
+  id: string;
+  role: AdvisorMessageRole;
+  text: string;
+  uiPayload: UIComponent[];
+  chips?: SuggestionChip[];
+  timestamp: number;
+  streaming?: boolean;
+};
+
+export type AdvisorPhase = 'idle' | 'loading_session' | 'ready' | 'thinking' | 'error';

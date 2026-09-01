@@ -27,6 +27,8 @@ type UseLiveAvatarSessionResult = {
   stop: () => Promise<void>;
   attach: (element: HTMLMediaElement) => void;
   sendMessage: (message: string) => string;
+  /** Lip-sync the given text without invoking the vendor LLM. */
+  repeat: (message: string) => string;
   interrupt: () => void;
   keepAlive: () => Promise<void>;
   setMicMuted: (muted: boolean) => void;
@@ -199,6 +201,13 @@ export function useLiveAvatarSession(
     [session],
   );
 
+  const repeat = useCallback(
+    (message: string) => {
+      return session.repeat(message);
+    },
+    [session],
+  );
+
   const interrupt = useCallback(() => {
     return session.interrupt();
   }, [session]);
@@ -232,6 +241,7 @@ export function useLiveAvatarSession(
     stop,
     attach,
     sendMessage,
+    repeat,
     interrupt,
     keepAlive,
     setMicMuted,

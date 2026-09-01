@@ -1,0 +1,62 @@
+# guardrail-service: fail-closed input/output filters. Policy changes
+# independently of the agent (docs/04-backend/01 §2).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: guardrail-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardrail-service
+  labels: { app: guardrail-service, zone: application }
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: guardrail-service }
+  template:
+    metadata:
+      labels: { app: guardrail-service, zone: application }
+    spec:
+      serviceAccountName: guardrail-service
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: guardrail
+          image: actinver-agent
+          args: ["serve", "--role", "guardrail", "--port", "8443"]
+          ports: [{ name: https, containerPort: 8443 }]
+          envFrom:
+            - configMapRef: { name: advisor-common }
+            - configMapRef: { name: advisor-guardrail }
+          volumeMounts:
+            - { name: secrets-common, mountPath: /var/run/secrets/actinver, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+          livenessProbe:
+            httpGet: { path: /healthz, port: https }
+          readinessProbe:
+            httpGet: { path: /readyz, port: https }
+          resources:
+            requests: { cpu: "200m", memory: "256Mi" }
+            limits: { cpu: "1", memory: "512Mi" }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+      volumes:
+        - name: secrets-common
+          secret: { secretName: advisor-common }
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guardrail-service
+spec:
+  selector: { app: guardrail-service }
+  ports: [{ name: https, port: 8443, targetPort: https }]

@@ -1,0 +1,747 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Actinver AI Advisor - transaction-service",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/v1/step-up/challenge": {
+      "post": {
+        "summary": "Challenge",
+        "operationId": "challenge_v1_step_up_challenge_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChallengeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orders": {
+      "post": {
+        "summary": "Place Order",
+        "operationId": "place_order_v1_orders_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "summary": "Healthz",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Healthz Healthz Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "summary": "Readyz",
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Readyz Readyz Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChallengeRequest": {
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "title": "Client Id"
+          },
+          "form_id": {
+            "type": "string",
+            "title": "Form Id"
+          },
+          "amount_hash": {
+            "type": "string",
+            "title": "Amount Hash"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_id",
+          "form_id",
+          "amount_hash"
+        ],
+        "title": "ChallengeRequest"
+      },
+      "ChallengeResponse": {
+        "properties": {
+          "challenge_id": {
+            "type": "string",
+            "title": "Challenge Id"
+          },
+          "challenge": {
+            "type": "string",
+            "title": "Challenge"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "challenge_id",
+          "challenge",
+          "expires_at"
+        ],
+        "title": "ChallengeResponse"
+      },
+      "FormDisclosure": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "ack": {
+            "type": "boolean",
+            "title": "Ack",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "text"
+        ],
+        "title": "FormDisclosure"
+      },
+      "FormExecution": {
+        "properties": {
+          "cutoff_local": {
+            "type": "string",
+            "title": "Cutoff Local"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone",
+            "default": "America/Mexico_City"
+          },
+          "settlement": {
+            "type": "string",
+            "title": "Settlement"
+          },
+          "valuation": {
+            "type": "string",
+            "title": "Valuation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cutoff_local",
+          "settlement",
+          "valuation"
+        ],
+        "title": "FormExecution"
+      },
+      "FormField": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,40}$",
+            "title": "Key"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "money",
+              "select",
+              "boolean",
+              "date",
+              "text",
+              "acknowledgement"
+            ],
+            "title": "Type"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "default": true
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "MXN",
+                  "USD",
+                  "EUR"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "step": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step"
+          },
+          "help": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Help"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options"
+          },
+          "options_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^tool:[a-z_]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options Source"
+          },
+          "default": {
+            "title": "Default"
+          },
+          "max_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Length"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "type",
+          "label"
+        ],
+        "title": "FormField"
+      },
+      "FormProduct": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "risk_level": {
+            "$ref": "#/components/schemas/RiskLevel"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "MXN",
+              "USD",
+              "EUR"
+            ],
+            "title": "Currency"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "risk_level",
+          "currency"
+        ],
+        "title": "FormProduct"
+      },
+      "FormSpec": {
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "title": "Form Id"
+          },
+          "client_id": {
+            "type": "string",
+            "title": "Client Id"
+          },
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id"
+          },
+          "turn_id": {
+            "type": "string",
+            "title": "Turn Id"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "BUY",
+              "SELL",
+              "SWITCH",
+              "REDEEM",
+              "RECURRING"
+            ],
+            "title": "Operation"
+          },
+          "product": {
+            "$ref": "#/components/schemas/FormProduct"
+          },
+          "target_product": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FormProduct"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "suitability_verdict_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suitability Verdict Id"
+          },
+          "approved_amount": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/FormField"
+            },
+            "type": "array",
+            "title": "Fields"
+          },
+          "disclosures": {
+            "items": {
+              "$ref": "#/components/schemas/FormDisclosure"
+            },
+            "type": "array",
+            "title": "Disclosures"
+          },
+          "execution": {
+            "$ref": "#/components/schemas/FormExecution"
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Issued At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "signature": {
+            "type": "string",
+            "title": "Signature",
+            "default": ""
+          },
+          "signing_key_version": {
+            "type": "integer",
+            "title": "Signing Key Version",
+            "default": 1
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "form_id",
+          "client_id",
+          "thread_id",
+          "turn_id",
+          "operation",
+          "product",
+          "fields",
+          "disclosures",
+          "execution",
+          "issued_at",
+          "expires_at"
+        ],
+        "title": "FormSpec",
+        "description": "Signed, single-use, 10-minute TTL. ``client_id`` is bound into the\nsignature and compared with the token subject on submission."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Money": {
+        "properties": {
+          "amount": {
+            "type": "string",
+            "title": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "MXN",
+              "USD",
+              "EUR"
+            ],
+            "title": "Currency"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "amount",
+          "currency"
+        ],
+        "title": "Money",
+        "description": "Always ``{amount: decimal string, currency}`` - never a bare number\n(docs/04-backend/04 §1). A value without a currency is rejected, not\ndefaulted to MXN (docs/07-data-governance/03 §6)."
+      },
+      "OrderRequest": {
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "title": "Client Id"
+          },
+          "form_spec": {
+            "$ref": "#/components/schemas/FormSpec"
+          },
+          "values": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Values"
+          },
+          "acknowledgements": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Acknowledgements"
+          },
+          "step_up_assertion": {
+            "type": "string",
+            "title": "Step Up Assertion"
+          },
+          "challenge_id": {
+            "type": "string",
+            "title": "Challenge Id"
+          },
+          "suitability_verdict_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suitability Verdict Id"
+          },
+          "jkt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jkt"
+          },
+          "device_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_id",
+          "form_spec",
+          "values",
+          "step_up_assertion",
+          "challenge_id"
+        ],
+        "title": "OrderRequest"
+      },
+      "OrderResponse": {
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "title": "Order Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "settlement_date": {
+            "type": "string",
+            "title": "Settlement Date"
+          },
+          "evidence_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Id"
+          },
+          "idempotent_replay": {
+            "type": "boolean",
+            "title": "Idempotent Replay",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "order_id",
+          "status",
+          "settlement_date",
+          "evidence_id"
+        ],
+        "title": "OrderResponse"
+      },
+      "RiskLevel": {
+        "type": "string",
+        "enum": [
+          "bajo",
+          "medio",
+          "alto"
+        ],
+        "title": "RiskLevel"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

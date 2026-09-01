@@ -9,7 +9,8 @@ function detectLocale(): Locale {
   if (typeof window === 'undefined') return DEFAULT_LOCALE;
   const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY);
   if (stored && (SUPPORTED_LOCALES as string[]).includes(stored)) return stored as Locale;
-  return window.navigator.language?.toLowerCase().startsWith('en') ? 'en' : DEFAULT_LOCALE;
+  // POC: Spanish by default (es-MX). English via setLocale() for dev/tests only.
+  return DEFAULT_LOCALE;
 }
 
 let currentLocale = detectLocale();

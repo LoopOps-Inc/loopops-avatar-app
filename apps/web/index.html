@@ -3,17 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="description" content="Actinver talking-head avatar web app" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="description" content="Tino, asesor con avatar de Actinver" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#2f2f2f" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&family=Poppins:wght@500;600;700&family=Public+Sans:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@400;500;600&family=Public+Sans:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
-    <title>LoopOps Avatar</title>
+    <title>Actinver · Tino</title>
+    <script>
+      (function () {
+        try {
+          var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (dark) document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="bg-surface text-content min-h-dvh antialiased">
     <div id="root"></div>

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { ConnectionQuality, SessionState } from '@heygen/liveavatar-web-sdk';
 import type { EmbedEvent } from '@loopops/contracts';
-import { useAdvisorChat } from '@/features/advisor/hooks/use-advisor-chat';
+import { useAdvisorChat } from '../hooks/use-advisor-chat';
 import { useTranslation } from '@/i18n';
 import { sessionStateClass, sessionStateLabel } from '../lib/session-status';
 import { useLiveAvatarSession } from '../hooks/use-liveavatar-session';

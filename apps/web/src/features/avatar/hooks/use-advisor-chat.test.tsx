@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { useAdvisorChat } from './use-advisor-chat';
-import { createMockAdvisorService } from '../services/mock-advisor-service';
+import { createMockAdvisorService } from '@/features/advisor/services/mock-advisor-service';
 
 const service = createMockAdvisorService({ delayMs: 0 });
 

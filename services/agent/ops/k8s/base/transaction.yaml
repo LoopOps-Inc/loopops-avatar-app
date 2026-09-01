@@ -1,0 +1,66 @@
+# transaction-service: never shares a process with the agent - the agent is
+# untrusted input to it (ADR-0010). Re-derives limits, verifies step-up,
+# idempotent order placement against the OMS over mTLS (F12).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: transaction-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-service
+  labels: { app: transaction-service, zone: application }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: transaction-service }
+  template:
+    metadata:
+      labels: { app: transaction-service, zone: application }
+    spec:
+      serviceAccountName: transaction-service
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: transaction
+          image: actinver-agent
+          args: ["serve", "--role", "transaction", "--port", "8443"]
+          ports: [{ name: https, containerPort: 8443 }]
+          envFrom:
+            - configMapRef: { name: advisor-common }
+            - configMapRef: { name: advisor-transaction }
+          volumeMounts:
+            - { name: secrets-common, mountPath: /var/run/secrets/actinver, readOnly: true }
+            - { name: oms-mtls, mountPath: /etc/certs, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+          livenessProbe:
+            httpGet: { path: /healthz, port: https }
+          readinessProbe:
+            httpGet: { path: /readyz, port: https }
+          resources:
+            requests: { cpu: "200m", memory: "256Mi" }
+            limits: { cpu: "1", memory: "512Mi" }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+      volumes:
+        - name: secrets-common
+          secret: { secretName: advisor-common }
+        - name: oms-mtls
+          secret: { secretName: oms-mtls-client-cert }
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transaction-service
+spec:
+  selector: { app: transaction-service }
+  ports: [{ name: https, port: 8443, targetPort: https }]

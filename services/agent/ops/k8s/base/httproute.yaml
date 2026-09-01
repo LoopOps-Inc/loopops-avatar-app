@@ -1,0 +1,63 @@
+# Gateway API route for the mobile/web-facing surface (ADR-0011: Gateway API,
+# not provider ingress annotations). The API Gateway in front (Z0) terminates
+# TLS 1.3, introspects OIDC tokens and validates DPoP binding before this hop.
+#
+# Session affinity (docs/04-backend/01 §1): only the avatar-broker path needs
+# it. The broker holds an open vendor WebSocket per `avatar_session_id`, so
+# `/v1/avatar/{session_id}/audio` must always land on the pod that started the
+# session. Affinity is implemented at the gateway on the `avatar_session_id`
+# path segment (hash-based consistent routing); the BackendLBPolicy below is
+# the Gateway API expression of it and is provider-specific in practice
+# (Istio: DestinationRule consistentHash on the header/path; Envoy Gateway:
+# BackendTrafficPolicy). Everything else is freely schedulable.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: advisor-api
+spec:
+  parentRefs:
+    - name: actinver-edge-gateway
+      namespace: gateway-system
+  hostnames:
+    - api-dev.advisor.actinver.mx
+  rules:
+    - matches:
+        - path: { type: PathPrefix, value: /v1/avatar/ }
+      timeouts:
+        # Long-lived WebSocket; the gateway must not cut it at the default idle.
+        request: 0s
+      backendRefs:
+        - name: agent-orchestrator
+          port: 8443
+    - matches:
+        - path: { type: PathPrefix, value: /v1/threads/ }
+      timeouts:
+        # SSE turn stream: whole-turn hard ceiling is 30 s plus a margin.
+        request: 60s
+      backendRefs:
+        - name: agent-orchestrator
+          port: 8443
+    - matches:
+        - path: { type: PathPrefix, value: /v1/ }
+        - path: { type: Exact, value: /healthz }
+        - path: { type: Exact, value: /readyz }
+      backendRefs:
+        - name: agent-orchestrator
+          port: 8443
+---
+# Consistent hashing on the avatar session id for the audio WebSocket path.
+# Rendered by the mesh; kept here so the intent is versioned with the app.
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: agent-orchestrator-affinity
+spec:
+  host: agent-orchestrator.actinver-advisor.svc.cluster.local
+  trafficPolicy:
+    tls: { mode: ISTIO_MUTUAL }
+    portLevelSettings:
+      - port: { number: 8443 }
+        loadBalancer:
+          consistentHash:
+            # `X-Avatar-Session-Id` is set by the gateway from the path segment.
+            httpHeaderName: X-Avatar-Session-Id

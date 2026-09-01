@@ -1,0 +1,140 @@
+# Default-deny plus the explicit flows from
+# docs/01-architecture/02-network-architecture.md §4 (F05, F13, F14, F15, F16,
+# F18). Anything not listed here is denied, east-west included.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# DNS for everyone (kube-system CoreDNS).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+      ports: [{ protocol: UDP, port: 53 }, { protocol: TCP, port: 53 }]
+---
+# F03/F04: gateway → agent (bff-mobile + avatar-broker surface)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gateway-to-agent
+spec:
+  podSelector:
+    matchLabels: { app: agent-orchestrator }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: gateway-system }
+      ports: [{ protocol: TCP, port: 8443 }]
+---
+# F18: agent → fail-closed internal controls (and the executor)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-agent-to-controls
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [suitability-service, guardrail-service, audit-service, transaction-service]
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app: agent-orchestrator }
+      ports: [{ protocol: TCP, port: 8443 }]
+---
+# transaction-service → suitability (amount re-check) and audit (execution record)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-transaction-to-controls
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [suitability-service, audit-service]
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app: transaction-service }
+      ports: [{ protocol: TCP, port: 8443 }]
+---
+# F13/F14: application zone → data zone (PostgreSQL, Redis)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-app-to-data
+spec:
+  podSelector:
+    matchLabels: { zone: application }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: data }
+      ports: [{ protocol: TCP, port: 5432 }, { protocol: TCP, port: 6379 }]
+---
+# F16: telemetry push to the collector
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-otel-push
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: observability }
+      ports: [{ protocol: TCP, port: 4317 }]
+---
+# Internal east-west between our own pods (mesh mTLS, SPIFFE identities).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-intra-namespace-egress
+spec:
+  podSelector:
+    matchLabels: { zone: application }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector: {}
+      ports: [{ protocol: TCP, port: 8443 }]
+---
+# All external traffic goes through the egress proxy (Z4). No pod has a direct
+# internet route: a new external dependency is a change request
+# (infra/terraform/egress-allowlist.tf), not a config tweak.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-via-proxy-only
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [agent-orchestrator, audit-service, transaction-service]
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: egress }
+          podSelector:
+            matchLabels: { app: egress-proxy }
+      ports: [{ protocol: TCP, port: 3128 }]

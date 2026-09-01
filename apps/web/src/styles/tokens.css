@@ -37,6 +37,10 @@
   --gray-chat-date: #6d7382;
   --gray-chat-placeholder: #9398a5;
 
+  /* Actinver advisor CTA (gold + navy) */
+  --actinver-cta-bg: #f0ca4d;
+  --actinver-cta-fg: #041e41;
+
   --success-10: #eaf6ed;
   --success-50: #31a147;
 
@@ -63,4 +67,22 @@
   --radius-bubble: 20px;
   --radius-tail: 4px;
   --radius-full: 999px;
+
+  /* Alpha primitives (frosted glass overlays) */
+  --color-black-a-5: rgba(12, 12, 13, 0.05);
+  --color-black-a-10: rgba(12, 12, 13, 0.1);
+  --color-black-a-20: rgba(12, 12, 13, 0.2);
+  --color-black-a-40: rgba(12, 12, 13, 0.4);
+  --color-black-a-70: rgba(12, 12, 13, 0.7);
+  --color-black-a-80: rgba(12, 12, 13, 0.8);
+
+  --color-white-a-10: rgba(255, 255, 255, 0.1);
+  --color-white-a-20: rgba(255, 255, 255, 0.2);
+  --color-white-a-40: rgba(255, 255, 255, 0.4);
+  --color-white-a-70: rgba(255, 255, 255, 0.7);
+  --color-white-a-80: rgba(255, 255, 255, 0.8);
+  --color-white-a-90: rgba(255, 255, 255, 0.9);
+
+  --color-crystal-overlay: color-mix(in srgb, var(--neutral-55) 55%, transparent);
+  --color-crystal-overlay-strong: color-mix(in srgb, var(--neutral-55) 80%, transparent);
 }

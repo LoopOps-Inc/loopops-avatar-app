@@ -52,7 +52,7 @@ Ported from **loopops-web-app** for brand consistency across LoopOps and Actinve
 | `text-error` / `bg-error`                | `#C53F3F`             | Error status              |
 | `text-warning` / `bg-warning`            | `#A48823`             | Warning status            |
 
-Dark mode inverts surface/content via the `.dark` class on a root element.
+Dark mode inverts surface/content via the `.dark` class on a root element. Use `.light` on a subtree when a screen must stay white/black regardless of system theme.
 
 ## Risk tier colors (investment UI)
 
