@@ -24,7 +24,7 @@ Both modes use the same Gemini agent backend and share session history. Adapted 
 App
 └── SessionProvider
     └── MainScreen
-        ├── AvatarView              ← HeyGen video surface
+        ├── AvatarView              ← LiveAvatar WebRTC video surface
         ├── ModeToggle              ← chat | voice
         ├── ChatPanel               ← visible in chat mode
         │   ├── MessageList
@@ -68,7 +68,7 @@ User input (text or speech)
 
 ### Multi-session history
 
-Per authenticated user. Sessions stored locally (AsyncStorage) until backend persistence is added. Auto-title from first user message.
+Per authenticated user. Sessions stored locally (localStorage) until backend persistence is added. Auto-title from first user message.
 
 ### Streaming replies
 
@@ -78,8 +78,8 @@ Show thinking indicator while agent runs tools. Stream tokens into message list.
 
 Agent can return structured actions:
 
-| Action type     | Mobile behavior                              |
-|-----------------|----------------------------------------------|
+| Action type     | App behavior                                 |
+| --------------- | -------------------------------------------- |
 | `send_prompt`   | Send a follow-up message                     |
 | `fill_composer` | Pre-fill composer text                       |
 | `open_form`     | Show transaction form (invest, sell, retire) |
@@ -95,8 +95,8 @@ Remember last mode per session. Default to chat on first launch.
 
 ## Gotchas
 
-- Voice mode must handle mic permissions (iOS `NSMicrophoneUsageDescription`, Android `RECORD_AUDIO`).
+- Voice mode must handle browser mic permissions (`getUserMedia` behind a user gesture). If installed-PWA mode is targeted, validate mic on iOS standalone PWAs first; Safari tabs work.
 - Do not block the UI while avatar video loads; show skeleton or last frame.
-- Streaming text and avatar speech can desync; prefer sending complete sentences to HeyGen for natural lip-sync.
+- Streaming text and avatar speech can desync; prefer sending complete sentences to the avatar for natural lip-sync.
 - Investment disclaimers appear below composer in chat mode and as overlay in voice mode.
 - Empty state copy uses i18n keys under `chat.*` namespace.

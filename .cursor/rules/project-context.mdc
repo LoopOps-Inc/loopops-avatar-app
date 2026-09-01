@@ -1,22 +1,24 @@
 ---
-description: LoopOps Avatar App — React Native + HeyGen + Actinver investment agent
+description: LoopOps Avatar App — Vite + React + LiveAvatar + Actinver investment agent
 alwaysApply: true
 ---
 
 # LoopOps Avatar App
 
-React Native mobile app for **Actinver** talking-head avatar. Not the LoopOps web app or marketing website.
+Web app for **Actinver** talking-head avatar. Not the LoopOps web app or marketing website.
 
 ## Stack
 
-- React Native 0.87, React 19, TypeScript
-- HeyGen **Live Avatar** ([docs.liveavatar.com](https://docs.liveavatar.com/))
+- Vite, React 19, TypeScript
+- TanStack Router (code-based tree in `src/router.tsx`)
+- Tailwind CSS v4 (`src/styles/tokens.css` + `global.css`)
+- HeyGen **LiveAvatar** Web SDK, FULL mode ([docs.liveavatar.com](https://docs.liveavatar.com/))
 - Backend: Python or TypeScript, LangChain / LangGraph, **Gemini** LLM
 - Investment tools: portfolio lookup, news scraping, risk-tier product search, guided transaction flows
 
 ## Interaction modes
 
-1. **Chat mode** — typed messages, text replies, optional avatar lip-sync
+1. **Chat mode** — typed messages, text replies, avatar lip-sync
 2. **Voice mode** — speech in/out via avatar session, hands-free conversation
 
 Both modes share the same agent backend and session context.
@@ -25,26 +27,17 @@ Both modes share the same agent backend and session context.
 
 ```
 src/
-├── theme/           # Design tokens (tokens.ts, getTheme)
+├── config/          # avatar + env config
+├── styles/          # tokens.css (primitives) + global.css (Tailwind wiring)
 ├── services/        # API client + backend calls
-└── features/
-    ├── avatar/      # HeyGen Live Avatar integration
-    ├── chat/        # Chat UI, composer, message list
-    └── voice/       # Voice capture + playback orchestration
-knowledge/           # Architecture docs (read before coding)
-DESIGN.md            # Agent-readable token mirror
+├── features/
+│   └── avatar/      # demo: components/, hooks/, types/
+├── router.tsx       # route tree, lazy routes from features
+└── main.tsx
 ```
 
 ## Commands
 
-```bash
-npm start            # Metro
-npm run ios
-npm run android
-npm test
-```
-
-## Sibling repos
-
-- `../loopops-web-app` — canonical design tokens and writing style
-- `../loopops-website` — ignore `.agent/rules/` (stale copies)
+- `npm run dev` — dev server (port 8080, `/liveavatar-api` proxy)
+- `npm run build` — typecheck + build
+- `npm run check` / `npm run lint` / `npm test`

@@ -1,0 +1,17 @@
+{
+  "name": "LoopOps Avatar",
+  "short_name": "Avatar",
+  "description": "Actinver talking-head avatar web app",
+  "start_url": "/demo",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

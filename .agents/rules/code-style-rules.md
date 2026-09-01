@@ -6,7 +6,7 @@ To ensure high code quality, AI agents and developers MUST adhere to the followi
 
 1. **No raw fetches in components:** All network calls MUST live in `src/services/` and use a shared API client. Components call hooks or services, never `fetch` directly.
 
-2. **Design tokens only:** Never hardcode hex colors or magic spacing in components. Import from `src/theme/tokens.ts` or use `getTheme()`.
+2. **Design tokens only:** Never hardcode hex colors or magic spacing in components. Use the semantic Tailwind utilities wired in `src/styles/global.css` (`bg-surface`, `text-content`, `bg-filled-dark`, etc.). Primitives live in `src/styles/tokens.css`.
 
 3. **Clean UI rendering:** When editing JSX/TSX, ensure no accidental text characters or typos are left outside React tags.
 

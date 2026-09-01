@@ -1,27 +1,25 @@
 ---
-description: React Native design tokens and semantic theme colors
+description: Tailwind design tokens and semantic utilities for the avatar app
 globs: "**/*.{tsx,ts}"
 alwaysApply: false
 ---
 
-# Design System (React Native)
+# Design System (Tailwind CSS v4)
 
 ## Tokens over magic values
 
 ```tsx
 // ✅ GOOD
-import { getTheme, spacing, radius } from './src/theme';
-
-const theme = getTheme(isDarkMode);
-<View style={{ backgroundColor: theme.colors.surface, padding: spacing[4], borderRadius: radius.sm }}>
+<button className="rounded-cta bg-filled-dark px-6 py-2 text-filled-dark-fg">Confirmar</button>
 
 // ❌ BAD
-<View style={{ backgroundColor: '#f5f5f5', padding: 18, borderRadius: 14 }}>
+<button className="rounded-[26.5px] bg-[#2f2f2f] px-6 py-2 text-[#fafafa]">Confirmar</button>
 ```
 
 ## Key files
 
-- `src/theme/tokens.ts` — primitives + `getTheme()`
+- `src/styles/tokens.css` — color/radius primitives as CSS variables
+- `src/styles/global.css` — semantic mapping + `@theme inline` Tailwind wiring
 - `DESIGN.md` — agent-readable token mirror (synced from loopops-web-app)
 - `knowledge/design-system.md` — usage rules
 
@@ -29,32 +27,5 @@ const theme = getTheme(isDarkMode);
 
 > **Primary action color is BLACK (filled-dark), not blue.**
 
-- Primary buttons: `theme.colors.filledDark` bg + `theme.colors.filledDarkFg` text
-- Brand blue (`#0431C0`): links, accents, focus — never primary CTAs
-
-## Semantic colors (prefer these)
-
-| Token | Use for |
-| ----- | ------- |
-| `surface` | Main backgrounds |
-| `surfaceSub` | Secondary panels |
-| `content` | Primary text |
-| `contentSub` | Secondary text |
-| `contentMuted` | Placeholders, captions |
-| `accent` | Brand blue highlights |
-| `filledDark` | Primary CTA buttons |
-| `success` / `error` / `warning` | Status |
-
-## Spacing and radius
-
-4px grid: `spacing[1]` (4) through `spacing[8]` (32). Radius: `radius.xs` (8), `radius.sm` (16), `radius.md` (24), `radius.full` (999).
-
-## Typography
-
-- Headings: Funnel Display (load when custom fonts are added)
-- Body: Public Sans / system default
-- Scale: `fontSize.xs` (8) through `fontSize['4xl']` (32)
-
-## Ask before
-
-Adding new tokens, changing semantic colors, or introducing a UI library.
+Primary CTAs: `bg-filled-dark` + `text-filled-dark-fg`.
+Blue (`bg-accent` / `text-accent`) is for links and brand accents only.

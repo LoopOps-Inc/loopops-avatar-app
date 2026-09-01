@@ -9,78 +9,77 @@ source: ../loopops-web-app/knowledge/design-system.md
 
 ## Overview
 
-Ported from **loopops-web-app** for brand consistency across LoopOps and Actinver avatar experiences. Implemented in React Native via `src/theme/tokens.ts` instead of Tailwind.
+Ported from **loopops-web-app** for brand consistency across LoopOps and Actinver avatar experiences. Implemented with **Tailwind CSS v4**: primitives in `src/styles/tokens.css`, semantic mapping and `@theme inline` wiring in `src/styles/global.css`.
 
-**Spacing:** 4px grid (`spacing[1]` = 4px through `spacing[8]` = 32px).
+**Spacing:** 4px grid (Tailwind default scale aligns).
 
-**Typography:** Funnel Display (headings), Public Sans (body). Load custom fonts when added to the project.
+**Typography:** Funnel Display (headings), Public Sans (body). Loaded in `index.html`.
 
 ## Checklist — every component and screen
 
-1. **Tokens first** — import from `src/theme/tokens.ts`, never hardcode hex
-2. **i18n always** — every user-facing string uses `t('namespace.key')`
-3. **Theme-aware** — use `getTheme(isDarkMode)` semantic colors
+1. **Tokens first** — use semantic Tailwind utilities (`bg-surface`, `text-content-sub`...), never hardcode hex
+2. **i18n always** — every user-facing string uses `t('namespace.key')` (pending i18n wiring)
+3. **Theme-aware** — semantic classes flip automatically in dark mode via the `.dark` class
 
 ## Primary color rule — MANDATORY
 
 > **The primary action color is BLACK (filled-dark), not blue.**
 
-- Primary buttons: `theme.colors.filledDark` + `theme.colors.filledDarkFg`
-- `filledDark` = `#2F2F2F` light / `#F0F0F0` dark
+- Primary buttons: `bg-filled-dark` + `text-filled-dark-fg` (+ `rounded-cta`)
+- `filled-dark` = `#2F2F2F` light / `#F0F0F0` dark
 - Brand blue `#0431C0` is for links, accents, and brand moments only
 
 ```tsx
 // ✅ Primary action
-<Pressable style={{ backgroundColor: theme.colors.filledDark }}>
-  <Text style={{ color: theme.colors.filledDarkFg }}>Confirmar</Text>
-</Pressable>
+<button className="rounded-cta bg-filled-dark px-6 py-2 text-filled-dark-fg">Confirmar</button>
 
 // ❌ Never use accent blue for primary CTAs
-<Pressable style={{ backgroundColor: theme.colors.accent }}>
+<button className="rounded-cta bg-accent px-6 py-2 text-accent-fg">Confirmar</button>
 ```
 
-## Semantic colors
+## Semantic utilities
 
-| Token | Light | Use for |
-| ----- | ----- | ------- |
-| `surface` | `#FFFFFF` | Main backgrounds |
-| `surfaceSub` | `#F5F5F5` | Secondary panels |
-| `content` | `#0F0F0F` | Primary text |
-| `contentSub` | `#525252` | Secondary text |
-| `contentMuted` | `#BEBEBE` | Placeholders |
-| `accent` | `#0431C0` | Brand links, highlights |
-| `outline` | `#EEEEEE` | Borders |
-| `success` | `#31A147` | Positive status |
-| `error` | `#C53F3F` | Error status |
-| `warning` | `#A48823` | Warning status |
+| Class                                    | Light                 | Use for                   |
+| ---------------------------------------- | --------------------- | ------------------------- |
+| `bg-surface` / `text-content`            | `#FFFFFF` / `#0F0F0F` | Main backgrounds and text |
+| `bg-surface-sub`                         | `#F5F5F5`             | Secondary panels          |
+| `text-content-sub`                       | `#525252`             | Secondary text            |
+| `text-content-muted`                     | `#BEBEBE`             | Placeholders              |
+| `bg-filled-dark` + `text-filled-dark-fg` | `#2F2F2F` / `#FAFAFA` | Primary CTAs              |
+| `text-accent` / `bg-accent`              | `#0431C0`             | Brand links, highlights   |
+| `border-outline`                         | `#EEEEEE`             | Borders                   |
+| `text-success` / `bg-success`            | `#31A147`             | Positive status           |
+| `text-error` / `bg-error`                | `#C53F3F`             | Error status              |
+| `text-warning` / `bg-warning`            | `#A48823`             | Warning status            |
 
-Dark mode inverts surface/content via `getTheme(true)`.
+Dark mode inverts surface/content via the `.dark` class on a root element.
 
 ## Risk tier colors (investment UI)
 
-| Tier | Token | Color |
-| ---- | ----- | ----- |
-| Low | `success` | Green |
-| Medium | `warning` | Yellow/amber |
-| High | `error` | Red |
+| Tier   | Utility        | Color        |
+| ------ | -------------- | ------------ |
+| Low    | `text-success` | Green        |
+| Medium | `text-warning` | Yellow/amber |
+| High   | `text-error`   | Red          |
 
 ## Border radius
 
-| Token | Value | Use |
-| ----- | ----- | --- |
-| `radius.xs` | 8 | Cards, inputs |
-| `radius.sm` | 16 | Containers |
-| `radius.md` | 24 | Modals |
-| `radius.cta` | 26.5 | CTA buttons |
-| `radius.full` | 999 | Pills, avatars |
+| Tailwind class | Value  | Use            |
+| -------------- | ------ | -------------- |
+| `rounded-xs`   | 8px    | Cards, inputs  |
+| `rounded-sm`   | 16px   | Containers     |
+| `rounded-md`   | 24px   | Modals         |
+| `rounded-cta`  | 26.5px | CTA buttons    |
+| `rounded-full` | 999px  | Pills, avatars |
 
 ## Agent / avatar element colors
 
-`element1` through `element5` for distinct agent or portfolio segment colors (from LoopOps design system).
+`--element-1` through `--element-5` in `tokens.css` for distinct agent or portfolio segment colors (from LoopOps design system).
 
 ## Gotchas
 
-- React Native `StyleSheet.create` is static; use dynamic styles from `getTheme()` for theme-dependent colors.
-- Touch targets: minimum 44×44 pt for accessibility.
-- Test light and dark mode on both iOS and Android.
-- Full token reference: `DESIGN.md` and `src/theme/tokens.ts`.
+- Tailwind v4 theme values are wired with `@theme inline` in `global.css`; add new tokens as CSS variables in `tokens.css` first, then map them.
+- Touch targets: minimum 44×44 px (`min-h-11`) for accessibility on mobile.
+- Dark mode is system-driven (`prefers-color-scheme`, FOUC script in `index.html`) with no visible toggle for now; the semantic classes flip automatically. Test both themes.
+- Icons come from `lucide-react` (same family as loopops-web-app). Never use emojis as icons.
+- Full token reference: `DESIGN.md`.

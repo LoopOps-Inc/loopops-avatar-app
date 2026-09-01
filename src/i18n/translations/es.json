@@ -1,0 +1,23 @@
+{
+  "demo": {
+    "title": "Demo LiveAvatar",
+    "subtitle": "Avatar Wayne · ~1 min · sin créditos",
+    "start": "Iniciar sandbox",
+    "starting": "Iniciando...",
+    "connecting": "Conectando...",
+    "transcript": "Transcripción",
+    "input_label": "Mensaje para el avatar",
+    "input_placeholder": "Escribe un mensaje",
+    "empty_chat": "Escribe un mensaje",
+    "send": "Enviar",
+    "end": "Terminar",
+    "interrupt": "Interrumpir",
+    "keep_alive": "Keep alive",
+    "note": "Sandbox: sesión de ~1 minuto.",
+    "ended_by_server": "La sesión se cerró (~1 minuto). Puedes iniciar otra.",
+    "avatar_talking": "Avatar hablando",
+    "user": "Tú",
+    "avatar": "Avatar",
+    "error_unknown": "Error desconocido"
+  }
+}

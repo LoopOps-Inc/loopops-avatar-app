@@ -1,0 +1,53 @@
+/*
+ * LoopOps / Actinver design token primitives.
+ * Source: DESIGN.md (synced from loopops-web-app).
+ * Semantic mapping and Tailwind wiring live in global.css.
+ */
+
+:root {
+  --neutral-0: #ffffff;
+  --neutral-5: #fafafa;
+  --neutral-10: #f5f5f5;
+  --neutral-15: #f0f0f0;
+  --neutral-20: #eeeeee;
+  --neutral-30: #e2e2e2;
+  --neutral-40: #bebebe;
+  --neutral-50: #9a9a9a;
+  --neutral-55: #7d7d7d;
+  --neutral-60: #525252;
+  --neutral-70: #2f2f2f;
+  --neutral-80: #1a1a1a;
+  --neutral-90: #0f0f0f;
+
+  --brand-accent-0: #dfe5f9;
+  --brand-accent-5: #eaeefb;
+  --brand-accent-20: #c6d1f2;
+  --brand-accent-50: #0431c0;
+  --brand-accent-60: #021d73;
+  --brand-accent-70: #011050;
+
+  --success-10: #eaf6ed;
+  --success-50: #31a147;
+
+  --error-10: #f6e4e4;
+  --error-50: #c53f3f;
+
+  --warning-10: #f0ead1;
+  --warning-50: #a48823;
+
+  --info-10: #dfe5f9;
+  --info-50: #6581d9;
+
+  --element-1: #306ee1;
+  --element-2: #40ad82;
+  --element-3: #dd9b25;
+  --element-4: #e7823f;
+  --element-5: #d856a8;
+
+  --radius-xs: 8px;
+  --radius-sm: 16px;
+  --radius-md: 24px;
+  --radius-lg: 32px;
+  --radius-cta: 26.5px;
+  --radius-full: 999px;
+}

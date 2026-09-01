@@ -1,0 +1,80 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
+   SEMANTIC THEME
+   Light/dark via CSS custom properties.
+   ============================================================ */
+
+:root {
+  --bg-surface: var(--neutral-0);
+  --bg-surface-sub: var(--neutral-10);
+  --text-content: var(--neutral-90);
+  --text-content-sub: var(--neutral-60);
+  --text-content-muted: var(--neutral-40);
+  --text-content-inverse: var(--neutral-0);
+  --bg-filled-dark: var(--neutral-70);
+  --text-filled-dark-fg: var(--neutral-5);
+  --border-outline: var(--neutral-20);
+  --bg-accent: var(--brand-accent-50);
+  --text-accent-fg: var(--neutral-0);
+  --color-success: var(--success-50);
+  --color-error: var(--error-50);
+  --color-warning: var(--warning-50);
+  --color-info: var(--info-50);
+}
+
+.dark {
+  --bg-surface: var(--neutral-70);
+  --bg-surface-sub: var(--neutral-80);
+  --text-content: var(--neutral-5);
+  --text-content-sub: var(--neutral-20);
+  --text-content-muted: var(--neutral-40);
+  --text-content-inverse: var(--neutral-90);
+  --bg-filled-dark: var(--neutral-15);
+  --text-filled-dark-fg: var(--neutral-90);
+  --border-outline: var(--neutral-60);
+  --bg-accent: var(--brand-accent-50);
+  --text-accent-fg: var(--neutral-0);
+}
+
+/* @theme inline maps CSS vars to Tailwind utility classes. */
+@theme inline {
+  --color-surface: var(--bg-surface);
+  --color-surface-sub: var(--bg-surface-sub);
+  --color-content: var(--text-content);
+  --color-content-sub: var(--text-content-sub);
+  --color-content-muted: var(--text-content-muted);
+  --color-content-inverse: var(--text-content-inverse);
+  --color-outline: var(--border-outline);
+  --color-accent: var(--bg-accent);
+  --color-accent-fg: var(--text-accent-fg);
+  --color-filled-dark: var(--bg-filled-dark);
+  --color-filled-dark-fg: var(--text-filled-dark-fg);
+  --color-success: var(--color-success);
+  --color-error: var(--color-error);
+  --color-warning: var(--color-warning);
+  --color-info: var(--color-info);
+
+  --font-heading: 'Funnel Display', sans-serif;
+  --font-body: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-body);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading);
+  }
+
+  :focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+}

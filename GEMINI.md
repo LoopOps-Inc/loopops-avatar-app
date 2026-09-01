@@ -12,12 +12,12 @@ Apply to user-facing copy (i18n, empty states, toasts, modals), knowledge docs, 
 
 ## Before you code
 
-| File | Read before… |
-| ---- | ------------ |
-| `knowledge/architecture.md` | Any structural change, new feature, backend contract |
-| `knowledge/chat-and-voice.md` | Chat UI, voice mode, streaming, session history |
-| `knowledge/heygen-live-avatar.md` | Avatar video, WebRTC, session lifecycle |
-| `knowledge/design-system.md` | Components, theme, dark mode |
-| `knowledge/writing-style.md` | User-facing copy |
+| File                              | Read before…                                         |
+| --------------------------------- | ---------------------------------------------------- |
+| `knowledge/architecture.md`       | Any structural change, new feature, backend contract |
+| `knowledge/chat-and-voice.md`     | Chat UI, voice mode, streaming, session history      |
+| `knowledge/heygen-live-avatar.md` | Avatar video, WebRTC, session lifecycle              |
+| `knowledge/design-system.md`      | Components, theme, dark mode                         |
+| `knowledge/writing-style.md`      | User-facing copy                                     |
 
 After completing a new feature, ask: **"Would you like me to document this in `knowledge/`?"**
