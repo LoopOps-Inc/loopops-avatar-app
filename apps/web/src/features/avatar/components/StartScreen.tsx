@@ -16,12 +16,12 @@ export function StartScreen({ starting, error, endedByServer, onStart }: StartSc
     <div className="pt-safe pb-safe relative flex h-full flex-col items-center justify-center gap-5 p-6">
       <div className="relative flex w-full flex-col items-center gap-4 text-center">
         <div className="bg-filled-dark flex w-full max-w-sm flex-col items-center gap-5 rounded-sm p-6">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full border border-[color:var(--brand-gold-bright)]/30 bg-[color:var(--brand-gold-bright)]/10">
-            <TinoMark className="h-8 w-8 text-[color:var(--brand-gold-bright)]" />
-          </div>
+          <img src="/tino-icon.png" alt="" className="h-12 w-12 shrink-0" aria-hidden="true" />
           <div>
-            <h1 className="font-heading text-2xl font-semibold text-white">{t('live.title')}</h1>
-            <p className="font-ui mt-1.5 text-sm font-medium text-[color:var(--brand-gold-bright)]">
+            <h1 className="font-heading text-2xl font-semibold text-[#041E41]">
+              {t('live.title')}
+            </h1>
+            <p className="font-ui mt-1.5 text-sm font-medium text-[#041E41]">
               {t('live.subtitle')}
             </p>
           </div>

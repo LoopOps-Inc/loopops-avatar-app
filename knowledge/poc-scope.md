@@ -7,10 +7,8 @@ This document defines what we build now versus what the BA reference architectur
 
 ## POC goal
 
-> A unified advisor screen where users chat with the Actinver agent (streamed text
-> and rich cards) and can turn a talking avatar on or off on the **same thread**.
-> HeyGen integration is validated in a separate `/demo` sandbox; the product route
-> is `/advisor` (embeddable via `?embed=1`).
+> A live session where users talk with Tino (HeyGen avatar) and chat on the same
+> screen. The product route is `/demo` (`/` redirects here).
 
 See [unified-advisor-avatar.md](./unified-advisor-avatar.md) for the full decision and phasing.
 
@@ -20,8 +18,8 @@ See [unified-advisor-avatar.md](./unified-advisor-avatar.md) for the full decisi
 | ---------------------- | ------------ | ----------------------------------------------------------------------- |
 | API contract           | Shared       | Done — `packages/contracts`                                             |
 | Backend (`apps/agent`) | Backend dev  | **Not started** — see [`apps/agent/README.md`](../apps/agent/README.md) |
-| Frontend (`apps/web`)  | Frontend dev | `/advisor` unified UI + mock domain data                                |
-| HeyGen sandbox         | Frontend dev | Done at `/demo` (internal only)                                         |
+| Frontend (`apps/web`)  | Frontend dev | `/demo` live session + mock domain data                                 |
+| HeyGen sandbox         | Frontend dev | Same `/demo` route                                                      |
 
 ## In scope
 
@@ -30,7 +28,7 @@ See [unified-advisor-avatar.md](./unified-advisor-avatar.md) for the full decisi
 | Contract      | Frozen v0 shapes in `packages/contracts` (TypeScript + Zod)        |
 | Backend       | FastAPI + LangGraph: sessions, chat SSE, mock tools (backend team) |
 | Split-channel | `speech` (narrative) + `ui_payload[]` (exact figures)              |
-| Frontend      | `/advisor` unified screen: chat, cards, avatar toggle, embed mode  |
+| Frontend      | `/demo` live session: chat, cards, avatar video                    |
 | Agent         | LangGraph: intent routing → tools → composer (backend team)        |
 | Avatar UI     | Mobile full-viewport layout; sandbox video in Phase 2a             |
 | Avatar speech | Agent `speech` → avatar broker → LITE lip-sync in Phase 2b         |

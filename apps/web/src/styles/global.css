@@ -12,8 +12,10 @@
   --text-content: var(--brand-ink);
   --text-content-sub: var(--gray-chat-meta);
   --text-content-muted: var(--gray-chat-placeholder);
+  --text-content-small: var(--chat-text-small);
   --text-content-inverse: var(--neutral-0);
   --text-content-faint: var(--gray-chat-date);
+  --text-icon-muted: var(--icon-muted);
   --bg-filled-dark: var(--brand-ink);
   --text-filled-dark-fg: var(--neutral-0);
   --border-outline: var(--gray-chat-border);
@@ -24,8 +26,14 @@
   --color-error: var(--error-50);
   --color-warning: var(--warning-50);
   --color-info: var(--info-50);
+  --bg-chat-user: var(--chat-user-bg);
+  --text-chat-user-fg: var(--chat-user-fg);
+  --bg-chat-agent: var(--chat-agent-bg);
+  --border-chat-agent: var(--chat-agent-border);
   --bg-advisor-cta: var(--actinver-cta-bg);
   --text-advisor-cta-fg: var(--actinver-cta-fg);
+  --bg-advisor-submit: var(--actinver-submit-bg);
+  --text-advisor-submit-fg: var(--actinver-submit-fg);
 }
 
 .dark {
@@ -49,13 +57,21 @@
   --bg-surface-sub: var(--neutral-10);
   --text-content: var(--neutral-90);
   --text-content-sub: var(--neutral-60);
-  --text-content-muted: var(--neutral-40);
+  --text-content-muted: var(--gray-chat-placeholder);
+  --text-content-small: var(--chat-text-small);
   --text-content-inverse: var(--neutral-0);
+  --text-icon-muted: var(--icon-muted);
   --bg-filled-dark: var(--neutral-70);
   --text-filled-dark-fg: var(--neutral-5);
   --border-outline: var(--neutral-20);
+  --bg-chat-user: var(--chat-user-bg);
+  --text-chat-user-fg: var(--chat-user-fg);
+  --bg-chat-agent: var(--chat-agent-bg);
+  --border-chat-agent: var(--chat-agent-border);
   --bg-advisor-cta: var(--actinver-cta-bg);
   --text-advisor-cta-fg: var(--actinver-cta-fg);
+  --bg-advisor-submit: var(--actinver-submit-bg);
+  --text-advisor-submit-fg: var(--actinver-submit-fg);
 }
 
 /* @theme inline maps CSS vars to Tailwind utility classes. */
@@ -65,8 +81,10 @@
   --color-content: var(--text-content);
   --color-content-sub: var(--text-content-sub);
   --color-content-muted: var(--text-content-muted);
+  --color-content-small: var(--text-content-small);
   --color-content-faint: var(--text-content-faint);
   --color-content-inverse: var(--text-content-inverse);
+  --color-icon-muted: var(--text-icon-muted);
   --color-outline: var(--border-outline);
   --color-outline-soft: var(--border-outline-soft);
   --color-accent: var(--bg-accent);
@@ -77,8 +95,14 @@
   --color-error: var(--color-error);
   --color-warning: var(--color-warning);
   --color-info: var(--color-info);
+  --color-chat-user: var(--bg-chat-user);
+  --color-chat-user-fg: var(--text-chat-user-fg);
+  --color-chat-agent: var(--bg-chat-agent);
+  --color-chat-agent-border: var(--border-chat-agent);
   --color-advisor-cta: var(--bg-advisor-cta);
   --color-advisor-cta-fg: var(--text-advisor-cta-fg);
+  --color-advisor-submit: var(--bg-advisor-submit);
+  --color-advisor-submit-fg: var(--text-advisor-submit-fg);
 
   --radius-xs: 8px;
   --radius-sm: 16px;

@@ -9,7 +9,7 @@ adapted-from: ../loopops-web-app/knowledge/chat.md
 
 ## Context
 
-Users interact with the Actinver advisor on a **single screen** (`/advisor`). Chat is always available. The talking avatar is optional: users toggle it on to see and hear responses, off for text-only.
+Users interact with Tino on a **single screen** (`/demo`; `/` redirects here). Chat is always available. The talking avatar runs in the live session.
 
 Two input modes share the same `thread_id` (voice is Phase 3):
 
@@ -24,33 +24,30 @@ Both modes use the Actinver LangGraph agent. The avatar is an output channel, no
 
 ```
 App
-└── AdvisorSessionProvider          ← thread_id, messages, SSE handlers
-    └── AdvisorPage
-        ├── AvatarPanel             ← optional; WebRTC video + session controls
-        ├── MessageList             ← always visible
-        │   ├── MessageBubble
-        │   └── UIPayloadRenderer   ← portfolio cards, attribution, sources
-        ├── Composer
-        ├── AvatarToggle            ← on / off
-        └── VoiceControls           ← Phase 3; mic when voice mode selected
+└── LiveSessionRoute
+    ├── StartScreen
+    └── SessionPanel
+        ├── video surface
+        ├── ChatArea / ChatBubble
+        └── Composer
 ```
 
 ### File locations (target)
 
 ```
-apps/web/src/features/advisor/
+apps/web/src/features/avatar/
 ├── components/
-│   ├── AdvisorPage.tsx
-│   ├── AvatarPanel.tsx
-│   ├── MessageList.tsx
-│   ├── Composer.tsx
-│   └── UIPayloadRenderer.tsx
+│   ├── LiveSessionScreen.tsx
+│   ├── SessionPanel.tsx
+│   ├── ChatArea.tsx
+│   ├── ChatBubble.tsx
+│   └── Composer.tsx
 ├── hooks/
 │   ├── use-advisor-chat.ts
-│   └── use-avatar-session.ts     ← adapted from features/avatar/
+│   └── use-liveavatar-session.ts
 └── types.ts
 
-apps/web/src/features/avatar/       ← /demo sandbox only until Phase 2a merge
+apps/web/src/features/advisor/     # shared cards + mock service
 ```
 
 ### Data flow
@@ -60,7 +57,7 @@ User input (text, or speech in Phase 3)
   → advisor-service (POST /v1/threads/{id}/messages)
   → backend agent (Gemini + tools)
   → SSE stream
-       ├─ token / ui → MessageList + UIPayloadRenderer
+       ├─ token / ui → MessageList + ui-payload-cards
        └─ speech (on done) → avatar-broker → LiveAvatar LITE → lip-sync
 
 Avatar toggle OFF: skip avatar-broker; chat and cards still work.
@@ -73,7 +70,7 @@ When `?embed=1` is set:
 - Full viewport (`100dvh`), no app nav
 - Avatar video fills the top when enabled
 - Chat docked at the bottom with safe-area padding
-- Same `AdvisorSessionProvider` state as standalone
+- Same live session state as standalone
 
 ## Patterns
 
@@ -83,7 +80,7 @@ Per authenticated user. Sessions stored locally (localStorage) until backend per
 
 ### Streaming replies
 
-Show thinking indicator while agent runs tools. Stream `token` events into the message list. On `done`, send the `speech` field to the avatar speak API (when avatar is on). Render `ui` events as cards via `UIPayloadRenderer`.
+Show thinking indicator while agent runs tools. Stream `token` events into the message list. On `done`, send the `speech` field to the avatar speak API (when avatar is on). Render `ui` events as cards via `ui-payload-cards`.
 
 ### Avatar toggle
 

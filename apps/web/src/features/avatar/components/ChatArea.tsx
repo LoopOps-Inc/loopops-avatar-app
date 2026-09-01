@@ -94,7 +94,7 @@ export function ChatArea({
             return (
               <Fragment key={`${msg.timestamp}-${i}`}>
                 {showDaySeparator && (
-                  <p className="font-heading text-content-faint py-1 text-left text-xs font-semibold">
+                  <p className="font-heading text-content-small py-1 text-left text-xs font-semibold">
                     {formatDayLabel(
                       msg.timestamp,
                       locale,
@@ -112,12 +112,12 @@ export function ChatArea({
       )}
 
       {isUserTalking && !loading && (
-        <p className="text-content-sub flex items-center justify-end gap-1.5 text-xs font-medium">
+        <p className="text-content-small flex items-center justify-end gap-1.5 text-xs font-medium">
           {t('live.listening')}
         </p>
       )}
       {micUnavailable && (
-        <p role="status" className="text-content-faint text-center text-xs">
+        <p role="status" className="text-content-small text-center text-xs">
           {t('live.mic_unavailable')}
         </p>
       )}
@@ -137,7 +137,7 @@ export function ChatArea({
               className={`flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
                 isMicMuted
                   ? 'border-error/40 bg-error/90 text-white'
-                  : 'border-outline bg-surface-sub text-content-sub hover:bg-outline/30'
+                  : 'border-outline bg-surface-sub text-icon-muted hover:bg-outline/30'
               }`}
             >
               {isMicMuted ? (

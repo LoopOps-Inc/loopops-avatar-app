@@ -48,4 +48,4 @@ uv run uvicorn actinver_agent.main:app --port 8000
 # curl session + SSE message (see README)
 ```
 
-When the API is ready, notify the frontend team so they can wire `/advisor` in `apps/web`.
+When the API is ready, notify the frontend team so they can wire SSE into `/demo` in `apps/web`.

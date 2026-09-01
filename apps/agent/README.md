@@ -184,7 +184,7 @@ The frontend team will:
 
 1. Proxy `/api` → `http://localhost:8000` in `apps/web/vite.config.ts`
 2. Add `apps/web/src/services/advisor-service.ts` (SSE client)
-3. Add `/advisor` route with `UIPayloadRenderer`
+3. Wire SSE into the `/demo` chat transcript
 
 Contract types: `import { ... } from '@loopops/contracts'`.
 

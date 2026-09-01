@@ -30,8 +30,7 @@ loopops-avatar-app/
 
 Solid lines = implemented today. Dashed = planned.
 
-`/advisor` is the product route (chat + optional avatar on one thread).
-`/demo` is an internal HeyGen FULL-mode sandbox. See [unified-advisor-avatar.md](./unified-advisor-avatar.md).
+`/demo` is the live session (HeyGen FULL-mode sandbox plus chat). `/` redirects to `/demo`. See [unified-advisor-avatar.md](./unified-advisor-avatar.md).
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -39,17 +38,17 @@ Solid lines = implemented today. Dashed = planned.
 │  ┌────────────────────────────────────────────────────────────────────┐  │
 │  │  apps/web  (Vite + React 19 + TanStack Router)                     │  │
 │  │                                                                    │  │
-│  │  ┌─────────────────────────────┐  ┌───────────┐  ┌───────────────┐ │  │
-│  │  │ /advisor  (product)         │  │ /demo     │  │ Theme + i18n  │ │  │
-│  │  │ chat + cards + avatar toggle│  │ dev only  │  │ styles/ i18n/ │ │  │
-│  │  │ ?embed=1 for webview        │  │ sandbox   │  └───────────────┘ │  │
-│  │  └──────────────┬──────────────┘  └─────┬─────┘                  │  │
-│  │                 │                         │                        │  │
-│  │                 │  SSE (token, ui, done)  │  FULL mode (vendor LLM)│  │
-│  │                 └────────────┐            │                        │  │
-│  │                              │            │                        │  │
-│  │  apps/web/src/services/      │            │  liveavatar-service    │  │
-│  │  advisor-service.ts          │            │                        │  │
+│  │  ┌─────────────────────────────┐                 ┌───────────────┐ │  │
+│  │  │ /  →  /demo                 │                 │ Theme + i18n  │ │  │
+│  │  │ live session + chat         │                 │ styles/ i18n/ │ │  │
+│  │  │ HeyGen FULL sandbox         │                 └───────────────┘ │  │
+│  │  └──────────────┬──────────────┘                                   │  │
+│  │                 │                                                  │  │
+│  │                 │  chat mock + FULL mode (vendor LLM)              │  │
+│  │                 └────────────┐                                     │  │
+│  │                              │                                     │  │
+│  │  apps/web/src/services/      │            liveavatar-service       │  │
+│  │  advisor-service.ts          │                                     │  │
 │  └──────────────────────────────┼────────────┼────────────────────────┘  │
 └─────────────────────────────────┼────────────┼────────────────────────────┘
                                   │ HTTPS      │ HTTPS
@@ -86,7 +85,7 @@ When `apps/agent` ships, every agent turn produces two outputs. Exact figures ne
                     └──────────┬──────────┬────────┘
                                │          │
               narrative ───────┘          └────── exact figures
-              (future: TTS → avatar)            (UIPayloadRenderer in /advisor)
+              (future: TTS → avatar)            (ui-payload-cards in chat)
 ```
 
 ### Target-state (post-POC)
@@ -105,16 +104,16 @@ See sibling repo `actinver-ai-advisor` for the full production architecture.
 
 ### Web layers
 
-| Layer                            | Status              | Responsibility                                                  |
-| -------------------------------- | ------------------- | --------------------------------------------------------------- |
-| `apps/web/src/features/advisor/` | In progress         | Unified screen: chat, cards, avatar toggle, embed layout        |
-| `apps/web/src/features/avatar/`  | Live (`/demo` only) | HeyGen sandbox spike; code migrates into advisor in Phase 2a    |
-| `apps/web/src/features/voice/`   | Planned (Phase 3)   | Mic capture, voice UI on same `thread_id`                       |
-| `apps/web/src/services/`         | Partial             | `advisor-service.ts` + `liveavatar-service.ts`                  |
-| `apps/web/src/styles/`           | Live                | Design tokens + Tailwind v4 wiring                              |
-| `apps/web/src/router.tsx`        | Live                | TanStack Router tree, lazy routes                               |
-| `packages/contracts/`            | Live                | Shared API types (`SessionResponse`, `UIComponent`, SSE events) |
-| `apps/agent/`                    | Planned             | Python BFF — see `apps/agent/README.md`                         |
+| Layer                            | Status               | Responsibility                                                  |
+| -------------------------------- | -------------------- | --------------------------------------------------------------- |
+| `apps/web/src/features/advisor/` | Partial              | Shared chat cards and mock advisor service                      |
+| `apps/web/src/features/avatar/`  | Live (`/` → `/demo`) | Live session screen, LiveAvatar SDK glue                        |
+| `apps/web/src/features/voice/`   | Planned (Phase 3)    | Mic capture, voice UI on same `thread_id`                       |
+| `apps/web/src/services/`         | Partial              | `advisor-service.ts` + `liveavatar-service.ts`                  |
+| `apps/web/src/styles/`           | Live                 | Design tokens + Tailwind v4 wiring                              |
+| `apps/web/src/router.tsx`        | Live                 | TanStack Router tree, lazy routes                               |
+| `packages/contracts/`            | Live                 | Shared API types (`SessionResponse`, `UIComponent`, SSE events) |
+| `apps/agent/`                    | Planned              | Python BFF — see `apps/agent/README.md`                         |
 
 ### Backend agent tools (POC v0, planned)
 

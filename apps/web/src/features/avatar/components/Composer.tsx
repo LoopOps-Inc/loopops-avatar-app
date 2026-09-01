@@ -25,29 +25,31 @@ export function Composer({ disabled = false, onSend }: ComposerProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-1 gap-2">
-      <label htmlFor="chat-input" className="sr-only">
-        {t('live.input_label')}
-      </label>
-      <input
-        ref={inputRef}
-        id="chat-input"
-        type="text"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder={t('live.input_placeholder')}
-        autoComplete="off"
-        enterKeyHint="send"
-        className="border-outline bg-surface-sub text-content placeholder:text-content-muted focus:border-content-muted min-h-11 flex-1 rounded-md border px-4 text-sm transition-colors focus:outline-none"
-      />
-      <button
-        type="submit"
-        disabled={disabled}
-        aria-label={t('live.send')}
-        className="bg-filled-dark text-filled-dark-fg flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        <Send className="h-4 w-4" aria-hidden="true" />
-      </button>
+    <form onSubmit={handleSubmit} className="flex flex-1">
+      <div className="flex h-14 min-h-11 w-full items-center rounded-full border border-[#9398A5] bg-[#F7F8FA] pr-1.5 pl-4">
+        <label htmlFor="chat-input" className="sr-only">
+          {t('live.input_label')}
+        </label>
+        <input
+          ref={inputRef}
+          id="chat-input"
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder={t('live.input_placeholder')}
+          autoComplete="off"
+          enterKeyHint="send"
+          className="placeholder:text-content-muted min-w-0 flex-1 border-[#E2E4E9] bg-transparent py-2 text-sm text-[#9398A5] focus:outline-none"
+        />
+        <button
+          type="submit"
+          disabled={disabled}
+          aria-label={t('live.send')}
+          className="bg-advisor-submit flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-white transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Send className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
     </form>
   );
 }

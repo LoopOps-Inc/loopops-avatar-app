@@ -28,6 +28,11 @@ colors:
   element-3: '#dd9b25'
   element-4: '#e7823f'
   element-5: '#d856a8'
+  brand-ink: '#041e41'
+  brand-gold-bright: '#f0ca4d'
+  chat-agent-bg: '#fffdf5'
+  chat-text-small: '#6082b6'
+  gray-chat-placeholder: '#9398a5'
   primary: '#0431c0'
 
 typography:
@@ -88,17 +93,29 @@ Synced from **loopops-web-app** `DESIGN.md` v1.1. See `knowledge/design-system.m
 
 Primary CTAs use **filled-dark** (`bg-filled-dark`), not brand blue. Blue is for links and accents only.
 
+Advisor navy send buttons use `bg-advisor-submit` with gold text (`text-advisor-submit-fg`). Gold chips keep navy text (`bg-advisor-cta` / `text-advisor-cta-fg`).
+
 ## Semantic mapping
 
-| Semantic      | Tailwind class       | Light           | Dark            |
-| ------------- | -------------------- | --------------- | --------------- |
-| surface       | `bg-surface`         | neutral-0       | neutral-70      |
-| surface-sub   | `bg-surface-sub`     | neutral-10      | neutral-80      |
-| content       | `text-content`       | neutral-90      | neutral-5       |
-| content-sub   | `text-content-sub`   | neutral-60      | neutral-20      |
-| content-muted | `text-content-muted` | neutral-40      | neutral-40      |
-| filled-dark   | `bg-filled-dark`     | neutral-70      | neutral-15      |
-| outline       | `border-outline`     | neutral-20      | neutral-60      |
-| accent        | `bg-accent`          | brand-accent-50 | brand-accent-50 |
+| Semantic          | Tailwind class             | Light                 | Dark              |
+| ----------------- | -------------------------- | --------------------- | ----------------- |
+| surface           | `bg-surface`               | neutral-0             | neutral-70        |
+| surface-sub       | `bg-surface-sub`           | gray-chat-bg          | neutral-80        |
+| content           | `text-content`             | brand-ink             | neutral-5         |
+| content-sub       | `text-content-sub`         | gray-chat-meta        | neutral-20        |
+| content-muted     | `text-content-muted`       | gray-chat-placeholder | neutral-40        |
+| content-small     | `text-content-small`       | chat-text-small       | chat-text-small   |
+| icon-muted        | `text-icon-muted`          | gray-chat-placeholder | inherit           |
+| filled-dark       | `bg-filled-dark`           | brand-ink             | neutral-15        |
+| outline           | `border-outline`           | gray-chat-border      | neutral-60        |
+| accent            | `bg-accent`                | brand-accent-50       | brand-accent-50   |
+| chat-user         | `bg-chat-user`             | brand-ink             | brand-ink         |
+| chat-user-fg      | `text-chat-user-fg`        | neutral-0             | neutral-0         |
+| chat-agent        | `bg-chat-agent`            | chat-agent-bg         | chat-agent-bg     |
+| chat-agent-border | `border-chat-agent-border` | brand-gold-bright     | brand-gold-bright |
+| advisor-cta       | `bg-advisor-cta`           | brand-gold-bright     | brand-gold-bright |
+| advisor-cta-fg    | `text-advisor-cta-fg`      | brand-ink             | brand-ink         |
+| advisor-submit    | `bg-advisor-submit`        | brand-ink             | brand-ink         |
+| advisor-submit-fg | `text-advisor-submit-fg`   | brand-gold-bright     | brand-gold-bright |
 
 Dark mode inverts via `.dark` class on the root element (see `apps/web/src/styles/global.css`).

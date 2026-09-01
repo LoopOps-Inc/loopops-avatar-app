@@ -31,8 +31,8 @@
 - `index.html` — app shell, fonts
 - `apps/web/src/main.tsx` — React root
 - `apps/web/src/router.tsx` — route tree (lazy routes from features)
-- `apps/web/src/features/advisor/` — unified advisor screen (chat + avatar toggle)
-- `apps/web/src/features/avatar/` — LiveAvatar sandbox (`/demo`, dev only)
+- `apps/web/src/features/avatar/` — live session at `/demo` (index redirects here)
+- `apps/web/src/features/advisor/` — shared chat cards and mock advisor service
 - `apps/web/src/services/` — API services (token minting)
 - `apps/web/src/config/avatar.ts` — Actinver + sandbox avatar config
 - `apps/agent/` — Python BFF handoff (`README.md`, `AGENTS.md`)

@@ -33,14 +33,14 @@ export function SessionRail({
 }: SessionRailProps) {
   const { t } = useTranslation();
   const actionButton =
-    'flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-outline bg-surface-sub text-content-sub transition-colors duration-200 hover:bg-outline/30';
+    'flex h-10 w-10 cursor-pointer items-center justify-center rounded-full  bg-[#041e41] text-icon-muted transition-colors duration-200 hover:bg-outline/30';
   return (
     <div className="flex items-center justify-between gap-2 px-4 pt-2">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <h2 className="font-heading text-content truncate text-sm font-semibold">
+        <h2 className="font-heading truncate text-sm font-semibold text-black">
           {t('live.title')}
         </h2>
-        <StatusPill>
+        {/* <StatusPill>
           <span aria-hidden="true" className={`h-2 w-2 rounded-full ${stateClass}`} />
           {stateText}
         </StatusPill>
@@ -53,7 +53,7 @@ export function SessionRail({
             />
             {t('live.avatar_talking')}
           </StatusPill>
-        )}
+        )} */}
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {isAvatarTalking && (
@@ -74,9 +74,9 @@ export function SessionRail({
           className={actionButton}
         >
           {isFullScreen ? (
-            <Minimize2 className="h-4 w-4" aria-hidden="true" />
+            <Minimize2 className="h-4 w-4 text-white" aria-hidden="true" />
           ) : (
-            <Maximize2 className="h-4 w-4" aria-hidden="true" />
+            <Maximize2 className="h-4 w-4 text-white" aria-hidden="true" />
           )}
         </button>
         <button
@@ -86,7 +86,7 @@ export function SessionRail({
           disabled={!canEnd}
           className={`${actionButton} border-error/40 bg-error/90 hover:bg-error disabled:cursor-not-allowed disabled:opacity-40`}
         >
-          <PhoneOff className="h-4 w-4" aria-hidden="true" />
+          <PhoneOff className="h-4 w-4 text-white" aria-hidden="true" />
         </button>
       </div>
     </div>

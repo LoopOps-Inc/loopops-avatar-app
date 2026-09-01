@@ -1,7 +1,6 @@
 import { UIPayloadCards } from '@/features/advisor/components/ui-payload-cards';
 import { useTranslation } from '@/i18n';
 import type { ChatMessage } from '../types';
-import { TinoMark } from './TinoMark';
 
 /** One transcript row: sender label, time, text and attached ui_payload cards. */
 export function ChatBubble({ message }: { message: ChatMessage }) {
@@ -16,22 +15,24 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
       <div
         className={`max-w-[85%] px-3.5 py-2 ${
           isUser
-            ? 'rounded-bubble bg-filled-dark text-filled-dark-fg'
-            : 'rounded-bubble rounded-bl-tail border-outline-soft bg-surface text-content border'
+            ? 'rounded-bubble bg-chat-user text-chat-user-fg'
+            : 'rounded-bubble rounded-bl-tail border-chat-agent-border bg-chat-agent text-content border'
         }`}
       >
         {!isUser && (
           <span className="mb-1 flex items-center gap-1.5">
-            <TinoMark className="h-4 w-4 text-[color:var(--brand-gold)]" />
+            <img src="/tino-icon.png" alt="" className="h-8 w-8 shrink-0" aria-hidden="true" />
             <span className="font-ui text-content text-sm font-bold">{t('live.avatar')}</span>
           </span>
         )}
-        {message.message && <p className="text-base leading-6 break-words">{message.message}</p>}
+        {message.message && (
+          <p className="leading-6 break-words text-[#041E41]">{message.message}</p>
+        )}
         {message.uiComponents && message.uiComponents.length > 0 && (
           <UIPayloadCards components={message.uiComponents} />
         )}
       </div>
-      <span className={`text-content-sub text-xs tabular-nums ${isUser ? 'pr-2' : 'pl-2'}`}>
+      <span className={`text-content-small text-xs tabular-nums ${isUser ? 'pr-2' : 'pl-2'}`}>
         {time}
       </span>
     </div>

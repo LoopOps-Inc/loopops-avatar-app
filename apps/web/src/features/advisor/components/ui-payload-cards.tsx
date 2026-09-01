@@ -48,7 +48,7 @@ function PortfolioSummaryCard({ payload }: { payload: PortfolioSummaryPayload })
         <dt className="text-content-sub text-[11px] font-medium tracking-wide uppercase">
           {t('advisor.as_of_label')}
         </dt>
-        <dd className="text-content-sub text-xs tabular-nums">{formatDate(payload.as_of)}</dd>
+        <dd className="text-content-small text-xs tabular-nums">{formatDate(payload.as_of)}</dd>
       </div>
     </dl>
   );
@@ -118,7 +118,7 @@ function CitationsCard({ payload }: { payload: CitationsPayload }) {
           <li key={item.title} className="text-content text-xs leading-relaxed">
             {item.title}
             {(item.source || item.published) && (
-              <span className="text-content-muted">
+              <span className="text-content-small">
                 {' '}
                 — {item.source}
                 {item.published ? `, ${formatDate(item.published)}` : ''}

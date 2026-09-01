@@ -12,14 +12,14 @@ skills: ~/.cursor/skills/heygen-skills
 
 The talking-head avatar uses **HeyGen LiveAvatar** in the web app. Docs: [docs.liveavatar.com](https://docs.liveavatar.com/).
 
-The avatar renders video of a digital presenter that lip-syncs **Actinver agent** responses. It is an output channel on `/advisor`, not a separate chat app. See [unified-advisor-avatar.md](./unified-advisor-avatar.md).
+The avatar renders video of a digital presenter that lip-syncs **Actinver agent** responses. It is an output channel on `/demo`, not a separate chat app. See [unified-advisor-avatar.md](./unified-advisor-avatar.md).
 
 LiveAvatar exposes three integration modes:
 
-| Mode     | POC usage                             | Who runs the LLM                |
-| -------- | ------------------------------------- | ------------------------------- |
-| **FULL** | `/demo` sandbox only                  | HeyGen (vendor LLM + TTS)       |
-| **LITE** | `/advisor` production path (Phase 2b) | Actinver agent via `apps/agent` |
+| Mode     | POC usage                              | Who runs the LLM                |
+| -------- | -------------------------------------- | ------------------------------- |
+| **FULL** | `/demo` sandbox only                   | HeyGen (vendor LLM + TTS)       |
+| **LITE** | Planned Actinver agent path (Phase 2b) | Actinver agent via `apps/agent` |
 
 Do not route product user messages through FULL mode. Use LITE so only our `speech` text goes to the avatar for lip-sync.
 
@@ -60,8 +60,8 @@ Live Avatar session tokens use `LIVEAVATAR_API_KEY` from [app.liveavatar.com](ht
 | -------------------------------------------------------------- | ------------------------------------------------------------- |
 | Backend (production)                                           | Create LiveAvatar LITE sessions, avatar-broker, hold API keys |
 | `apps/web/src/services/liveavatar-service.ts`                  | Mint session tokens (dev proxy), backend token calls          |
-| `apps/web/src/features/advisor/`                               | Product: `AvatarPanel`, toggle, embed layout (Phase 2a)       |
-| `apps/web/src/features/avatar/`                                | Dev sandbox at `/demo` only                                   |
+| `apps/web/src/features/advisor/`                               | Shared chat cards and mock advisor service                    |
+| `apps/web/src/features/avatar/`                                | Live session at `/demo`                                       |
 | `apps/web/src/features/avatar/hooks/use-liveavatar-session.ts` | React glue over the SDK (events → state); migrates to advisor |
 
 ### Session lifecycle
@@ -77,14 +77,14 @@ Live Avatar session tokens use `LIVEAVATAR_API_KEY` from [app.liveavatar.com](ht
 6. session.stop() on end / unmount
 ```
 
-**`/advisor` product path (LITE mode, Phase 2b):**
+**`/demo` product path (LITE mode, Phase 2b):**
 
 ```
-1. User toggles avatar ON on /advisor
+1. User starts a session on /demo
 2. Backend mints LITE session token via avatar-broker
 3. Web subscribes to WebRTC video
 4. On each advisor SSE `done` event, broker sends agent `speech` to avatar TTS
-5. User toggles OFF or leaves → session.stop(); chat thread persists
+5. User ends the session or leaves → session.stop(); chat thread persists
 ```
 
 ### Sandbox mode

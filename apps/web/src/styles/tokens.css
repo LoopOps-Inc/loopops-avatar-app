@@ -37,9 +37,19 @@
   --gray-chat-date: #6d7382;
   --gray-chat-placeholder: #9398a5;
 
+  /* Chat bubbles */
+  --chat-user-bg: var(--brand-ink);
+  --chat-user-fg: var(--neutral-0);
+  --chat-agent-bg: #fffdf5;
+  --chat-agent-border: var(--brand-gold-bright);
+  --chat-text-small: #6082b6;
+  --icon-muted: var(--gray-chat-placeholder);
+
   /* Actinver advisor CTA (gold + navy) */
   --actinver-cta-bg: #f0ca4d;
   --actinver-cta-fg: #041e41;
+  --actinver-submit-bg: #041e41;
+  --actinver-submit-fg: #f0ca4d;
 
   --success-10: #eaf6ed;
   --success-50: #31a147;

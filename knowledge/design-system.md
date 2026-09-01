@@ -26,7 +26,9 @@ Ported from **loopops-web-app** for brand consistency across LoopOps and Actinve
 > **The primary action color is BLACK (filled-dark), not blue.**
 
 - Primary buttons: `bg-filled-dark` + `text-filled-dark-fg` (+ `rounded-cta`)
-- `filled-dark` = `#2F2F2F` light / `#F0F0F0` dark
+- `filled-dark` = `#041E41` light / `#F0F0F0` dark
+- Advisor send buttons use `bg-advisor-submit` + `text-advisor-submit-fg` (navy + gold)
+- Gold chips keep navy text: `bg-advisor-cta` + `text-advisor-cta-fg`
 - Brand blue `#0431C0` is for links, accents, and brand moments only
 
 ```tsx
@@ -39,20 +41,36 @@ Ported from **loopops-web-app** for brand consistency across LoopOps and Actinve
 
 ## Semantic utilities
 
-| Class                                    | Light                 | Use for                   |
-| ---------------------------------------- | --------------------- | ------------------------- |
-| `bg-surface` / `text-content`            | `#FFFFFF` / `#0F0F0F` | Main backgrounds and text |
-| `bg-surface-sub`                         | `#F5F5F5`             | Secondary panels          |
-| `text-content-sub`                       | `#525252`             | Secondary text            |
-| `text-content-muted`                     | `#BEBEBE`             | Placeholders              |
-| `bg-filled-dark` + `text-filled-dark-fg` | `#2F2F2F` / `#FAFAFA` | Primary CTAs              |
-| `text-accent` / `bg-accent`              | `#0431C0`             | Brand links, highlights   |
-| `border-outline`                         | `#EEEEEE`             | Borders                   |
-| `text-success` / `bg-success`            | `#31A147`             | Positive status           |
-| `text-error` / `bg-error`                | `#C53F3F`             | Error status              |
-| `text-warning` / `bg-warning`            | `#A48823`             | Warning status            |
+| Class                                          | Light                 | Use for                            |
+| ---------------------------------------------- | --------------------- | ---------------------------------- |
+| `bg-surface` / `text-content`                  | `#FFFFFF` / `#041E41` | Main backgrounds and text          |
+| `bg-surface-sub`                               | `#F7F8FA`             | Secondary panels                   |
+| `text-content-sub`                             | `#4B5563`             | Secondary body text                |
+| `text-content-muted`                           | `#9398A5`             | Placeholders                       |
+| `text-content-small`                           | `#6082B6`             | Timestamps, captions, fine print   |
+| `text-icon-muted`                              | `#9398A5`             | Decorative icons                   |
+| `bg-filled-dark` + `text-filled-dark-fg`       | `#041E41` / `#FFFFFF` | Dark surfaces                      |
+| `bg-advisor-submit` + `text-advisor-submit-fg` | `#041E41` / `#F0CA4D` | Navy send buttons (gold icon/text) |
+| `bg-advisor-cta` + `text-advisor-cta-fg`       | `#F0CA4D` / `#041E41` | Gold chips and gold icon buttons   |
+| `bg-chat-user` + `text-chat-user-fg`           | `#041E41` / `#FFFFFF` | User chat bubbles                  |
+| `bg-chat-agent` + `border-chat-agent-border`   | `#FFFDF5` / `#F0CA4D` | Agent chat bubbles                 |
+| `text-accent` / `bg-accent`                    | `#0431C0`             | Brand links, highlights            |
+| `border-outline`                               | `#E2E4E9`             | Borders                            |
+| `text-success` / `bg-success`                  | `#31A147`             | Positive status                    |
+| `text-error` / `bg-error`                      | `#C53F3F`             | Error status                       |
+| `text-warning` / `bg-warning`                  | `#A48823`             | Warning status                     |
 
 Dark mode inverts surface/content via the `.dark` class on a root element. Use `.light` on a subtree when a screen must stay white/black regardless of system theme.
+
+## Chat bubbles
+
+| Role      | Classes                                         | Colors                 |
+| --------- | ----------------------------------------------- | ---------------------- |
+| User      | `bg-chat-user text-chat-user-fg`                | Navy `#041E41` / white |
+| Agent     | `bg-chat-agent border-chat-agent-border border` | Cream `#FFFDF5` / gold |
+| Timestamp | `text-content-small`                            | `#6082B6`              |
+
+Do not reuse `bg-filled-dark` for user bubbles. Chat tokens stay independent of CTA surfaces.
 
 ## Risk tier colors (investment UI)
 
