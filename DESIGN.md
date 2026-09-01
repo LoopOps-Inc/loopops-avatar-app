@@ -90,11 +90,11 @@ Primary CTAs use **filled-dark** (`neutral-70` / `#2F2F2F`), not brand blue. Blu
 
 ## Semantic mapping
 
-| Semantic | Light bg | Light text |
-| -------- | -------- | ---------- |
-| surface | neutral-0 | neutral-90 |
-| surface-sub | neutral-10 | neutral-60 |
-| filled-dark | neutral-70 | neutral-5 |
-| accent | brand-accent-50 | neutral-0 |
+| Semantic    | Light bg        | Light text |
+|-------------|-----------------|------------|
+| surface     | neutral-0       | neutral-90 |
+| surface-sub | neutral-10      | neutral-60 |
+| filled-dark | neutral-70      | neutral-5  |
+| accent      | brand-accent-50 | neutral-0  |
 
 Dark mode inverts via `getTheme(true)` in `src/theme/tokens.ts`.

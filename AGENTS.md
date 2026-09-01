@@ -9,6 +9,11 @@ Shared rules for **Cursor**, **GitHub Copilot**, **Claude Code**, **Gemini**, an
 | All agents | This file + `knowledge/` |
 | Cursor | `.cursor/rules/*.mdc` |
 | Gemini CLI / Gemini Assist | `GEMINI.md` |
+| HeyGen Skills | `~/.cursor/skills/heygen-skills` (avatar, video, translate) |
+
+## HeyGen Skills
+
+Installed at `~/.cursor/skills/heygen-skills` per [HeyGen install guide](https://github.com/heygen-com/skills/blob/master/INSTALL_FOR_AGENTS.md). Requires `HEYGEN_API_KEY` in `.env` or HeyGen MCP connected in Cursor. CLI: `~/.local/bin/heygen`.
 | Design tokens (agents) | `DESIGN.md` |
 | Design tokens (code) | `src/theme/tokens.ts` |
 

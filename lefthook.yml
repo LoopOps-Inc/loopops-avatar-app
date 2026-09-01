@@ -1,0 +1,18 @@
+pre-commit:
+  parallel: true
+  commands:
+    prettier:
+      glob: '*.{js,ts,jsx,tsx,json,css,md}'
+      run: npx prettier --write {staged_files}
+      stage_fixed: true
+
+    eslint:
+      glob: '*.{js,ts,jsx,tsx}'
+      run: npx eslint --fix {staged_files}
+
+# CI runs lint + check + build. Pre-push only verifies the production build once
+# (includes tsc) — avoids duplicate full-project typecheck on every commit/push.
+pre-push:
+  commands:
+    build:
+      run: npm run build
