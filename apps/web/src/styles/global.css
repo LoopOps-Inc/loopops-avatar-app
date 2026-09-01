@@ -24,6 +24,8 @@
   --color-error: var(--error-50);
   --color-warning: var(--warning-50);
   --color-info: var(--info-50);
+  --bg-advisor-cta: var(--actinver-cta-bg);
+  --text-advisor-cta-fg: var(--actinver-cta-fg);
 }
 
 .dark {
@@ -38,6 +40,22 @@
   --border-outline: var(--neutral-60);
   --bg-accent: var(--brand-accent-50);
   --text-accent-fg: var(--neutral-0);
+}
+
+/* Nested light scope. Wins over an ancestor .dark so a screen can stay white. */
+.light {
+  color-scheme: light;
+  --bg-surface: var(--neutral-0);
+  --bg-surface-sub: var(--neutral-10);
+  --text-content: var(--neutral-90);
+  --text-content-sub: var(--neutral-60);
+  --text-content-muted: var(--neutral-40);
+  --text-content-inverse: var(--neutral-0);
+  --bg-filled-dark: var(--neutral-70);
+  --text-filled-dark-fg: var(--neutral-5);
+  --border-outline: var(--neutral-20);
+  --bg-advisor-cta: var(--actinver-cta-bg);
+  --text-advisor-cta-fg: var(--actinver-cta-fg);
 }
 
 /* @theme inline maps CSS vars to Tailwind utility classes. */
@@ -57,6 +75,8 @@
   --color-error: var(--color-error);
   --color-warning: var(--color-warning);
   --color-info: var(--color-info);
+  --color-advisor-cta: var(--bg-advisor-cta);
+  --color-advisor-cta-fg: var(--text-advisor-cta-fg);
 
   --radius-xs: 8px;
   --radius-sm: 16px;
@@ -94,6 +114,7 @@
     isolation: isolate;
     background-color: var(--color-white-a-80);
     border: 1px solid var(--color-white-a-70);
+    color: var(--neutral-90);
     box-shadow:
       inset 1px 0 0 var(--color-white-a-80),
       inset -1px 0 0 var(--color-white-a-20),
@@ -110,7 +131,7 @@
     }
   }
 
-  /* Gray frost for overlays on video. Light crystal is for light surfaces only. */
+  /* Gray frost for status chrome on video. Light crystal is for inputs and chips. */
   .crystal-dark {
     isolation: isolate;
     background-color: var(--color-crystal-overlay);

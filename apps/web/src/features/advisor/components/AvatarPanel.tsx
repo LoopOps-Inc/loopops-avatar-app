@@ -1,19 +1,36 @@
-import { useEffect, useRef } from 'react';
-import { SessionState } from '@heygen/liveavatar-web-sdk';
+import { useCallback, useEffect, useRef } from 'react';
+import { SessionState, type ConnectionQuality } from '@heygen/liveavatar-web-sdk';
 import { useTranslation } from '@/i18n';
 import { useLiveAvatarSession } from '@/features/avatar/hooks/use-liveavatar-session';
 import { AvatarVideoSurface } from './AvatarVideoSurface';
 
 export type AvatarSpeakFn = (text: string) => void;
 
+export type AvatarSessionControls = {
+  sessionState: SessionState;
+  isConnected: boolean;
+  connectionQuality: ConnectionQuality;
+  isAvatarTalking: boolean;
+  interrupt: () => void;
+  keepAlive: () => void;
+  close: () => void;
+};
+
 type AvatarPanelProps = {
   sessionToken: string;
   active: boolean;
   onEnded: (reason: 'user' | 'server') => void;
   onSpeakReady?: (speak: AvatarSpeakFn | null) => void;
+  onSessionControlsChange?: (controls: AvatarSessionControls | null) => void;
 };
 
-export function AvatarPanel({ sessionToken, active, onEnded, onSpeakReady }: AvatarPanelProps) {
+export function AvatarPanel({
+  sessionToken,
+  active,
+  onEnded,
+  onSpeakReady,
+  onSessionControlsChange,
+}: AvatarPanelProps) {
   const { t } = useTranslation();
   const {
     sessionState,
@@ -60,12 +77,34 @@ export function AvatarPanel({ sessionToken, active, onEnded, onSpeakReady }: Ava
     }
   }, [active, sessionState, stop]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     userStoppedRef.current = true;
     void stop();
-  };
+  }, [stop]);
 
   const isConnected = sessionState === SessionState.CONNECTED;
+
+  useEffect(() => {
+    onSessionControlsChange?.({
+      sessionState,
+      isConnected,
+      connectionQuality,
+      isAvatarTalking,
+      interrupt: () => void interrupt(),
+      keepAlive: () => void keepAlive(),
+      close: handleClose,
+    });
+    return () => onSessionControlsChange?.(null);
+  }, [
+    connectionQuality,
+    handleClose,
+    interrupt,
+    isAvatarTalking,
+    isConnected,
+    keepAlive,
+    onSessionControlsChange,
+    sessionState,
+  ]);
 
   useEffect(() => {
     if (!isConnected) {

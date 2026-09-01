@@ -2,17 +2,24 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Loader2, Send, Sparkles, X } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
-import { CRYSTAL_DARK_CLASS, CRYSTAL_DARK_STRONG_CLASS } from '@/components/Crystal';
 import { appEnv } from '@/config/env';
 import { useEmbeddedMode } from '@/hooks/use-embedded-mode';
 import { useTranslation } from '@/i18n';
 import { useAdvisorAvatar } from '../hooks/use-advisor-avatar';
 import { useAdvisorChat } from '../hooks/use-advisor-chat';
-import { AvatarPanel, type AvatarSpeakFn } from './AvatarPanel';
+import { AvatarPanel, type AvatarSessionControls, type AvatarSpeakFn } from './AvatarPanel';
+import { AvatarSessionToolbar } from './AvatarSessionToolbar';
 import { ChatVideoSwitch } from './ChatVideoSwitch';
 import { UIPayloadRenderer } from './UIPayloadRenderer';
 
 const SUGGESTIONS = ['advisor.suggestion_portfolio', 'advisor.suggestion_market'] as const;
+
+const ADVISOR_CHIP_CLASS =
+  'bg-advisor-cta text-advisor-cta-fg hover:opacity-90 cursor-pointer rounded-full px-3 py-1.5 text-xs transition-opacity';
+const ADVISOR_SUGGESTION_CLASS =
+  'bg-advisor-cta text-advisor-cta-fg hover:opacity-90 cursor-pointer rounded-full px-4 py-2 text-sm transition-opacity disabled:cursor-not-allowed disabled:opacity-40';
+const ADVISOR_ICON_BUTTON_CLASS =
+  'bg-advisor-cta text-advisor-cta-fg flex shrink-0 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40';
 
 function MessageBubble({
   role,
@@ -37,14 +44,12 @@ function MessageBubble({
   if (overlay) {
     return (
       <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-        <div
-          className={`${CRYSTAL_DARK_CLASS} max-w-[min(100%,36rem)] rounded-2xl px-4 py-3 text-white`}
-        >
+        <div className="bg-surface text-content max-w-[min(100%,36rem)] rounded-2xl px-4 py-3">
           {text && (
-            <p className="text-sm leading-relaxed text-white/90">
+            <p className="text-sm leading-relaxed">
               {text}
               {streaming && (
-                <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-white/60 motion-reduce:animate-none" />
+                <span className="bg-content-sub ml-0.5 inline-block h-4 w-0.5 animate-pulse motion-reduce:animate-none" />
               )}
             </p>
           )}
@@ -56,7 +61,7 @@ function MessageBubble({
                   key={chip.id}
                   type="button"
                   onClick={() => onChipClick?.(chip.label)}
-                  className={`${CRYSTAL_DARK_CLASS} cursor-pointer rounded-full border border-white/20 px-3 py-1.5 text-xs text-white/90 transition-colors hover:bg-black/30`}
+                  className={ADVISOR_CHIP_CLASS}
                 >
                   {chip.label}
                 </button>
@@ -70,11 +75,7 @@ function MessageBubble({
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div
-        className={`max-w-[min(100%,36rem)] rounded-sm px-4 py-3 ${
-          isUser ? 'bg-filled-dark text-filled-dark-fg' : 'border-outline bg-surface-sub border'
-        }`}
-      >
+      <div className="border-outline bg-surface-sub text-content max-w-[min(100%,36rem)] rounded-sm border px-4 py-3">
         <p className="text-content-muted mb-1 text-[11px] font-medium tracking-wide uppercase">
           {isUser ? t('advisor.you') : t('advisor.assistant')}
         </p>
@@ -94,7 +95,7 @@ function MessageBubble({
                 key={chip.id}
                 type="button"
                 onClick={() => onChipClick?.(chip.label)}
-                className="border-outline bg-surface-sub text-content hover:bg-surface cursor-pointer rounded-full border px-3 py-1.5 text-xs transition-colors"
+                className={ADVISOR_CHIP_CLASS}
               >
                 {chip.label}
               </button>
@@ -134,10 +135,21 @@ export function AdvisorRoute() {
     onAssistantSpeech: handleAssistantSpeech,
   });
   const [input, setInput] = useState('');
+  const [sessionControls, setSessionControls] = useState<AvatarSessionControls | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   const videoMode = avatar.wantsAvatar || avatar.starting || Boolean(avatar.sessionToken);
   const viewportLayout = embedded || videoMode;
+
+  const handleSessionControlsChange = useCallback((controls: AvatarSessionControls | null) => {
+    setSessionControls(controls);
+  }, []);
+
+  useEffect(() => {
+    if (!videoMode) {
+      setSessionControls(null);
+    }
+  }, [videoMode]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -173,18 +185,14 @@ export function AdvisorRoute() {
       onModeChange={handleViewModeChange}
       loading={avatar.starting}
       disabled={loading}
-      variant={videoMode ? 'overlay' : 'surface'}
+      variant="surface"
     />
   );
 
   const messageList = (
     <>
       {loading && (
-        <div
-          className={`flex flex-1 items-center justify-center gap-2 text-sm ${
-            viewportLayout && videoMode ? 'text-white/70' : 'text-content-muted'
-          }`}
-        >
+        <div className="text-content-muted flex flex-1 items-center justify-center gap-2 text-sm">
           <Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden="true" />
           {t('advisor.loading')}
         </div>
@@ -192,13 +200,7 @@ export function AdvisorRoute() {
 
       {!loading && messages.length === 0 && (
         <div className="flex flex-col gap-3 py-6">
-          <p
-            className={`text-center text-sm ${
-              viewportLayout && videoMode ? 'text-white/70' : 'text-content-sub'
-            }`}
-          >
-            {t('advisor.empty')}
-          </p>
+          <p className="text-content-sub text-center text-sm">{t('advisor.empty')}</p>
           <div className="flex flex-wrap justify-center gap-2">
             {SUGGESTIONS.map((key) => (
               <button
@@ -206,11 +208,7 @@ export function AdvisorRoute() {
                 type="button"
                 onClick={() => handleSuggestion(key)}
                 disabled={!isReady || isThinking}
-                className={
-                  viewportLayout && videoMode
-                    ? `${CRYSTAL_DARK_CLASS} cursor-pointer rounded-full px-4 py-2 text-sm text-white/90 transition-colors hover:bg-black/30 disabled:cursor-not-allowed disabled:opacity-40`
-                    : 'border-outline bg-surface-sub text-content hover:bg-surface cursor-pointer rounded-full border px-4 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40'
-                }
+                className={ADVISOR_SUGGESTION_CLASS}
               >
                 {t(key)}
               </button>
@@ -267,8 +265,8 @@ export function AdvisorRoute() {
       onSubmit={handleSubmit}
       className={
         viewportLayout && videoMode
-          ? `${CRYSTAL_DARK_STRONG_CLASS} mx-3 mb-3 flex items-center gap-2 rounded-full px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]`
-          : 'border-outline bg-surface-sub flex items-center gap-1 rounded-full border p-1'
+          ? 'border-outline bg-surface mx-3 mb-3 flex items-center gap-2 rounded-full border px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]'
+          : 'border-outline bg-surface flex items-center gap-1 rounded-full border p-1'
       }
     >
       <label htmlFor="advisor-input" className="sr-only">
@@ -284,8 +282,8 @@ export function AdvisorRoute() {
         autoComplete="off"
         className={
           viewportLayout && videoMode
-            ? 'min-h-10 flex-1 bg-transparent px-2 text-sm text-white placeholder:text-white/70 focus:outline-none disabled:opacity-50'
-            : 'placeholder:text-content-muted min-h-11 flex-1 rounded-full bg-transparent px-4 text-sm focus:outline-none disabled:opacity-50'
+            ? 'text-content placeholder:text-content-muted min-h-10 flex-1 bg-transparent px-2 text-sm focus:outline-none disabled:opacity-50'
+            : 'text-content placeholder:text-content-muted min-h-11 flex-1 rounded-full bg-transparent px-4 text-sm focus:outline-none disabled:opacity-50'
         }
       />
       {viewportLayout && videoMode ? (
@@ -293,7 +291,7 @@ export function AdvisorRoute() {
           <button
             type="submit"
             disabled={!isReady || isThinking || !input.trim()}
-            className={`${CRYSTAL_DARK_CLASS} flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/90 transition-opacity hover:bg-black/30 disabled:cursor-not-allowed disabled:opacity-40`}
+            className={`${ADVISOR_ICON_BUTTON_CLASS} h-10 w-10 bg-black text-white`}
             title={t('advisor.send')}
           >
             {isThinking ? (
@@ -309,7 +307,7 @@ export function AdvisorRoute() {
           <button
             type="button"
             onClick={() => handleViewModeChange('chat')}
-            className={`${CRYSTAL_DARK_CLASS} flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/90 transition-colors hover:bg-black/30`}
+            className={`${ADVISOR_ICON_BUTTON_CLASS} h-10 w-10`}
             title={t('advisor.mode_chat')}
           >
             <X className="h-4 w-4" aria-hidden="true" />
@@ -320,7 +318,7 @@ export function AdvisorRoute() {
         <button
           type="submit"
           disabled={!isReady || isThinking || !input.trim()}
-          className="bg-filled-dark text-filled-dark-fg flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+          className={`${ADVISOR_ICON_BUTTON_CLASS} h-11 w-11 bg-black text-white`}
           title={t('advisor.send')}
         >
           {isThinking ? (
@@ -339,40 +337,125 @@ export function AdvisorRoute() {
 
   if (viewportLayout && videoMode) {
     return (
-      <AppShell embedded={embedded || videoMode}>
-        <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden">
-          {avatar.sessionToken && (
-            <div className="absolute inset-0 size-full">
-              <AvatarPanel
-                key={avatar.sessionToken}
-                sessionToken={avatar.sessionToken}
-                active={avatar.wantsAvatar}
-                onEnded={avatar.handleSessionEnded}
-                onSpeakReady={handleSpeakReady}
-              />
-            </div>
-          )}
+      <div className="light">
+        <AppShell embedded={embedded || videoMode}>
+          <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden">
+            {avatar.sessionToken && (
+              <div className="absolute inset-0 size-full">
+                <AvatarPanel
+                  key={avatar.sessionToken}
+                  sessionToken={avatar.sessionToken}
+                  active={avatar.wantsAvatar}
+                  onEnded={avatar.handleSessionEnded}
+                  onSpeakReady={handleSpeakReady}
+                  onSessionControlsChange={handleSessionControlsChange}
+                />
+              </div>
+            )}
 
-          {!avatar.sessionToken && avatar.starting && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black">
-              <Loader2
-                className="h-6 w-6 animate-spin text-white/80 motion-reduce:animate-none"
-                aria-hidden="true"
-              />
-              <p className="text-sm text-white/80">{t('advisor.avatar_starting')}</p>
-            </div>
-          )}
+            {!avatar.sessionToken && avatar.starting && (
+              <div className="bg-filled-dark absolute inset-0 flex flex-col items-center justify-center gap-3">
+                <Loader2
+                  className="text-filled-dark-fg h-6 w-6 animate-spin motion-reduce:animate-none"
+                  aria-hidden="true"
+                />
+                <p className="text-filled-dark-fg text-sm">{t('advisor.avatar_starting')}</p>
+              </div>
+            )}
 
-          <div className="pointer-events-none relative z-10 flex justify-center px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
-            <div className="pointer-events-auto">{switchControl}</div>
+            <div className="pointer-events-none relative z-10 flex flex-col gap-2 px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+              {sessionControls && (
+                <AvatarSessionToolbar
+                  className="pointer-events-auto"
+                  sessionState={sessionControls.sessionState}
+                  isConnected={sessionControls.isConnected}
+                  connectionQuality={sessionControls.connectionQuality}
+                  isAvatarTalking={sessionControls.isAvatarTalking}
+                  onInterrupt={sessionControls.interrupt}
+                  onKeepAlive={sessionControls.keepAlive}
+                  onClose={sessionControls.close}
+                  closeLabel={t('advisor.avatar_hide')}
+                  sandboxNotice={t('advisor.avatar_sandbox_notice')}
+                />
+              )}
+              <div className="pointer-events-auto flex justify-center">{switchControl}</div>
+            </div>
+
+            <section
+              aria-label={t('advisor.title')}
+              className="relative z-10 mt-auto flex max-h-[48dvh] min-h-0 flex-col"
+            >
+              <div
+                role="log"
+                aria-live="polite"
+                className="bg-surface text-content mx-3 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-2xl px-3 py-2"
+              >
+                {session && (
+                  <p className="text-content-muted text-xs">
+                    {t('advisor.greeting', { name: session.client.first_name })}
+                  </p>
+                )}
+                {messageList}
+              </div>
+
+              {alerts}
+              {composer}
+            </section>
           </div>
+        </AppShell>
+      </div>
+    );
+  }
 
+  return (
+    <div className="light flex min-h-0 flex-1 flex-col">
+      <AppShell embedded={embedded}>
+        <div
+          className={
+            viewportLayout
+              ? 'flex h-full min-h-0 flex-1 flex-col overflow-hidden'
+              : 'mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 p-4 sm:p-6'
+          }
+        >
           <section
             aria-label={t('advisor.title')}
-            className="relative z-10 mt-auto flex max-h-[48dvh] min-h-0 flex-col"
+            className={
+              viewportLayout ? 'flex min-h-0 flex-1 flex-col' : 'flex min-h-0 flex-1 flex-col gap-4'
+            }
           >
-            {session && (
-              <p className="mx-4 mb-2 text-xs text-white/60">
+            <header
+              className={
+                viewportLayout
+                  ? 'flex justify-center px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3'
+                  : 'border-outline flex flex-col gap-3 border-b pb-4'
+              }
+            >
+              {viewportLayout ? (
+                switchControl
+              ) : (
+                <>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="text-content-sub h-5 w-5" aria-hidden="true" />
+                      <h1 className="font-heading text-xl font-semibold">{t('advisor.title')}</h1>
+                    </div>
+                    {switchControl}
+                  </div>
+                  <p className="text-content-sub text-sm">{t('advisor.subtitle')}</p>
+                  {session && (
+                    <p className="text-content-muted text-xs">
+                      {t('advisor.greeting', { name: session.client.first_name })}
+                    </p>
+                  )}
+                  {appEnv.advisorMock && (
+                    <p className="text-content-muted text-xs">{t('advisor.mock_notice')}</p>
+                  )}
+                </>
+              )}
+            </header>
+
+            {viewportLayout && session && (
+              <p className="text-content-muted px-4 text-xs">
                 {t('advisor.greeting', { name: session.client.first_name })}
               </p>
             )}
@@ -380,90 +463,23 @@ export function AdvisorRoute() {
             <div
               role="log"
               aria-live="polite"
-              className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-2"
+              className={
+                viewportLayout
+                  ? 'flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-2'
+                  : 'flex min-h-64 flex-1 flex-col gap-4 overflow-y-auto'
+              }
             >
               {messageList}
             </div>
 
             {alerts}
-            {composer}
+
+            <div className={viewportLayout ? 'px-4 pb-[env(safe-area-inset-bottom)]' : undefined}>
+              {composer}
+            </div>
           </section>
         </div>
       </AppShell>
-    );
-  }
-
-  return (
-    <AppShell embedded={embedded}>
-      <div
-        className={
-          viewportLayout
-            ? 'flex h-full min-h-0 flex-1 flex-col overflow-hidden'
-            : 'mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 p-4 sm:p-6'
-        }
-      >
-        <section
-          aria-label={t('advisor.title')}
-          className={
-            viewportLayout ? 'flex min-h-0 flex-1 flex-col' : 'flex min-h-0 flex-1 flex-col gap-4'
-          }
-        >
-          <header
-            className={
-              viewportLayout
-                ? 'flex justify-center px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3'
-                : 'border-outline flex flex-col gap-3 border-b pb-4'
-            }
-          >
-            {viewportLayout ? (
-              switchControl
-            ) : (
-              <>
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="text-content-sub h-5 w-5" aria-hidden="true" />
-                    <h1 className="font-heading text-xl font-semibold">{t('advisor.title')}</h1>
-                  </div>
-                  {switchControl}
-                </div>
-                <p className="text-content-sub text-sm">{t('advisor.subtitle')}</p>
-                {session && (
-                  <p className="text-content-muted text-xs">
-                    {t('advisor.greeting', { name: session.client.first_name })}
-                  </p>
-                )}
-                {appEnv.advisorMock && (
-                  <p className="text-content-muted text-xs">{t('advisor.mock_notice')}</p>
-                )}
-              </>
-            )}
-          </header>
-
-          {viewportLayout && session && (
-            <p className="text-content-muted px-4 text-xs">
-              {t('advisor.greeting', { name: session.client.first_name })}
-            </p>
-          )}
-
-          <div
-            role="log"
-            aria-live="polite"
-            className={
-              viewportLayout
-                ? 'flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-2'
-                : 'flex min-h-64 flex-1 flex-col gap-4 overflow-y-auto'
-            }
-          >
-            {messageList}
-          </div>
-
-          {alerts}
-
-          <div className={viewportLayout ? 'px-4 pb-[env(safe-area-inset-bottom)]' : undefined}>
-            {composer}
-          </div>
-        </section>
-      </div>
-    </AppShell>
+    </div>
   );
 }
