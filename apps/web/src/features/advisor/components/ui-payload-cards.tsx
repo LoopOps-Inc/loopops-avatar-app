@@ -6,9 +6,22 @@ import type {
   UIComponent,
   WarningBannerPayload,
 } from '@loopops/contracts';
+import {
+  AttributionBarsPayloadSchema,
+  CitationsPayloadSchema,
+  MarketQuotePayloadSchema,
+  PortfolioSummaryPayloadSchema,
+  WarningBannerPayloadSchema,
+} from '@loopops/contracts';
+import type { ZodType } from 'zod';
 import { Info, TriangleAlert } from 'lucide-react';
 import { useTranslation } from '@/i18n';
 import { formatDate, moneyFormatter } from './ui-payload-format';
+
+function matchPayload<T>(schema: ZodType<T>, component: UIComponent): T | null {
+  const result = schema.safeParse(component.payload);
+  return result.success ? result.data : null;
+}
 
 function ReturnBadge({ value, period }: { value: number; period: string }) {
   const positive = value >= 0;
@@ -89,7 +102,7 @@ function AttributionBarsCard({ payload }: { payload: AttributionBarsPayload }) {
   );
 }
 
-function MarketQuoteCard({ payload }: { payload: MarketQuotePayload }) {
+export function MarketQuoteCard({ payload }: { payload: MarketQuotePayload }) {
   const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between gap-2">
@@ -159,32 +172,42 @@ export function UIPayloadCards({ components }: { components: UIComponent[] }) {
     <div className="mt-2 flex flex-col gap-2">
       {components.map((component, index) => {
         switch (component.type) {
-          case 'portfolio_summary':
-            return (
+          case 'portfolio_summary': {
+            const payload = matchPayload(PortfolioSummaryPayloadSchema, component);
+            return payload ? (
               <div key={index} className={CARD_BODY_STYLES}>
-                <PortfolioSummaryCard payload={component.payload} />
+                <PortfolioSummaryCard payload={payload} />
               </div>
-            );
-          case 'attribution_bars':
-            return (
+            ) : null;
+          }
+          case 'attribution_bars': {
+            const payload = matchPayload(AttributionBarsPayloadSchema, component);
+            return payload ? (
               <div key={index} className={CARD_BODY_STYLES}>
-                <AttributionBarsCard payload={component.payload} />
+                <AttributionBarsCard payload={payload} />
               </div>
-            );
-          case 'market_quote':
-            return (
+            ) : null;
+          }
+          case 'market_quote': {
+            const payload = matchPayload(MarketQuotePayloadSchema, component);
+            return payload ? (
               <div key={index} className={CARD_BODY_STYLES}>
-                <MarketQuoteCard payload={component.payload} />
+                <MarketQuoteCard payload={payload} />
               </div>
-            );
-          case 'citations':
-            return (
+            ) : null;
+          }
+          case 'citations': {
+            const payload = matchPayload(CitationsPayloadSchema, component);
+            return payload ? (
               <div key={index} className={CARD_BODY_STYLES}>
-                <CitationsCard payload={component.payload} />
+                <CitationsCard payload={payload} />
               </div>
-            );
-          case 'warning_banner':
-            return <WarningBannerCard key={index} payload={component.payload} />;
+            ) : null;
+          }
+          case 'warning_banner': {
+            const payload = matchPayload(WarningBannerPayloadSchema, component);
+            return payload ? <WarningBannerCard key={index} payload={payload} /> : null;
+          }
           default:
             return null;
         }

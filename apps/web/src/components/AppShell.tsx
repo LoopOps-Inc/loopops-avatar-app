@@ -41,16 +41,6 @@ export function AppShell({ children, embedded = false }: AppShellProps) {
           >
             {t('nav.advisor')}
           </a>
-          <a
-            href="/demo"
-            className={`rounded-xs px-3 py-2 text-sm font-medium transition-colors ${
-              pathname === '/demo'
-                ? 'bg-filled-dark text-filled-dark-fg'
-                : 'text-content-sub hover:bg-surface'
-            }`}
-          >
-            {t('nav.demo')}
-          </a>
         </nav>
       </header>
       <main className="flex min-h-0 flex-1 flex-col">{children}</main>

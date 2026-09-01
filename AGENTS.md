@@ -31,7 +31,7 @@ apps/agent/         # Python BFF — not implemented; see apps/agent/README.md
 packages/contracts/ # Shared API contract (TypeScript + Zod)
 ```
 
-- **HeyGen LiveAvatar** for video output ([docs.liveavatar.com](https://docs.liveavatar.com/)), via `@heygen/liveavatar-web-sdk`. FULL mode at `/demo` (sandbox dev only); LITE mode on `/advisor` (product, Phase 2b).
+- **Backend-owned avatar media**: the agent backend (`services/agent`) serves avatar sessions via `POST /v1/avatar/session` (LiveKit URL + token, audio WebSocket); the web app renders them with `livekit-client` on `/advisor`.
 - **Custom backend** (Python or TypeScript) with LangChain / LangGraph + **Gemini** — see reference architecture in the sibling repo `actinver-ai-advisor`
 - **Unified advisor screen** (`/advisor`): one chat thread with optional talking avatar toggle. Embeds use `?embed=1`. See [`knowledge/unified-advisor-avatar.md`](./knowledge/unified-advisor-avatar.md).
 - **Input modes** (Phase 3 for voice): typed chat and conversation (voice) share the same `thread_id`
@@ -48,7 +48,7 @@ Sibling repos for reference:
 ## Commands
 
 ```sh
-npm run dev       # dev server (port 8080, /liveavatar-api proxy)
+npm run dev       # dev server (port 8080, /api proxy -> http://localhost:8443; needs AGENT_DEV_TOKEN in apps/web/.env)
 npm run build     # tsc --noEmit && vite build
 npm run check     # typecheck only
 npm run lint      # eslint apps/web/src/
@@ -75,7 +75,7 @@ Primary CTA buttons use **filled-dark** (`bg-filled-dark` / `text-filled-dark-fg
 
 ### API calls — service layer only
 
-Never use raw `fetch` in components. Place network calls in `apps/web/src/services/`. The LiveAvatar API key is injected by the Vite dev proxy (`LIVEAVATAR_API_KEY` in `apps/web/.env`); production tokens come from the backend.
+Never use raw `fetch` in components. Place network calls in `apps/web/src/services/`. `npm run dev` proxies `/api` to `http://localhost:8443`; the dev bearer token (`AGENT_DEV_TOKEN` in `apps/web/.env`) is injected by the Vite proxy and never reaches the client bundle.
 
 ### i18n — every user-facing string
 

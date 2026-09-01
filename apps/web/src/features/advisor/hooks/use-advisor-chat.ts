@@ -1,26 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { SessionResponse, UIComponent } from '@loopops/contracts';
-import { createAdvisorSession, sendAdvisorMessage } from '@/services/advisor-service';
-import { appEnv } from '@/config/env';
-import { t } from '@/i18n';
-import { sendMockAdvisorMessage } from '@/services/advisor-mock';
-import type { AdvisorMessage, AdvisorPhase } from '../types';
+import type { SseErrorEvent, SessionResponse, UIComponent } from '@loopops/contracts';
+import {
+  ackFirstTurnDisclosures,
+  createAdvisorSession,
+  sendAdvisorMessage,
+} from '@/services/advisor-service';
+import { getLocale, t } from '@/i18n';
+import type { AdvisorMessage, AdvisorPhase, VoiceActivity } from '../types';
 
 function newId(): string {
   return crypto.randomUUID();
 }
 
-type UseAdvisorChatOptions = {
-  /** Called with the assistant narrative when a turn finishes (for avatar lip-sync). */
-  onAssistantSpeech?: (text: string) => void;
-};
-
-export function useAdvisorChat(options: UseAdvisorChatOptions = {}) {
-  const { onAssistantSpeech } = options;
+export function useAdvisorChat() {
   const [session, setSession] = useState<SessionResponse | null>(null);
   const [messages, setMessages] = useState<AdvisorMessage[]>([]);
   const [phase, setPhase] = useState<AdvisorPhase>('loading_session');
   const [error, setError] = useState<string | null>(null);
+  const [voiceActivity, setVoiceActivity] = useState<VoiceActivity>('idle');
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -28,9 +25,19 @@ export function useAdvisorChat(options: UseAdvisorChatOptions = {}) {
     void (async () => {
       try {
         const next = await createAdvisorSession();
+        await ackFirstTurnDisclosures();
         if (!cancelled) {
           setSession(next);
           setPhase('ready');
+          setMessages([
+            {
+              id: newId(),
+              role: 'assistant',
+              text: t('advisor.greeting', { name: next.client.first_name }),
+              uiPayload: [],
+              timestamp: Date.now(),
+            },
+          ]);
         }
       } catch (err) {
         if (!cancelled) {
@@ -41,7 +48,53 @@ export function useAdvisorChat(options: UseAdvisorChatOptions = {}) {
     })();
     return () => {
       cancelled = true;
+      abortRef.current?.abort();
     };
+  }, []);
+
+  const appendUserMessage = useCallback((text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: newId(),
+        role: 'user',
+        text: trimmed,
+        uiPayload: [],
+        timestamp: Date.now(),
+      },
+    ]);
+  }, []);
+
+  const beginAssistantTurn = useCallback(() => {
+    const id = newId();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id,
+        role: 'assistant',
+        text: '',
+        uiPayload: [],
+        timestamp: Date.now(),
+        streaming: true,
+      },
+    ]);
+    return id;
+  }, []);
+
+  const setAssistantText = useCallback((id: string, text: string) => {
+    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, text } : m)));
+  }, []);
+
+  const appendAssistantUi = useCallback((id: string, component: UIComponent) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, uiPayload: [...m.uiPayload, component] } : m)),
+    );
+  }, []);
+
+  const endAssistantTurn = useCallback((id: string) => {
+    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, streaming: false } : m)));
   }, []);
 
   const sendMessage = useCallback(
@@ -51,87 +104,73 @@ export function useAdvisorChat(options: UseAdvisorChatOptions = {}) {
       const trimmed = text.trim();
       if (!trimmed) return;
 
-      const userMessage: AdvisorMessage = {
-        id: newId(),
-        role: 'user',
-        text: trimmed,
-        uiPayload: [],
-        timestamp: Date.now(),
-      };
+      appendUserMessage(trimmed);
 
       const assistantId = newId();
-      const assistantMessage: AdvisorMessage = {
-        id: assistantId,
-        role: 'assistant',
-        text: '',
-        uiPayload: [],
-        timestamp: Date.now(),
-        streaming: true,
-      };
-
-      setMessages((prev) => [...prev, userMessage, assistantMessage]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: assistantId,
+          role: 'assistant',
+          text: '',
+          uiPayload: [],
+          timestamp: Date.now(),
+          streaming: true,
+        },
+      ]);
       setPhase('thinking');
       setError(null);
 
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
-      let assistantSpeech = '';
+
+      const handleSseError = (sseError: SseErrorEvent) => {
+        setError(t('advisor.error_event', { code: sseError.code }));
+      };
 
       try {
-        const runMock = appEnv.advisorMock;
-        const handlers = {
-          onToken: (chunk: string) => {
-            assistantSpeech += chunk;
-            setMessages((prev) =>
-              prev.map((m) => (m.id === assistantId ? { ...m, text: m.text + chunk } : m)),
-            );
+        await sendAdvisorMessage(
+          session.thread_id,
+          {
+            text: trimmed,
+            locale: getLocale(),
+            client_turn_id: newId(),
           },
-          onUi: (component: UIComponent) => {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantId ? { ...m, uiPayload: [...m.uiPayload, component] } : m,
-              ),
-            );
+          {
+            onToken: (chunk) => {
+              setMessages((prev) =>
+                prev.map((m) => (m.id === assistantId ? { ...m, text: m.text + chunk } : m)),
+              );
+            },
+            onUi: (component) => {
+              appendAssistantUi(assistantId, component);
+            },
+            onCitations: (citations) => {
+              appendAssistantUi(assistantId, {
+                type: 'citations',
+                payload: { items: citations.items },
+              });
+            },
+            onFormSpec: () => {},
+            onError: handleSseError,
+            onDone: () => {
+              setMessages((prev) =>
+                prev.map((m) => (m.id === assistantId ? { ...m, streaming: false } : m)),
+              );
+            },
           },
-          onError: (sseError: { message: string }) => {
-            setError(sseError.message);
-          },
-          onDone: () => {
-            setMessages((prev) =>
-              prev.map((m) => (m.id === assistantId ? { ...m, streaming: false } : m)),
-            );
-            setPhase('ready');
-            const speech = assistantSpeech.trim();
-            if (speech) {
-              onAssistantSpeech?.(speech);
-            }
-          },
-        };
-
-        if (runMock) {
-          const meta = await sendMockAdvisorMessage(trimmed, handlers);
-          if (meta.chips?.length) {
-            setMessages((prev) =>
-              prev.map((m) => (m.id === assistantId ? { ...m, chips: meta.chips } : m)),
-            );
-          }
-        } else {
-          await sendAdvisorMessage(
-            session.thread_id,
-            { message: trimmed },
-            handlers,
-            controller.signal,
-          );
-        }
+          controller.signal,
+        );
       } catch (err) {
         if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : t('advisor.error_unknown'));
-        setPhase('error');
         setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+      } finally {
+        setPhase('ready');
       }
     },
-    [session, phase, onAssistantSpeech],
+    [session, phase, appendUserMessage, appendAssistantUi],
   );
 
   return {
@@ -139,7 +178,14 @@ export function useAdvisorChat(options: UseAdvisorChatOptions = {}) {
     messages,
     phase,
     error,
+    voiceActivity,
+    setVoiceActivity,
     sendMessage,
+    appendUserMessage,
+    beginAssistantTurn,
+    setAssistantText,
+    appendAssistantUi,
+    endAssistantTurn,
     isReady: phase === 'ready' || phase === 'thinking',
     isThinking: phase === 'thinking',
   };
