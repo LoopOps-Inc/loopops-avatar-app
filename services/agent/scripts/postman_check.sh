@@ -2,7 +2,8 @@
 # Run the Postman collection end to end with Newman (Postman's CLI), including
 # the step-up signature that is a manual step inside the Postman app.
 #
-#   scripts/postman_check.sh            # needs node/npx and the compose stack up
+#   scripts/postman_check.sh                                   # stub agent on :8443
+#   BASE_URL=http://localhost:8444 scripts/postman_check.sh    # real-Gemini agent
 set -euo pipefail
 cd "$(dirname "$0")/.."
 PY=${PY:-.venv/bin/python}
@@ -11,7 +12,7 @@ ENV=docs/postman/local.postman_environment.json
 TMP=${TMPDIR:-/tmp}/actinver-postman-$$
 mkdir -p "$TMP"; trap 'rm -rf "$TMP"' EXIT
 
-$PY scripts/postman_env.py --client "${CLIENT:-cl_demo_moderado}" >/dev/null
+$PY scripts/postman_env.py --client "${CLIENT:-cl_demo_moderado}" --base-url "${BASE_URL:-http://localhost:8443}" >/dev/null
 
 # 1) everything up to the step-up challenge (folders 0-4 and request 5.1)
 npx -y newman run "$COL" -e "$ENV" \

@@ -69,6 +69,16 @@ class _RouterOutput(BaseModel):
     profile_filtered: bool = False
 
 
+def _thinking_config(model: str) -> types.ThinkingConfig | None:
+    """Router and planner are structured-output calls: no visible reasoning.
+
+    Gemini 2.5 Flash spends the output budget on thinking unless told not to,
+    which truncated the router JSON. Pro models cannot disable thinking, so the
+    budget is left to the model there.
+    """
+    return types.ThinkingConfig(thinking_budget=0) if "flash" in model.lower() else None
+
+
 def _redacted(proxy: RedactionProxy, payload: dict[str, Any]) -> dict[str, Any]:
     body, _count = proxy.redact_body(orjson.dumps(payload, default=str))
     result: dict[str, Any] = orjson.loads(body)
@@ -103,7 +113,8 @@ class GeminiClassifier:
             temperature=0.0,
             response_mime_type="application/json",
             response_schema=_RouterOutput,
-            max_output_tokens=120,
+            max_output_tokens=256,
+            thinking_config=_thinking_config(self._settings.vertex.model_fast),
             http_options=types.HttpOptions(timeout=int(self._settings.vertex.timeout_s * 1000)),
         )
         response = await self._factory.client().aio.models.generate_content(
@@ -163,6 +174,7 @@ class GeminiPlanner:
             tool_config=types.ToolConfig(
                 function_calling_config=types.FunctionCallingConfig(mode="ANY")
             ),
+            thinking_config=_thinking_config(self._settings.vertex.model_fast),
             http_options=types.HttpOptions(timeout=int(self._settings.vertex.timeout_s * 1000)),
         )
         response = await self._factory.client().aio.models.generate_content(
@@ -317,7 +329,10 @@ def _schema(parameters: dict[str, Any]) -> dict[str, Any]:
 
     def clean(node: Any) -> Any:
         if isinstance(node, dict):
-            out = {k: clean(v) for k, v in node.items() if k in allowed}
+            out = {k: clean(v) for k, v in node.items() if k in allowed and k != "properties"}
+            if isinstance(node.get("properties"), dict):
+                # Keys under "properties" are property names, not schema keywords.
+                out["properties"] = {name: clean(sub) for name, sub in node["properties"].items()}
             if "anyOf" in out:
                 variants = [v for v in out["anyOf"] if v.get("type") != "null"]
                 if len(variants) == 1:
