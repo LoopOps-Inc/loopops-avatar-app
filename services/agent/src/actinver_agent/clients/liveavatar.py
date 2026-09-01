@@ -16,6 +16,7 @@ import asyncio
 import base64
 import contextlib
 import json
+import re
 import time
 import uuid
 from collections.abc import Coroutine
@@ -48,9 +49,28 @@ class AvatarState(StrEnum):
 
 
 class LiveAvatarError(RuntimeError):
-    def __init__(self, message: str, *, status: int | None = None) -> None:
+    def __init__(
+        self, message: str, *, status: int | None = None, duration_cap_s: int | None = None
+    ) -> None:
         super().__init__(message)
         self.status = status
+        # Set when the vendor rejected ``max_session_duration`` and told us its cap.
+        self.duration_cap_s = duration_cap_s
+
+
+_DURATION_CAP_RE = re.compile(r"max_session_duration.*?maximum allowed \((\d+)s\)")
+
+
+def _duration_cap(response: httpx.Response) -> int | None:
+    """Extract the vendor's session-duration cap from a 400 body, nothing else.
+
+    Sandbox and trial accounts cap sessions far below the contracted 1800 s. The
+    body is only pattern-matched here; it is never logged (it may echo the request).
+    """
+    if response.status_code != 400:
+        return None
+    match = _DURATION_CAP_RE.search(response.text[:2000])
+    return int(match.group(1)) if match else None
 
 
 class LiveAvatarVendor:
@@ -81,12 +101,31 @@ class LiveAvatarVendor:
         if self._settings.voice_id:
             body["voice_id"] = self._settings.voice_id
 
-        token_response = await self._post(
-            "/v1/sessions/token",
-            headers={"X-API-KEY": self._api_key, "Content-Type": "application/json"},
-            json=body,
-            op="create_session_token",
-        )
+        try:
+            token_response = await self._post(
+                "/v1/sessions/token",
+                headers={"X-API-KEY": self._api_key, "Content-Type": "application/json"},
+                json=body,
+                op="create_session_token",
+            )
+        except LiveAvatarError as exc:
+            cap = exc.duration_cap_s
+            if cap is None or cap >= int(body["max_session_duration"]):
+                raise
+            # The account's cap is below what we asked for: honour it once and
+            # move on. Sessions are re-minted on expiry by the broker anyway.
+            log.warning(
+                "avatar.session_duration_capped",
+                requested_s=body["max_session_duration"],
+                vendor_cap_s=cap,
+            )
+            body["max_session_duration"] = cap
+            token_response = await self._post(
+                "/v1/sessions/token",
+                headers={"X-API-KEY": self._api_key, "Content-Type": "application/json"},
+                json=body,
+                op="create_session_token",
+            )
         token_data = token_response.json().get("data") or {}
         session_token = token_data.get("session_token")
         if not session_token:
@@ -173,7 +212,9 @@ class LiveAvatarVendor:
             # Never log the response body: it may echo the request, which carries the key.
             log.error("avatar.api_error", op=op, status=response.status_code)
             raise LiveAvatarError(
-                f"{op} failed with HTTP {response.status_code}", status=response.status_code
+                f"{op} failed with HTTP {response.status_code}",
+                status=response.status_code,
+                duration_cap_s=_duration_cap(response),
             )
 
 

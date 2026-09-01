@@ -69,16 +69,34 @@ ensure_secret() {
   fi
 }
 
+# Host-provided vendor keys replace whatever is stored (so a key added to .env
+# after the first `up` takes effect on the next `up`).
+set_secret() {
+  name="$1"
+  value="$2"
+  if aws secretsmanager describe-secret --secret-id "$name" >/dev/null 2>&1; then
+    echo "[floci-init] updating secret $name"
+    aws secretsmanager put-secret-value --secret-id "$name" --secret-string "$value" >/dev/null
+  else
+    echo "[floci-init] creating secret $name"
+    aws secretsmanager create-secret --name "$name" --secret-string "$value" >/dev/null
+  fi
+}
+
 ensure_bucket "$EVIDENCE_BUCKET"
 ensure_bucket "$ANCHOR_BUCKET"
 
-ensure_secret "actinver/liveavatar/api-key" "${LIVEAVATAR_API_KEY:-sandbox-placeholder}"
+if [ -n "${LIVEAVATAR_API_KEY:-}" ]; then
+  set_secret "actinver/liveavatar/api-key" "$LIVEAVATAR_API_KEY"
+else
+  ensure_secret "actinver/liveavatar/api-key" "sandbox-placeholder"
+fi
 ensure_secret "actinver/formspec-hmac" "$(random_hex)"
 ensure_secret "actinver/suitability-hmac" "$(random_hex)"
 ensure_secret "actinver/dev-signing-key" "${DEV_SIGNING_KEY:-$(random_hex)}"
 ensure_secret "actinver/client-hash-salt" "$(random_hex)"
 if [ -n "${GEMINI_API_KEY:-}" ]; then
-  ensure_secret "actinver/gemini-api-key" "$GEMINI_API_KEY"
+  set_secret "actinver/gemini-api-key" "$GEMINI_API_KEY"
 fi
 
 echo "[floci-init] done"

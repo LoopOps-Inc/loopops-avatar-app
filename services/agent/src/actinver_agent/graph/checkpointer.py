@@ -53,7 +53,9 @@ async def make_checkpointer(settings: Settings) -> tuple[Any, Closer | None]:
 
     stack = AsyncExitStack()
     saver = await stack.enter_async_context(
-        AsyncPostgresSaver.from_conn_string(_psycopg_url(settings.database_url.get_secret_value()))
+        AsyncPostgresSaver.from_conn_string(
+            _psycopg_url(settings.database_url.get_secret_value()), serde=make_serializer()
+        )
     )
     await saver.setup()
     log.info("checkpointer.ready", provider="postgres")
