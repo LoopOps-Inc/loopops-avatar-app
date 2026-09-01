@@ -33,10 +33,13 @@ export function SessionRail({
 }: SessionRailProps) {
   const { t } = useTranslation();
   const actionButton =
-    'flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur-sm transition-colors duration-200 hover:bg-black/70';
+    'flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-outline bg-surface-sub text-content-sub transition-colors duration-200 hover:bg-outline/30';
   return (
     <div className="flex items-center justify-between gap-2 px-4 pt-2">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <h2 className="font-heading text-content truncate text-sm font-semibold">
+          {t('live.title')}
+        </h2>
         <StatusPill>
           <span aria-hidden="true" className={`h-2 w-2 rounded-full ${stateClass}`} />
           {stateText}
@@ -54,7 +57,12 @@ export function SessionRail({
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {isAvatarTalking && (
-          <button type="button" aria-label={t('live.interrupt')} onClick={onInterrupt} className={actionButton}>
+          <button
+            type="button"
+            aria-label={t('live.interrupt')}
+            onClick={onInterrupt}
+            className={actionButton}
+          >
             <Square className="h-4 w-4 fill-current" aria-hidden="true" />
           </button>
         )}

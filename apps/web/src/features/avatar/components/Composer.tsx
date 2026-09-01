@@ -38,13 +38,13 @@ export function Composer({ disabled = false, onSend }: ComposerProps) {
         placeholder={t('live.input_placeholder')}
         autoComplete="off"
         enterKeyHint="send"
-        className="min-h-11 flex-1 rounded-full border border-white/20 bg-black/50 px-4 text-sm text-white backdrop-blur-sm transition-colors placeholder:text-white/50 focus:border-white/50 focus:outline-none"
+        className="border-outline bg-surface-sub text-content placeholder:text-content-muted focus:border-content-muted min-h-11 flex-1 rounded-md border px-4 text-sm transition-colors focus:outline-none"
       />
       <button
         type="submit"
         disabled={disabled}
         aria-label={t('live.send')}
-        className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-filled-dark text-filled-dark-fg transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+        className="bg-filled-dark text-filled-dark-fg flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
       >
         <Send className="h-4 w-4" aria-hidden="true" />
       </button>

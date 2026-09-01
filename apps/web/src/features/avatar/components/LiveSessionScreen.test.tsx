@@ -29,7 +29,7 @@ describe('LiveSessionRoute', () => {
 
   it('renders the welcome screen with a single start action', () => {
     render(<LiveSessionRoute />);
-    expect(screen.getByRole('heading', { name: 'Tu asesor Actinver' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Consulta con Tino' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Iniciar conversación' })).toBeInTheDocument();
   });
 
@@ -38,7 +38,7 @@ describe('LiveSessionRoute', () => {
     render(<LiveSessionRoute />);
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversación' }));
     expect(await screen.findByText('Conectando...')).toBeInTheDocument();
-    expect(await screen.findByRole('region', { name: 'Tu asesor Actinver' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Consulta con Tino' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Terminar' })).toBeInTheDocument();
     expect(createSandboxSessionToken).toHaveBeenCalledTimes(1);
   });
@@ -48,7 +48,7 @@ describe('LiveSessionRoute', () => {
     render(<LiveSessionRoute />);
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversación' }));
     expect(await screen.findByText('Conectando...')).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Tu asesor Actinver' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Consulta con Tino' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Mensaje para el avatar')).not.toBeInTheDocument();
   });
 
@@ -96,7 +96,7 @@ describe('LiveSessionRoute', () => {
   it('renders copy in english when the locale changes', () => {
     setLocale('en');
     render(<LiveSessionRoute />);
-    expect(screen.getByRole('heading', { name: 'Your Actinver advisor' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Talk with Tino' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start conversation' })).toBeInTheDocument();
   });
 });

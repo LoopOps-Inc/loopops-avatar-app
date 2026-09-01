@@ -24,6 +24,6 @@ export function sessionStateClass(state: SessionStateType): string {
     case SessionState.DISCONNECTING:
       return 'animate-pulse bg-warning motion-reduce:animate-none';
     default:
-      return 'bg-white/40';
+      return 'bg-content-muted';
   }
 }

@@ -92,7 +92,12 @@ export function useAdvisorChat({
                 }
                 return [
                   ...prev,
-                  { sender: 'avatar', message: '', timestamp: Date.now(), uiComponents: [component] },
+                  {
+                    sender: 'avatar',
+                    message: '',
+                    timestamp: Date.now(),
+                    uiComponents: [component],
+                  },
                 ];
               });
             }

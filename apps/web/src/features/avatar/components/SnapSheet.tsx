@@ -127,14 +127,14 @@ export function SnapSheet({
           dragElastic={0.12}
           dragMomentum={false}
           onDragEnd={handleDragEnd}
-          className={`flex h-full w-full flex-col overflow-hidden rounded-t-2xl border border-white/10 bg-black/90 text-white shadow-2xl backdrop-blur-md sm:rounded-2xl ${className}`}
+          className={`border-outline bg-surface text-content flex h-full w-full flex-col overflow-hidden rounded-t-lg border-t shadow-2xl sm:rounded-lg ${className}`}
         >
           <div
             onPointerDown={(event) => dragControls.start(event)}
             className="shrink-0 cursor-grab touch-none pt-3 pb-1 active:cursor-grabbing"
             aria-hidden="true"
           >
-            <div className="mx-auto h-1.5 w-12 rounded-full bg-white/30" />
+            <div className="bg-outline mx-auto h-1.5 w-12 rounded-full" />
           </div>
           {children}
         </motion.div>

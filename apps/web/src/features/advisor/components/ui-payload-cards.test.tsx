@@ -63,7 +63,10 @@ describe('UIPayloadCards', () => {
     render(
       <UIPayloadCards
         components={[
-          { ...portfolioSummary, payload: { ...portfolioSummary.payload, period_return_pct: -1.2 } },
+          {
+            ...portfolioSummary,
+            payload: { ...portfolioSummary.payload, period_return_pct: -1.2 },
+          },
         ]}
       />,
     );

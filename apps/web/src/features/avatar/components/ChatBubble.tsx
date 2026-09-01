@@ -1,40 +1,39 @@
 import { UIPayloadCards } from '@/features/advisor/components/ui-payload-cards';
 import { useTranslation } from '@/i18n';
 import type { ChatMessage } from '../types';
-
-function formatTime(timestamp: number): string {
-  return new Date(timestamp).toLocaleTimeString('es-MX', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+import { TinoMark } from './TinoMark';
 
 /** One transcript row: sender label, time, text and attached ui_payload cards. */
 export function ChatBubble({ message }: { message: ChatMessage }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const isUser = message.sender === 'user';
+  const time = new Date(message.timestamp).toLocaleTimeString(locale === 'en' ? 'en-US' : 'es-MX', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex flex-col gap-1 ${isUser ? 'items-end' : 'items-start'}`}>
       <div
-        className={`max-w-[85%] rounded-xl px-3.5 py-2 text-sm ${
+        className={`max-w-[85%] px-3.5 py-2 ${
           isUser
-            ? 'rounded-br-sm border border-white/20 bg-white/20 text-white'
-            : 'rounded-bl-sm border border-white/10 bg-white/5 text-white backdrop-blur-sm'
+            ? 'rounded-bubble bg-filled-dark text-filled-dark-fg'
+            : 'rounded-bubble rounded-bl-tail border-outline-soft bg-surface text-content border'
         }`}
       >
-        <span className="mb-0.5 flex items-baseline justify-between gap-2">
-          <span className="text-[11px] font-medium tracking-wide text-white/60 uppercase">
-            {isUser ? t('live.user') : t('live.avatar')}
+        {!isUser && (
+          <span className="mb-1 flex items-center gap-1.5">
+            <TinoMark className="h-4 w-4 text-[color:var(--brand-gold)]" />
+            <span className="font-ui text-content text-sm font-bold">{t('live.avatar')}</span>
           </span>
-          <span className="text-[10px] text-white/60 tabular-nums">
-            {formatTime(message.timestamp)}
-          </span>
-        </span>
-        {message.message && <p className="leading-relaxed break-words">{message.message}</p>}
+        )}
+        {message.message && <p className="text-base leading-6 break-words">{message.message}</p>}
         {message.uiComponents && message.uiComponents.length > 0 && (
           <UIPayloadCards components={message.uiComponents} />
         )}
       </div>
+      <span className={`text-content-sub text-xs tabular-nums ${isUser ? 'pr-2' : 'pl-2'}`}>
+        {time}
+      </span>
     </div>
   );
 }

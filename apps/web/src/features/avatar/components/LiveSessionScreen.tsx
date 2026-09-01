@@ -81,8 +81,8 @@ export function LiveSessionRoute() {
 
   return (
     <AppShell>
-      <div className="flex min-h-dvh justify-center bg-surface-sub">
-        <div className="relative h-dvh w-full overflow-hidden bg-surface-sub sm:my-auto sm:h-[min(853px,calc(100dvh-3rem))] sm:max-w-md sm:rounded-lg sm:border sm:border-outline">
+      <div className="bg-surface-sub flex min-h-dvh justify-center">
+        <div className="bg-surface-sub sm:border-outline relative h-dvh w-full overflow-hidden sm:my-auto sm:h-[min(853px,calc(100dvh-3rem))] sm:max-w-md sm:rounded-lg sm:border">
           {sessionToken ? (
             <SessionPanel
               key={sessionToken}

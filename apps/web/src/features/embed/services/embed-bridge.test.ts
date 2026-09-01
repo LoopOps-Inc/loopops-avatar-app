@@ -5,7 +5,9 @@ import { EMBED_BRIDGE_VERSION } from '@loopops/contracts';
 function fakeWindow({ parent, originParam }: { parent?: Window; originParam?: string } = {}) {
   const win = {
     parent: parent ?? ({} as Window),
-    location: { href: originParam ? `https://app.example/?origin=${originParam}` : 'https://app.example/' },
+    location: {
+      href: originParam ? `https://app.example/?origin=${originParam}` : 'https://app.example/',
+    },
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
   } as unknown as Window;
@@ -81,7 +83,10 @@ describe('EmbedBridge', () => {
     const listener = (win.addEventListener as ReturnType<typeof vi.fn>).mock.calls.find(
       ([type]) => type === 'message',
     )?.[1] as (event: { source: unknown; data: unknown }) => void;
-    listener({ source: {}, data: { version: EMBED_BRIDGE_VERSION, ts: 1, message: { type: 'stop' } } });
+    listener({
+      source: {},
+      data: { version: EMBED_BRIDGE_VERSION, ts: 1, message: { type: 'stop' } },
+    });
     expect(handler).not.toHaveBeenCalled();
     bridge.dispose();
   });
@@ -95,7 +100,10 @@ describe('EmbedBridge', () => {
       ([type]) => type === 'message',
     )?.[1] as (event: { source: unknown; data: unknown }) => void;
     listener({ source: win.parent, data: { version: 99, ts: 1, message: { type: 'stop' } } });
-    listener({ source: win.parent, data: { version: EMBED_BRIDGE_VERSION, ts: 1, message: { type: 'warp' } } });
+    listener({
+      source: win.parent,
+      data: { version: EMBED_BRIDGE_VERSION, ts: 1, message: { type: 'warp' } },
+    });
     listener({ source: win.parent, data: 'not-an-object' });
     expect(handler).not.toHaveBeenCalled();
     bridge.dispose();

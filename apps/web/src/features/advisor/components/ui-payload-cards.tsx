@@ -29,15 +29,15 @@ function PortfolioSummaryCard({ payload }: { payload: PortfolioSummaryPayload })
   return (
     <dl className="grid grid-cols-2 gap-2">
       <div className="col-span-2 flex items-baseline justify-between gap-2">
-        <dt className="text-[11px] font-medium tracking-wide text-white/60 uppercase">
+        <dt className="text-content-sub text-[11px] font-medium tracking-wide uppercase">
           {t('advisor.market_value')}
         </dt>
-        <dd className="text-sm font-semibold text-white tabular-nums">
+        <dd className="text-content text-sm font-semibold tabular-nums">
           {moneyFormatter.format(Number(payload.market_value.amount))}
         </dd>
       </div>
       <div className="flex items-center justify-between gap-2">
-        <dt className="text-[11px] font-medium tracking-wide text-white/60 uppercase">
+        <dt className="text-content-sub text-[11px] font-medium tracking-wide uppercase">
           {t('advisor.period_return')}
         </dt>
         <dd>
@@ -45,10 +45,10 @@ function PortfolioSummaryCard({ payload }: { payload: PortfolioSummaryPayload })
         </dd>
       </div>
       <div className="flex items-center justify-between gap-2">
-        <dt className="text-[11px] font-medium tracking-wide text-white/60 uppercase">
+        <dt className="text-content-sub text-[11px] font-medium tracking-wide uppercase">
           {t('advisor.as_of')}
         </dt>
-        <dd className="text-xs text-white/70 tabular-nums">{formatDate(payload.as_of)}</dd>
+        <dd className="text-content-sub text-xs tabular-nums">{formatDate(payload.as_of)}</dd>
       </div>
     </dl>
   );
@@ -59,7 +59,7 @@ function AttributionBarsCard({ payload }: { payload: AttributionBarsPayload }) {
   const max = Math.max(...payload.contributions.map((c) => Math.abs(c.bps)), 1);
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-[11px] font-medium tracking-wide text-white/60 uppercase">
+      <p className="text-content-sub text-[11px] font-medium tracking-wide uppercase">
         {t('advisor.contributions')}
       </p>
       {payload.contributions.map((contribution) => {
@@ -68,7 +68,7 @@ function AttributionBarsCard({ payload }: { payload: AttributionBarsPayload }) {
         return (
           <div key={contribution.sleeve} className="flex flex-col gap-0.5">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-xs text-white/80">{contribution.sleeve}</span>
+              <span className="text-content text-xs">{contribution.sleeve}</span>
               <span
                 className={`text-xs font-medium tabular-nums ${positive ? 'text-success' : 'text-error'}`}
               >
@@ -76,7 +76,7 @@ function AttributionBarsCard({ payload }: { payload: AttributionBarsPayload }) {
                 {contribution.bps} bp
               </span>
             </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+            <div className="bg-outline/40 h-1.5 w-full overflow-hidden rounded-full">
               <div
                 className={`h-full rounded-full ${positive ? 'bg-success' : 'bg-error'}`}
                 style={{ width: `${width}%` }}
@@ -93,11 +93,11 @@ function MarketQuoteCard({ payload }: { payload: MarketQuotePayload }) {
   const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-xs font-medium tracking-wide text-white/60 uppercase">
+      <span className="text-content-sub text-xs font-medium tracking-wide uppercase">
         {payload.symbol}
       </span>
       <span className="flex items-baseline gap-2">
-        <span className="text-sm font-semibold text-white tabular-nums">{payload.value}</span>
+        <span className="text-content text-sm font-semibold tabular-nums">{payload.value}</span>
         {payload.change_pct !== undefined && (
           <ReturnBadge value={payload.change_pct} period={t('advisor.today')} />
         )}
@@ -110,15 +110,15 @@ function CitationsCard({ payload }: { payload: CitationsPayload }) {
   const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-[11px] font-medium tracking-wide text-white/60 uppercase">
+      <p className="text-content-sub text-[11px] font-medium tracking-wide uppercase">
         {t('advisor.citations')}
       </p>
       <ul className="flex flex-col gap-1">
         {payload.items.map((item) => (
-          <li key={item.title} className="text-xs leading-relaxed text-white/80">
+          <li key={item.title} className="text-content text-xs leading-relaxed">
             {item.title}
             {(item.source || item.published) && (
-              <span className="text-white/50">
+              <span className="text-content-muted">
                 {' '}
                 — {item.source}
                 {item.published ? `, ${formatDate(item.published)}` : ''}
@@ -150,7 +150,7 @@ function WarningBannerCard({ payload }: { payload: WarningBannerPayload }) {
 }
 
 const CARD_BODY_STYLES =
-  'flex w-full flex-col gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-left';
+  'flex w-full flex-col gap-2 rounded-xl border border-outline-soft bg-surface-sub px-3 py-2.5 text-left';
 
 /** Renders the ui_payload cards attached to an avatar chat message. */
 export function UIPayloadCards({ components }: { components: UIComponent[] }) {

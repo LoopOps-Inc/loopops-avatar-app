@@ -102,7 +102,10 @@ export const MOCK_TURNS = {
 /** Intent patterns (matched on accent-insensitive lowercase text). */
 export const INTENT_PATTERNS: Array<{ pattern: RegExp; turn: MockTurn }> = [
   { pattern: /atribucion|contribucion|de donde|sleeve/, turn: MOCK_TURNS.attribution },
-  { pattern: /portafolio|portfolio|como va|rendimiento|desempeno|performance/, turn: MOCK_TURNS.portfolio },
+  {
+    pattern: /portafolio|portfolio|como va|rendimiento|desempeno|performance/,
+    turn: MOCK_TURNS.portfolio,
+  },
   { pattern: /dolar|usdmxn|tipo de cambio|exchange|cotiz/, turn: MOCK_TURNS.quote },
   { pattern: /noticia|news|mercado|banxico|peso|contexto/, turn: MOCK_TURNS.news },
 ];

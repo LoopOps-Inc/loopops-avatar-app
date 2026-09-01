@@ -65,9 +65,7 @@ export function useLiveAvatarSession(
   const userStoppedRef = useRef(false);
   const userMutedRef = useRef(false);
 
-  const [session] = useState(
-    () => new LiveAvatarSession(sessionToken, { voiceChat }),
-  );
+  const [session] = useState(() => new LiveAvatarSession(sessionToken, { voiceChat }));
 
   const [sessionState, setSessionState] = useState<SessionState>(SessionState.INACTIVE);
   const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>(
@@ -145,10 +143,16 @@ export function useLiveAvatarSession(
   // unless the user muted it manually. Only for voice sessions.
   useEffect(() => {
     if (!voiceChat || !isAvatarTalking) return;
-    void session.voiceChat.mute().then(() => setIsMicMuted(true)).catch(() => {});
+    void session.voiceChat
+      .mute()
+      .then(() => setIsMicMuted(true))
+      .catch(() => {});
     return () => {
       if (!userMutedRef.current) {
-        void session.voiceChat.unmute().then(() => setIsMicMuted(false)).catch(() => {});
+        void session.voiceChat
+          .unmute()
+          .then(() => setIsMicMuted(false))
+          .catch(() => {});
       }
     };
   }, [isAvatarTalking, session, voiceChat]);

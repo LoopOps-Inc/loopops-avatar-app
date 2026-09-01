@@ -1,10 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import {
-  DEFAULT_LOCALE,
-  LOCALE_STORAGE_KEY,
-  SUPPORTED_LOCALES,
-  type Locale,
-} from './config';
+import { DEFAULT_LOCALE, LOCALE_STORAGE_KEY, SUPPORTED_LOCALES, type Locale } from './config';
 import en from './translations/en.json';
 import es from './translations/es.json';
 
