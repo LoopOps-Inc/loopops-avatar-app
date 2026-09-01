@@ -14,64 +14,112 @@ Inspired by conversational banking demos (e.g. Citi Sky), but scoped to Actinver
 
 ## Architecture
 
+### Monorepo layout
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Web App (Vite + React 19)                │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │  Chat Mode   │  │  Voice Mode  │  │  Avatar View     │  │
-│  │  (typed)     │  │  (speech)    │  │  (WebRTC video)  │  │
-│  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘  │
-│         │                 │                    │             │
-│         └────────┬────────┴────────────────────┘             │
-│                  ▼                                           │
-│         ┌─────────────────┐    ┌─────────────────┐            │
-│         │  Router/State   │    │  Theme (CSS)    │            │
-│         └────────┬────────┘    └─────────────────┘            │
-│                  ▼                                           │
-│         ┌─────────────────┐                                   │
-│         │  Services       │                                   │
-│         └────────┬────────┘                                   │
-└──────────────────┼───────────────────────────────────────────┘
-                   │ HTTPS / WebSocket / WebRTC
-                   ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Custom Backend                            │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │  LangGraph Agent (Gemini)                            │    │
-│  │  Tools: portfolio, products, news, transactions      │    │
-│  └─────────────────────────────────────────────────────┘    │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ Actinver API │  │ News Scraper │  │ Product DB   │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-└──────────────────┬──────────────────────────────────────────┘
-                   ▼
-         ┌─────────────────┐
-         │ LiveAvatar API   │
-         │ (sessions, LLM,  │
-         │  TTS, LiveKit)   │
-         └─────────────────┘
+loopops-avatar-app/
+├── apps/
+│   ├── web/                 # Vite + React 19 (npm workspace) — LIVE
+│   └── agent/               # Python FastAPI + LangGraph BFF — PLANNED
+├── packages/
+│   └── contracts/           # @loopops/contracts — shared API types (Zod)
+└── knowledge/               # architecture docs
 ```
+
+### Runtime (POC)
+
+Solid lines = implemented today. Dashed = planned.
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│  Browser (desktop / mobile)                                              │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │  apps/web  (Vite + React 19 + TanStack Router)                     │  │
+│  │                                                                    │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────────┐ │  │
+│  │  │ /demo LIVE  │  │ /advisor    │  │ Theme + i18n                │ │  │
+│  │  │ Avatar demo │  │ PLANNED     │  │ apps/web/src/styles/        │ │  │
+│  │  │ FULL sandbox│  │ chat + cards│  │ apps/web/src/i18n/          │ │  │
+│  │  └──────┬──────┘  └──────┬──────┘  └─────────────────────────────┘ │  │
+│  │         │                │                                          │  │
+│  │         │                │  SSE (token, ui, done)                    │  │
+│  │         │                └──────────────────┐                       │  │
+│  │         │                                   │                       │  │
+│  │  apps/web/src/services/                     │                       │  │
+│  │  liveavatar-service.ts                      │  advisor-service.ts   │  │
+│  │         │                                   │  (planned)            │  │
+│  └─────────┼───────────────────────────────────┼───────────────────────┘  │
+└────────────┼───────────────────────────────────┼──────────────────────────┘
+             │ HTTPS                             │ HTTPS
+             │ /liveavatar-api (Vite proxy)      │ /api → :8000 (planned)
+             ▼                                   ▼
+┌────────────────────────┐         ┌────────────────────────────────────────┐
+│  HeyGen LiveAvatar     │         │  apps/agent  (Python BFF)  PLANNED     │
+│  FULL mode · sandbox   │         │  ┌──────────────────────────────────┐  │
+│  WebRTC via LiveKit    │         │  │  LangGraph agent (Gemini)        │  │
+│  Vendor LLM + TTS      │         │  │  route → tools → composer        │  │
+└────────────────────────┘         │  └───────────────┬──────────────────┘  │
+                                     │                  │ mock tools (POC)   │
+                                     │                  ▼                    │
+                                     │         portfolio · market · news     │
+                                     └────────────────────────────────────────┘
+                                                   │
+                     packages/contracts ◄──────────┘
+                     (SessionResponse, UIComponent, SSE events)
+```
+
+### Split-channel rendering (advisor path)
+
+When `apps/agent` ships, every agent turn produces two outputs. Exact figures never go to the avatar vendor.
+
+```
+                    AgentTurnOutput
+                    ┌─────────────────────────────┐
+                    │  speech   (qualitative only)  │
+                    │  ui_payload[] (exact data)  │
+                    └──────────┬──────────┬────────┘
+                               │          │
+              narrative ───────┘          └────── exact figures
+              (future: TTS → avatar)            (UIPayloadRenderer in /advisor)
+```
+
+### Target-state (post-POC)
+
+```
+apps/web ──HTTPS/SSE──► apps/agent ──► LangGraph + Gemini
+                            │
+                            ├── tool-gateway ──► Actinver core APIs
+                            ├── Vertex AI (STT / TTS)
+                            └── avatar-broker ──► LiveAvatar LITE + LiveKit
+                                      │
+apps/web ◄──────── WebRTC subscribe ──┘  (video only; audio from our pipeline)
+```
+
+See sibling repo `actinver-ai-advisor` for the full production architecture.
 
 ### Web layers
 
-| Layer                           | Responsibility                                     |
-| ------------------------------- | -------------------------------------------------- |
-| `apps/web/src/features/avatar/`          | LiveAvatar session, video surface, chat panel      |
-| `apps/web/src/features/chat/` (planned)  | Message list, composer, action chips               |
-| `apps/web/src/features/voice/` (planned) | Mic capture, voice UI state                        |
-| `apps/web/src/services/`                 | Token exchange, agent stream, future backend calls |
-| `apps/web/src/styles/`                   | Design tokens + Tailwind v4 wiring                 |
-| `apps/web/src/router.tsx`                | TanStack Router code-based tree, lazy routes       |
+| Layer                            | Status               | Responsibility                                                  |
+| -------------------------------- | -------------------- | --------------------------------------------------------------- |
+| `apps/web/src/features/avatar/`  | Live (`/demo`)       | LiveAvatar sandbox session, video, chat panel                   |
+| `apps/web/src/features/advisor/` | Planned (`/advisor`) | Message list, composer, `UIPayloadRenderer`                     |
+| `apps/web/src/features/voice/`   | Planned              | Mic capture, voice UI state                                     |
+| `apps/web/src/services/`         | Partial              | `liveavatar-service.ts` live; `advisor-service.ts` after BFF    |
+| `apps/web/src/styles/`           | Live                 | Design tokens + Tailwind v4 wiring                              |
+| `apps/web/src/router.tsx`        | Live                 | TanStack Router tree, lazy routes                               |
+| `packages/contracts/`            | Live                 | Shared API types (`SessionResponse`, `UIComponent`, SSE events) |
+| `apps/agent/`                    | Planned              | Python BFF — see `apps/agent/README.md`                         |
 
-### Backend agent tools (planned)
+### Backend agent tools (POC v0, planned)
 
-| Tool                   | Purpose                                             |
-| ---------------------- | --------------------------------------------------- |
-| `get_portfolio`        | User holdings, allocation, performance              |
-| `search_products`      | Filter by risk tier (low / medium / high)           |
-| `scrape_news`          | Market and sector news for context                  |
-| `explain_movement`     | Why a holding or market moved                       |
-| `initiate_transaction` | Return form schema for invest / sell / retire flows |
+| Tool                        | Purpose                                          |
+| --------------------------- | ------------------------------------------------ |
+| `get_portfolio_performance` | Holdings valuation, period return                |
+| `get_portfolio_attribution` | Why the portfolio moved (basis points by sleeve) |
+| `search_market_news`        | Allow-listed news with citations                 |
+| `get_market_quote`          | FX and index quotes with timestamps              |
+
+Full catalogue: `actinver-ai-advisor/docs/04-backend/03-tool-catalog.md`.
 
 ### Transaction flow pattern
 
@@ -89,7 +137,9 @@ All backend calls go through `apps/web/src/services/`. Components never call `fe
 
 ### Dev proxy for API keys
 
-`vite.config.ts` proxies `/liveavatar-api/*` → `https://api.liveavatar.com` and injects `X-API-KEY` from `.env`. The key never reaches the bundle. In production, `VITE_LIVEAVATAR_API_BASE` points at the backend.
+`apps/web/vite.config.ts` proxies `/liveavatar-api/*` → `https://api.liveavatar.com` and injects `X-API-KEY` from `.env`. The key never reaches the bundle.
+
+When `apps/agent` is ready, add a second proxy: `/api` → `http://localhost:8000`. In production, `VITE_ADVISOR_API_BASE` points at the deployed BFF.
 
 ### Feature folders
 

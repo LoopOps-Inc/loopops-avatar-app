@@ -13,7 +13,7 @@ Web app for **Actinver** talking-head avatar. Not the LoopOps web app or marketi
 - TanStack Router (code-based tree in `apps/web/src/router.tsx`)
 - Tailwind CSS v4 (`apps/web/src/styles/tokens.css` + `global.css`)
 - HeyGen **LiveAvatar** Web SDK, FULL mode ([docs.liveavatar.com](https://docs.liveavatar.com/))
-- Backend: Python or TypeScript, LangChain / LangGraph, **Gemini** LLM
+- Backend: `apps/agent/` (Python / FastAPI / LangGraph)
 - Investment tools: portfolio lookup, news scraping, risk-tier product search, guided transaction flows
 
 ## Interaction modes
@@ -26,6 +26,13 @@ Both modes share the same agent backend and session context.
 ## Structure
 
 ```
+apps/
+├── web/src/         # frontend
+└── agent/           # Python BFF (backend team)
+
+packages/
+└── contracts/       # shared API types (@loopops/contracts)
+
 apps/web/src/
 ├── config/          # avatar + env config
 ├── styles/          # tokens.css (primitives) + global.css (Tailwind wiring)

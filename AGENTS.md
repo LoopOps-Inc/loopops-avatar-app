@@ -7,6 +7,7 @@ Shared rules for **Cursor**, **GitHub Copilot**, **Claude Code**, **Gemini**, an
 | Audience                   | File                                                        |
 | -------------------------- | ----------------------------------------------------------- |
 | All agents                 | This file + `knowledge/`                                    |
+| Backend agent              | `apps/agent/AGENTS.md` + `apps/agent/README.md`             |
 | Cursor                     | `.cursor/rules/*.mdc`                                       |
 | Gemini CLI / Gemini Assist | `GEMINI.md`                                                 |
 | HeyGen Skills              | `~/.cursor/skills/heygen-skills` (avatar, video, translate) |
@@ -23,8 +24,9 @@ Installed at `~/.cursor/skills/heygen-skills` per [HeyGen install guide](https:/
 Monorepo for the **Actinver** talking-head avatar:
 
 ```
-apps/web/        # Vite + React frontend (this app)
-services/agent/  # agent backend placeholder (Python / FastAPI / LangGraph, reserved)
+apps/web/           # Vite + React frontend
+apps/agent/         # Python BFF — not implemented; see apps/agent/README.md
+packages/contracts/ # Shared API contract (TypeScript + Zod)
 ```
 
 - **HeyGen LiveAvatar** for video/voice output ([docs.liveavatar.com](https://docs.liveavatar.com/)), via `@heygen/liveavatar-web-sdk` (FULL mode)
@@ -38,7 +40,7 @@ All frontend source lives under `apps/web/` — feature layout, tokens, and serv
 Sibling repos for reference:
 
 - `../loopops-web-app` — canonical design tokens, writing style, chat patterns; this app mirrors its stack (Vite + TanStack Router + Tailwind + TypeScript)
-- `../actinver-ai-advisor` — reference architecture for the monorepo layout (`apps/`, `services/`, `infra/`, `docs/`)
+- `../actinver-ai-advisor` — reference architecture for the monorepo layout (`apps/`, `packages/`, `infra/`, `docs/`)
 
 ## Commands
 
