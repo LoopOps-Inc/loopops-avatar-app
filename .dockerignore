@@ -1,0 +1,16 @@
+.git
+.github
+.agents
+.atl
+.cursor
+.codegraph
+node_modules
+**/node_modules
+apps/web/dist
+.env*
+**/.env*
+services
+knowledge
+docs
+*.log
+.DS_Store

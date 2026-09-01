@@ -53,6 +53,8 @@ npm run build     # tsc --noEmit && vite build
 npm run check     # typecheck only
 npm run lint      # eslint apps/web/src/
 npm test          # vitest run
+docker compose up -d --build   # full stack: web on :8080 + agent on :8443
+docker compose logs -f web
 ```
 
 Root scripts delegate to the `apps/web` workspace (`npm -w apps/web`). Run them from the repo root.
