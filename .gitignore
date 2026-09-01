@@ -5,6 +5,16 @@ node_modules
 dist
 coverage
 
+# python
+__pycache__/
+*.py[cod]
+.venv/
+apps/agent/.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
 # env
 .env
 .env.*

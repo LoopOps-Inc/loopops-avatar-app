@@ -7,6 +7,7 @@
 
 | Doc                                              | Scope       | Description                                               |
 | ------------------------------------------------ | ----------- | --------------------------------------------------------- |
+| [poc-scope.md](./poc-scope.md)                   | POC         | What we build now vs production BA architecture           |
 | [architecture.md](./architecture.md)             | System      | Web client + LiveAvatar + backend + Gemini agent overview |
 | [chat-and-voice.md](./chat-and-voice.md)         | Feature     | Chat and voice modes, streaming, sessions                 |
 | [heygen-live-avatar.md](./heygen-live-avatar.md) | Integration | LiveAvatar Web SDK, session lifecycle, sandbox            |
@@ -21,7 +22,7 @@
 - **TanStack Router** — code-based route tree in `apps/web/src/router.tsx`
 - **Tailwind CSS v4** — tokens in `apps/web/src/styles/tokens.css`, wiring in `apps/web/src/styles/global.css`
 - **@heygen/liveavatar-web-sdk** — FULL mode talking head (WebRTC)
-- **Backend** — LangChain / LangGraph + Gemini, investment tools (planned)
+- **Backend** — LangChain / LangGraph + Gemini (`apps/agent/`, planned)
 
 ### Key entry points
 
@@ -31,6 +32,8 @@
 - `apps/web/src/features/avatar/` — LiveAvatar demo feature
 - `apps/web/src/services/` — API services (token minting)
 - `apps/web/src/config/avatar.ts` — Actinver + sandbox avatar config
+- `apps/agent/` — Python BFF handoff (`README.md`, `AGENTS.md`)
+- `packages/contracts/` — shared API contract (`@loopops/contracts`)
 
 ### Sibling repos
 

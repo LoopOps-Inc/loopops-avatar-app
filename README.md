@@ -4,9 +4,10 @@ Monorepo for the Actinver talking-head avatar: web frontend (HeyGen LiveAvatar +
 
 ```
 ├── apps/
-│   └── web/          # Vite + React 19 frontend
-├── services/
-│   └── agent/        # agent backend placeholder (Python / FastAPI / LangGraph, reserved)
+│   ├── web/          # Vite + React 19 frontend
+│   └── agent/        # Python BFF — see README.md + AGENTS.md (backend team)
+├── packages/
+│   └── contracts/    # Shared API contract (TypeScript + Zod)
 ├── knowledge/        # architecture docs (read before coding)
 └── package.json      # npm workspaces root
 ```
@@ -78,7 +79,7 @@ For production, remove `is_sandbox`, swap in the Actinver avatar, and mint token
 │   │   ├── main.tsx           # entry point
 │   │   └── router.tsx         # TanStack Router tree
 │   └── index.html
-└── services/agent/        # reserved for the agent backend
+└── apps/agent/            # Python BFF (backend team)
 ```
 
 ## Agent docs
