@@ -1,7 +1,7 @@
 ---
 name: LoopOps Avatar
-description: Actinver talking-head avatar app design system
-version: '1.0'
+description: Actinver talking-head avatar web app design system
+version: '1.1'
 source: ../loopops-web-app/DESIGN.md
 
 colors:
@@ -80,21 +80,25 @@ components:
 
 # LoopOps Avatar Design System
 
-Agent-readable token mirror. Code implementation: `src/theme/tokens.ts`.
+Agent-readable token mirror. Code implementation: `src/styles/tokens.css` (primitives) + `src/styles/global.css` (semantic mapping and Tailwind wiring).
 
-Synced from **loopops-web-app** `DESIGN.md` v1.1. See `knowledge/design-system.md` for React Native usage rules.
+Synced from **loopops-web-app** `DESIGN.md` v1.1. See `knowledge/design-system.md` for usage rules.
 
 ## Primary color rule
 
-Primary CTAs use **filled-dark** (`neutral-70` / `#2F2F2F`), not brand blue. Blue is for links and accents only.
+Primary CTAs use **filled-dark** (`bg-filled-dark`), not brand blue. Blue is for links and accents only.
 
 ## Semantic mapping
 
-| Semantic    | Light bg        | Light text |
-|-------------|-----------------|------------|
-| surface     | neutral-0       | neutral-90 |
-| surface-sub | neutral-10      | neutral-60 |
-| filled-dark | neutral-70      | neutral-5  |
-| accent      | brand-accent-50 | neutral-0  |
+| Semantic      | Tailwind class       | Light           | Dark            |
+| ------------- | -------------------- | --------------- | --------------- |
+| surface       | `bg-surface`         | neutral-0       | neutral-70      |
+| surface-sub   | `bg-surface-sub`     | neutral-10      | neutral-80      |
+| content       | `text-content`       | neutral-90      | neutral-5       |
+| content-sub   | `text-content-sub`   | neutral-60      | neutral-20      |
+| content-muted | `text-content-muted` | neutral-40      | neutral-40      |
+| filled-dark   | `bg-filled-dark`     | neutral-70      | neutral-15      |
+| outline       | `border-outline`     | neutral-20      | neutral-60      |
+| accent        | `bg-accent`          | brand-accent-50 | brand-accent-50 |
 
-Dark mode inverts via `getTheme(true)` in `src/theme/tokens.ts`.
+Dark mode inverts via `.dark` class on the root element (see `src/styles/global.css`).

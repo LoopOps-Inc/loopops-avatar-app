@@ -1,66 +1,69 @@
 # LoopOps Avatar App
 
-React Native mobile app for the Actinver talking-head avatar (HeyGen Live Avatar + custom LLM backend).
+Web app for the Actinver talking-head avatar (HeyGen LiveAvatar + custom LLM backend). Runs on desktop and mobile browsers, PWA-ready.
 
 ## Stack
 
-- React Native **0.87.1**
-- React **19.2.3**
-- TypeScript
+- Vite + React 19 + TypeScript
+- TanStack Router
+- Tailwind CSS v4 + LoopOps design tokens (`src/styles/`)
+- `@heygen/liveavatar-web-sdk` (FULL mode, WebRTC)
+- `lucide-react` icons
+- Vitest + Testing Library
 
-## Prerequisites
+Mirrors `../loopops-web-app` conventions. i18n via `src/i18n` (es/en, `t('demo.key')`), dark mode follows `prefers-color-scheme`, PWA manifest + favicon in `public/`.
 
-Follow the [React Native environment setup](https://reactnative.dev/docs/set-up-your-environment) for iOS and/or Android.
-
-- Node.js >= 22.11.0
-- Xcode (iOS)
-- Android Studio (Android)
-
-## Install
+## Setup
 
 ```sh
 npm install
+cp .env.example .env
 ```
 
-### iOS (first time or after native dependency changes)
-
-```sh
-bundle install
-bundle exec pod install --project-directory=ios
-```
+Set `LIVEAVATAR_API_KEY` in `.env` (from https://app.liveavatar.com, Developers page). The Vite dev proxy injects it as `X-API-KEY`, so the key never reaches the client bundle.
 
 ## Run
 
-Start Metro:
-
 ```sh
-npm start
+npm run dev       # http://localhost:8080
+npm run build     # typecheck + production build
+npm run check     # tsc --noEmit
+npm run lint      # eslint src/
+npm test          # vitest
 ```
 
-In another terminal:
+Open http://localhost:8080/demo and start a sandbox session.
 
-```sh
-npm run ios
-# or
-npm run android
-```
+## Sandbox demo
+
+The demo at `/demo` mints a FULL-mode sandbox session token and connects with the LiveAvatar Web SDK: avatar video, live transcriptions, and text chat (the avatar answers with voice).
+
+Sandbox constraints (https://docs.liveavatar.com/docs/sandbox-mode):
+
+- Only the Wayne avatar (`dd73ea75-1218-4ef3-92ce-606d5f7fbc0a`) is available
+- Sessions terminate after ~1 minute
+- No credit usage
+
+For production, remove `is_sandbox`, swap in the Actinver avatar, and mint tokens from the backend instead of the dev proxy.
 
 ## Project structure
 
 ```
-.
 ├── AGENTS.md              # Agent instructions index
 ├── GEMINI.md              # Gemini-specific rules
 ├── DESIGN.md              # Design token mirror for agents
 ├── .cursor/rules/         # Cursor agent rules
 ├── .agents/rules/         # Cross-IDE agent rules
 ├── knowledge/             # Architecture docs (read before coding)
-├── src/theme/             # Design tokens (tokens.ts, getTheme)
-├── App.tsx                # Root component
-├── index.js               # Entry point
-├── android/               # Android native project
-├── ios/                   # iOS native project
-└── __tests__/             # Jest tests
+├── src/
+│   ├── config/            # avatar + env config
+│   ├── features/avatar/   # demo feature (components, hooks, types)
+│   ├── routes/            # (route components live in features/, wired in router.tsx)
+│   ├── services/          # API services (never raw fetch in components)
+│   ├── styles/            # tokens.css + global.css (Tailwind v4)
+│   ├── main.tsx           # entry point
+│   └── router.tsx         # TanStack Router tree
+└── index.html
 ```
 
 ## Agent docs

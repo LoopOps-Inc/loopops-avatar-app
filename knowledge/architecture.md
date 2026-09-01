@@ -8,31 +8,31 @@ last-updated: 2026-09-01
 
 ## Context
 
-The LoopOps Avatar App is a React Native mobile client for **Actinver** customers. Users interact with a talking-head avatar powered by **HeyGen Live Avatar**, backed by a custom LLM agent (Gemini + LangChain/LangGraph) that answers investment questions, explains portfolio behavior, recommends products by risk tier, and guides transaction flows (invest, retire, sell, rebalance).
+The LoopOps Avatar App is a **web client** for **Actinver** customers. Users interact with a talking-head avatar powered by **HeyGen LiveAvatar**, backed by a custom LLM agent (Gemini + LangChain/LangGraph) that answers investment questions, explains portfolio behavior, recommends products by risk tier, and guides transaction flows (invest, retire, sell, rebalance).
 
-Inspired by conversational banking demos (e.g. Citi Sky), but scoped to Actinver portfolio and product data.
+Inspired by conversational banking demos (e.g. Citi Sky), but scoped to Actinver portfolio and product data. Runs on desktop and mobile browsers; PWA-ready.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    React Native App                          │
+│                    Web App (Vite + React 19)                │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
 │  │  Chat Mode   │  │  Voice Mode  │  │  Avatar View     │  │
-│  │  (typed)     │  │  (speech)    │  │  (HeyGen video)  │  │
+│  │  (typed)     │  │  (speech)    │  │  (WebRTC video)  │  │
 │  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘  │
 │         │                 │                    │             │
 │         └────────┬────────┴────────────────────┘             │
 │                  ▼                                           │
 │         ┌─────────────────┐    ┌─────────────────┐            │
-│         │  Session Store  │    │  Theme / i18n   │            │
+│         │  Router/State   │    │  Theme (CSS)    │            │
 │         └────────┬────────┘    └─────────────────┘            │
 │                  ▼                                           │
 │         ┌─────────────────┐                                   │
-│         │  API Services   │                                   │
+│         │  Services       │                                   │
 │         └────────┬────────┘                                   │
 └──────────────────┼───────────────────────────────────────────┘
-                   │ HTTPS / WebSocket / SSE
+                   │ HTTPS / WebSocket / WebRTC
                    ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    Custom Backend                            │
@@ -43,38 +43,39 @@ Inspired by conversational banking demos (e.g. Citi Sky), but scoped to Actinver
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
 │  │ Actinver API │  │ News Scraper │  │ Product DB   │      │
 │  └──────────────┘  └──────────────┘  └──────────────┘      │
-└─────────────────────────────────────────────────────────────┘
-                   │
+└──────────────────┬──────────────────────────────────────────┘
                    ▼
          ┌─────────────────┐
-         │ HeyGen Live      │
-         │ Avatar API       │
+         │ LiveAvatar API   │
+         │ (sessions, LLM,  │
+         │  TTS, LiveKit)   │
          └─────────────────┘
 ```
 
-### Mobile layers
+### Web layers
 
-| Layer | Responsibility |
-| ----- | -------------- |
-| `src/features/avatar/` | HeyGen session, video surface, lip-sync |
-| `src/features/chat/` | Message list, composer, action chips |
-| `src/features/voice/` | Mic capture, STT trigger, voice UI state |
-| `src/services/` | HTTP client, agent stream, avatar token exchange |
-| `src/theme/` | Design tokens, light/dark semantic theme |
+| Layer                           | Responsibility                                     |
+| ------------------------------- | -------------------------------------------------- |
+| `src/features/avatar/`          | LiveAvatar session, video surface, chat panel      |
+| `src/features/chat/` (planned)  | Message list, composer, action chips               |
+| `src/features/voice/` (planned) | Mic capture, voice UI state                        |
+| `src/services/`                 | Token exchange, agent stream, future backend calls |
+| `src/styles/`                   | Design tokens + Tailwind v4 wiring                 |
+| `src/router.tsx`                | TanStack Router code-based tree, lazy routes       |
 
 ### Backend agent tools (planned)
 
-| Tool | Purpose |
-| ---- | ------- |
-| `get_portfolio` | User holdings, allocation, performance |
-| `search_products` | Filter by risk tier (low / medium / high) |
-| `scrape_news` | Market and sector news for context |
-| `explain_movement` | Why a holding or market moved |
+| Tool                   | Purpose                                             |
+| ---------------------- | --------------------------------------------------- |
+| `get_portfolio`        | User holdings, allocation, performance              |
+| `search_products`      | Filter by risk tier (low / medium / high)           |
+| `scrape_news`          | Market and sector news for context                  |
+| `explain_movement`     | Why a holding or market moved                       |
 | `initiate_transaction` | Return form schema for invest / sell / retire flows |
 
 ### Transaction flow pattern
 
-When the agent decides a transaction is needed, it returns a structured **action** with required fields. The mobile app renders a form (amount, product, account, confirm) before submitting to Actinver APIs.
+When the agent decides a transaction is needed, it returns a structured **action** with required fields. The web app renders a form (amount, product, account, confirm) before submitting to Actinver APIs.
 
 ## Patterns
 
@@ -85,6 +86,10 @@ Chat and voice share one session context. Switching modes does not reset convers
 ### Service layer
 
 All backend calls go through `src/services/`. Components never call `fetch` directly. See `.agents/rules/code-style-rules.md`.
+
+### Dev proxy for API keys
+
+`vite.config.ts` proxies `/liveavatar-api/*` → `https://api.liveavatar.com` and injects `X-API-KEY` from `.env`. The key never reaches the bundle. In production, `VITE_LIVEAVATAR_API_BASE` points at the backend.
 
 ### Feature folders
 
@@ -100,7 +105,8 @@ src/features/<feature>/
 
 ## Gotchas
 
-- HeyGen session tokens are short-lived; refresh via backend, never embed API keys in the app.
+- LiveAvatar session tokens are short-lived; refresh via backend, never embed API keys in the client.
 - Avatar video and agent streaming are separate channels; coordinate so lip-sync matches spoken response.
 - Investment disclaimers and regulatory copy must appear in the UI (not only in agent responses).
-- Primary CTA buttons use `filledDark`, not brand blue. See `knowledge/design-system.md`.
+- Primary CTA buttons use `bg-filled-dark`, not brand blue. See `knowledge/design-system.md`.
+- If a PWA (installed standalone mode) is targeted, validate `getUserMedia` on iOS installed PWAs before committing to voice mode there; Safari tabs work.

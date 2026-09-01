@@ -20,6 +20,18 @@ export const actinverAvatar = {
     'https://files2.heygen.ai/avatar/v3/6c421e25058b4dcf8e73e44de252fced/half/2.2/raw_preview_image.webp',
 } as const;
 
+/**
+ * LiveAvatar sandbox defaults.
+ * Sandbox mode: only the Wayne avatar is available and sessions last ~1 minute.
+ * No voice_id: the Actinver voice lives in the HeyGen catalog, not in the
+ * LiveAvatar space, and /v1/sessions/start rejects it with "Voice not found".
+ * https://docs.liveavatar.com/docs/sandbox-mode
+ */
+export const liveAvatarSandbox = {
+  avatarId: 'dd73ea75-1218-4ef3-92ce-606d5f7fbc0a',
+  language: actinverAvatar.language,
+} as const;
+
 /** Look ID passed to HeyGen video / Live Avatar session APIs */
 export function getAvatarLookId(orientation: 'landscape' | 'portrait' = 'portrait') {
   return actinverAvatar.lookIds[orientation];
