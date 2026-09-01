@@ -1,0 +1,50 @@
+---
+description: LoopOps Avatar App — React Native + HeyGen + Actinver investment agent
+alwaysApply: true
+---
+
+# LoopOps Avatar App
+
+React Native mobile app for **Actinver** talking-head avatar. Not the LoopOps web app or marketing website.
+
+## Stack
+
+- React Native 0.87, React 19, TypeScript
+- HeyGen **Live Avatar** ([docs.liveavatar.com](https://docs.liveavatar.com/))
+- Backend: Python or TypeScript, LangChain / LangGraph, **Gemini** LLM
+- Investment tools: portfolio lookup, news scraping, risk-tier product search, guided transaction flows
+
+## Interaction modes
+
+1. **Chat mode** — typed messages, text replies, optional avatar lip-sync
+2. **Voice mode** — speech in/out via avatar session, hands-free conversation
+
+Both modes share the same agent backend and session context.
+
+## Structure
+
+```
+src/
+├── theme/           # Design tokens (tokens.ts, getTheme)
+├── services/        # API client + backend calls
+└── features/
+    ├── avatar/      # HeyGen Live Avatar integration
+    ├── chat/        # Chat UI, composer, message list
+    └── voice/       # Voice capture + playback orchestration
+knowledge/           # Architecture docs (read before coding)
+DESIGN.md            # Agent-readable token mirror
+```
+
+## Commands
+
+```bash
+npm start            # Metro
+npm run ios
+npm run android
+npm test
+```
+
+## Sibling repos
+
+- `../loopops-web-app` — canonical design tokens and writing style
+- `../loopops-website` — ignore `.agent/rules/` (stale copies)

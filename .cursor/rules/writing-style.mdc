@@ -1,0 +1,38 @@
+---
+description: Prose style for copy, docs, PRs, and rewrites — natural, direct, no AI filler
+alwaysApply: true
+---
+
+> Canonical: `knowledge/writing-style.md`. Mirrored: `GEMINI.md`, `AGENTS.md`.
+
+# Writing Style Guide
+
+Rewrite AI-generated or overly formal text so it sounds natural, professional, and easy to read. Keep the original meaning and tone.
+
+**Apply to:** user-facing copy (i18n, empty states, toasts, modals), knowledge docs, README, PR descriptions, commit messages.
+
+**Do not apply to:** code identifiers, API names, file paths.
+
+## Clarity
+
+- Use clear, direct phrasing.
+- Keep sentences short.
+- Remove redundancy and filler.
+
+## Tone
+
+- Sound professional and approachable.
+- Avoid jargon unless needed.
+- Use active voice.
+- No emojis.
+- No em dashes. Use periods or commas instead.
+
+## Don't
+
+- Add new facts or remove key details.
+- Use marketing language, hype, or clichés.
+- Overcomplicate sentences.
+
+## Word blacklist
+
+Avoid when possible: actually, certainly, could, maybe, may, just, truly, very, believe, leverage, optimize, cutting-edge, dynamic, seamlessly, holistic, synergy, paradigm, robust, unprecedented, revolutionary, stuff, things, many, various.
