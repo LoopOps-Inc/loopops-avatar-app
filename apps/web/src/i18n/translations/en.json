@@ -24,6 +24,17 @@
     "user": "You",
     "avatar": "Avatar",
     "ended_by_server": "The session ended (~1 minute). You can start another.",
-    "error_unknown": "Unknown error"
+    "error_unknown": "Unknown error",
+    "session_active": "Tino is with you. Drag the sheet or use the buttons to resize it.",
+    "expand": "Full screen",
+    "collapse": "Exit full screen"
+  },
+  "advisor": {
+    "market_value": "Market value",
+    "period_return": "Return",
+    "contributions": "Contributions",
+    "citations": "Sources",
+    "as_of": "As of",
+    "today": "today"
   }
 }

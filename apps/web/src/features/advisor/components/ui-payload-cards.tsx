@@ -1,0 +1,206 @@
+import type {
+  AttributionBarsPayload,
+  CitationsPayload,
+  MarketQuotePayload,
+  PortfolioSummaryPayload,
+  UIComponent,
+  WarningBannerPayload,
+} from '@loopops/contracts';
+import { Info, TriangleAlert } from 'lucide-react';
+import { useTranslation } from '@/i18n';
+
+const moneyFormatter = new Intl.NumberFormat('es-MX', {
+  style: 'currency',
+  currency: 'MXN',
+  maximumFractionDigits: 2,
+});
+
+function formatDate(iso: string): string {
+  const date = new Date(`${iso}T00:00:00`);
+  return Number.isNaN(date.getTime())
+    ? iso
+    : date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function ReturnBadge({ value, period }: { value: number; period: string }) {
+  const positive = value >= 0;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+        positive ? 'bg-success/15 text-success' : 'bg-error/15 text-error'
+      }`}
+    >
+      {positive ? '+' : ''}
+      {value.toFixed(2)}% {period}
+    </span>
+  );
+}
+
+function PortfolioSummaryCard({ payload }: { payload: PortfolioSummaryPayload }) {
+  const { t } = useTranslation();
+  return (
+    <dl className="grid grid-cols-2 gap-2">
+      <div className="col-span-2 flex items-baseline justify-between gap-2">
+        <dt className="text-[11px] font-medium tracking-wide text-white/60 uppercase">
+          {t('advisor.market_value')}
+        </dt>
+        <dd className="text-sm font-semibold text-white tabular-nums">
+          {moneyFormatter.format(Number(payload.market_value.amount))}
+        </dd>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <dt className="text-[11px] font-medium tracking-wide text-white/60 uppercase">
+          {t('advisor.period_return')}
+        </dt>
+        <dd>
+          <ReturnBadge value={payload.period_return_pct} period={payload.period} />
+        </dd>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <dt className="text-[11px] font-medium tracking-wide text-white/60 uppercase">
+          {t('advisor.as_of')}
+        </dt>
+        <dd className="text-xs text-white/70 tabular-nums">{formatDate(payload.as_of)}</dd>
+      </div>
+    </dl>
+  );
+}
+
+function AttributionBarsCard({ payload }: { payload: AttributionBarsPayload }) {
+  const { t } = useTranslation();
+  const max = Math.max(...payload.contributions.map((c) => Math.abs(c.bps)), 1);
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p className="text-[11px] font-medium tracking-wide text-white/60 uppercase">
+        {t('advisor.contributions')}
+      </p>
+      {payload.contributions.map((contribution) => {
+        const positive = contribution.bps >= 0;
+        const width = Math.round((Math.abs(contribution.bps) / max) * 100);
+        return (
+          <div key={contribution.sleeve} className="flex flex-col gap-0.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-xs text-white/80">{contribution.sleeve}</span>
+              <span
+                className={`text-xs font-medium tabular-nums ${positive ? 'text-success' : 'text-error'}`}
+              >
+                {positive ? '+' : ''}
+                {contribution.bps} bp
+              </span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+              <div
+                className={`h-full rounded-full ${positive ? 'bg-success' : 'bg-error'}`}
+                style={{ width: `${width}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function MarketQuoteCard({ payload }: { payload: MarketQuotePayload }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-xs font-medium tracking-wide text-white/60 uppercase">
+        {payload.symbol}
+      </span>
+      <span className="flex items-baseline gap-2">
+        <span className="text-sm font-semibold text-white tabular-nums">{payload.value}</span>
+        {payload.change_pct !== undefined && (
+          <ReturnBadge value={payload.change_pct} period={t('advisor.today')} />
+        )}
+      </span>
+    </div>
+  );
+}
+
+function CitationsCard({ payload }: { payload: CitationsPayload }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p className="text-[11px] font-medium tracking-wide text-white/60 uppercase">
+        {t('advisor.citations')}
+      </p>
+      <ul className="flex flex-col gap-1">
+        {payload.items.map((item) => (
+          <li key={item.title} className="text-xs leading-relaxed text-white/80">
+            {item.title}
+            {(item.source || item.published) && (
+              <span className="text-white/50">
+                {' '}
+                — {item.source}
+                {item.published ? `, ${formatDate(item.published)}` : ''}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function WarningBannerCard({ payload }: { payload: WarningBannerPayload }) {
+  const isWarning = payload.severity === 'warning';
+  const Icon = isWarning ? TriangleAlert : Info;
+  return (
+    <p
+      role="status"
+      className={`flex items-start gap-2 rounded-xs border px-2.5 py-2 text-xs leading-relaxed ${
+        isWarning
+          ? 'border-warning/30 bg-warning/10 text-warning'
+          : 'border-info/30 bg-info/10 text-info'
+      }`}
+    >
+      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      {payload.message}
+    </p>
+  );
+}
+
+const CARD_BODY_STYLES =
+  'flex w-full flex-col gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-left';
+
+/** Renders the ui_payload cards attached to an avatar chat message. */
+export function UIPayloadCards({ components }: { components: UIComponent[] }) {
+  if (components.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-col gap-2">
+      {components.map((component, index) => {
+        switch (component.type) {
+          case 'portfolio_summary':
+            return (
+              <div key={index} className={CARD_BODY_STYLES}>
+                <PortfolioSummaryCard payload={component.payload} />
+              </div>
+            );
+          case 'attribution_bars':
+            return (
+              <div key={index} className={CARD_BODY_STYLES}>
+                <AttributionBarsCard payload={component.payload} />
+              </div>
+            );
+          case 'market_quote':
+            return (
+              <div key={index} className={CARD_BODY_STYLES}>
+                <MarketQuoteCard payload={component.payload} />
+              </div>
+            );
+          case 'citations':
+            return (
+              <div key={index} className={CARD_BODY_STYLES}>
+                <CitationsCard payload={component.payload} />
+              </div>
+            );
+          case 'warning_banner':
+            return <WarningBannerCard key={index} payload={component.payload} />;
+          default:
+            return null;
+        }
+      })}
+    </div>
+  );
+}

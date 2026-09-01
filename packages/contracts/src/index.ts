@@ -54,6 +54,14 @@ export const AttributionBarsPayloadSchema = z.object({
 });
 export type AttributionBarsPayload = z.infer<typeof AttributionBarsPayloadSchema>;
 
+export const MarketQuotePayloadSchema = z.object({
+  symbol: z.string(),
+  value: z.string(),
+  change_pct: z.number().optional(),
+  as_of: z.string().optional(),
+});
+export type MarketQuotePayload = z.infer<typeof MarketQuotePayloadSchema>;
+
 export const CitationSchema = z.object({
   title: z.string(),
   url: z.string().optional(),
@@ -83,6 +91,12 @@ export const UIComponentSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('attribution_bars'),
     payload: AttributionBarsPayloadSchema,
+    as_of: z.string().optional(),
+    source: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('market_quote'),
+    payload: MarketQuotePayloadSchema,
     as_of: z.string().optional(),
     source: z.string().optional(),
   }),

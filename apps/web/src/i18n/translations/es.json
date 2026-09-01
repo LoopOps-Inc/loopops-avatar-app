@@ -24,6 +24,17 @@
     "user": "Tú",
     "avatar": "Avatar",
     "ended_by_server": "La sesión se cerró (~1 minuto). Puedes iniciar otra.",
-    "error_unknown": "Error desconocido"
+    "error_unknown": "Error desconocido",
+    "session_active": "Tino está contigo. Arrastra la hoja o usa los botones para ajustar el tamaño.",
+    "expand": "Pantalla completa",
+    "collapse": "Salir de pantalla completa"
+  },
+  "advisor": {
+    "market_value": "Valor de mercado",
+    "period_return": "Rendimiento",
+    "contributions": "Contribuciones",
+    "citations": "Fuentes",
+    "as_of": "Corte",
+    "today": "hoy"
   }
 }

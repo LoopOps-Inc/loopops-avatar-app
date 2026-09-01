@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AudioLines, Loader2, PhoneCall, PhoneOff } from 'lucide-react';
+import { AudioLines, Loader2, PhoneCall } from 'lucide-react';
 import { ConnectionQuality, SessionState } from '@heygen/liveavatar-web-sdk';
 import type { SessionState as SessionStateType } from '@heygen/liveavatar-web-sdk';
 import type { EmbedCommand, EmbedEvent } from '@loopops/contracts';
 import { AppShell } from '@/components/AppShell';
+import { useAdvisorChat } from '@/features/advisor/hooks/use-advisor-chat';
 import { useEmbedBridge } from '@/features/embed/hooks/use-embed-bridge';
 import { useTranslation } from '@/i18n';
 import { useLiveAvatarSession } from '../hooks/use-liveavatar-session';
-import { ChatSheet } from './ChatSheet';
-import { SessionControls } from './SessionControls';
-import { StatusPill } from './StatusPill';
+import { ChatArea } from './ChatArea';
+import { SessionRail } from './SessionRail';
+import { SnapSheet } from './SnapSheet';
 
 type PanelCommands = {
   stop: () => void;
@@ -25,6 +26,12 @@ type SessionPanelProps = {
   onEvent: (event: EmbedEvent) => void;
 };
 
+/** Snap fractions of the frame height: loading (compact), chat (video above), full screen. */
+const SNAP_POINTS = [0.34, 0.62, 1];
+const LOADING_SNAP = 0;
+const CHAT_SNAP = 1;
+const FULL_SNAP = 2;
+
 function stateLabel(state: SessionStateType, t: (key: string) => string): string {
   switch (state) {
     case SessionState.CONNECTED:
@@ -38,6 +45,14 @@ function stateLabel(state: SessionStateType, t: (key: string) => string): string
   }
 }
 
+/**
+ * The avatar video is the base layer; the chat lives in a bottom snap sheet
+ * (Motion) docked over it. Snap points control how much of the frame the
+ * sheet occupies — the video shows through whatever space is left (the
+ * full-screen snap covers it entirely, e.g. for future forms/firma). The
+ * advisor mock owns the transcript; the avatar only speaks what the advisor
+ * sends, so HeyGen transcriptions are not rendered.
+ */
 function SessionPanel({
   sessionToken,
   voiceEnabled,
@@ -49,6 +64,7 @@ function SessionPanel({
   const { t } = useTranslation();
   const session = useLiveAvatarSession(sessionToken, { voiceChat: voiceEnabled });
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [snapIndex, setSnapIndex] = useState(LOADING_SNAP);
 
   const {
     sessionState,
@@ -57,7 +73,6 @@ function SessionPanel({
     isAvatarTalking,
     isUserTalking,
     isMicMuted,
-    messages,
     endReason,
     start,
     stop,
@@ -66,6 +81,10 @@ function SessionPanel({
     sendMessage,
     setMicMuted,
   } = session;
+
+  const isConnected = sessionState === SessionState.CONNECTED;
+  const speak = useCallback((text: string) => sendMessage(text), [sendMessage]);
+  const advisor = useAdvisorChat({ speak, enabled: isConnected });
 
   useEffect(() => {
     registerCommands({ stop: () => void stop(), setMicMuted });
@@ -89,9 +108,14 @@ function SessionPanel({
   }, [onEvent, sessionState, connectionQuality]);
 
   useEffect(() => {
-    const last = messages[messages.length - 1];
-    if (last) onEvent({ type: 'message', payload: last });
-  }, [onEvent, messages]);
+    const last = advisor.messages[advisor.messages.length - 1];
+    if (last) {
+      onEvent({
+        type: 'message',
+        payload: { sender: last.sender, message: last.message, timestamp: last.timestamp },
+      });
+    }
+  }, [onEvent, advisor.messages]);
 
   useEffect(() => {
     if (endReason) {
@@ -102,71 +126,83 @@ function SessionPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endReason, onEvent]);
 
-  const isConnected = sessionState === SessionState.CONNECTED;
   const isPoorQuality = connectionQuality === ConnectionQuality.BAD;
+  // Derived snap: compact while loading; once connected the effective snap is
+  // at least the chat view (the loading snap is unreachable after connect).
+  const effectiveSnap = !isConnected ? LOADING_SNAP : Math.max(snapIndex, CHAT_SNAP);
+  const isFullScreen = effectiveSnap === FULL_SNAP;
+  const visibleFraction = SNAP_POINTS[effectiveSnap] ?? 1;
+  const stateClass = isConnected
+    ? 'bg-success'
+    : sessionState === SessionState.CONNECTING || sessionState === SessionState.DISCONNECTING
+      ? 'animate-pulse bg-warning motion-reduce:animate-none'
+      : 'bg-white/40';
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-black">
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
-          isConnected ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
-      {!isConnected && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60">
-          <Loader2 className="h-6 w-6 animate-spin text-white/80 motion-reduce:animate-none" aria-hidden="true" />
-          <p className="text-sm text-white/80">{t('live.connecting')}</p>
-        </div>
-      )}
-      <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-2 pt-safe px-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusPill>
-            <span
-              aria-hidden="true"
-              className={`h-2 w-2 rounded-full ${
-                isConnected
-                  ? 'bg-success'
-                  : sessionState === SessionState.CONNECTING ||
-                      sessionState === SessionState.DISCONNECTING
-                    ? 'animate-pulse bg-warning motion-reduce:animate-none'
-                    : 'bg-white/40'
-              }`}
+    <>
+      {/* Chat sheet: bottom docked, snap points control how much video is visible. */}
+      <SnapSheet
+        snaps={SNAP_POINTS}
+        activeIndex={effectiveSnap}
+        onActiveIndexChange={setSnapIndex}
+        label={t('live.title')}
+        above={
+          <>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              className="h-full w-full object-cover"
             />
-            {stateLabel(sessionState, t)}
-          </StatusPill>
-          {isPoorQuality && <StatusPill>{t('live.quality_poor')}</StatusPill>}
-          {isAvatarTalking && (
-            <StatusPill>
-              <AudioLines className="h-3.5 w-3.5 animate-pulse motion-reduce:animate-none" aria-hidden="true" />
-              {t('live.avatar_talking')}
-            </StatusPill>
-          )}
-        </div>
-        <button
-          type="button"
-          aria-label={t('live.end')}
-          onClick={() => void stop()}
-          disabled={!isConnected}
-          className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-error/40 bg-error/90 text-white backdrop-blur-sm transition-colors duration-200 hover:bg-error disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <PhoneOff className="h-5 w-5" aria-hidden="true" />
-        </button>
-      </div>
-      <SessionControls isAvatarTalking={isAvatarTalking} onInterrupt={interrupt} />
-      <ChatSheet
-        messages={messages}
-        connected={isConnected}
-        voiceEnabled={voiceEnabled}
-        isUserTalking={isUserTalking}
-        isMicMuted={isMicMuted}
-        micUnavailable={micUnavailable}
-        onSend={(message) => sendMessage(message)}
-        onToggleMic={() => setMicMuted(!isMicMuted)}
-      />
-    </div>
+            {!isConnected && (
+              <div
+                role="status"
+                aria-label={t('live.connecting')}
+                className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-black/50 via-black/30 to-black/70"
+              >
+                <div className="flex h-16 w-16 animate-pulse items-center justify-center rounded-full border border-white/20 bg-white/5 motion-reduce:animate-none">
+                  <Loader2
+                    className="h-6 w-6 animate-spin text-white/80 motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
+                </div>
+              </div>
+            )}
+          </>
+        }
+      >
+        <SessionRail
+          stateText={stateLabel(sessionState, t)}
+          stateClass={stateClass}
+          showQualityPill={isPoorQuality}
+          isAvatarTalking={isAvatarTalking}
+          isFullScreen={isFullScreen}
+          canEnd={isConnected}
+          onInterrupt={interrupt}
+          onToggleSnap={() => setSnapIndex(isFullScreen ? CHAT_SNAP : FULL_SNAP)}
+          onEnd={() => void stop()}
+        />
+        <ChatArea
+          messages={advisor.messages}
+          connected={isConnected}
+          loading={!isConnected}
+          busy={advisor.isThinking}
+          voiceEnabled={voiceEnabled}
+          isUserTalking={isUserTalking}
+          isMicMuted={isMicMuted}
+          micUnavailable={micUnavailable}
+          onSend={advisor.send}
+          onToggleMic={() => setMicMuted(!isMicMuted)}
+        />
+        {/*
+          Snap sheets are full-height layers translated down by the snap
+          offset: only the top `snap` fraction is visible. This spacer keeps
+          the composer pinned to the visible bottom edge at every snap (it
+          collapses to zero at full screen).
+        */}
+        <div aria-hidden="true" className="shrink-0" style={{ height: `${(1 - visibleFraction) * 100}%` }} />
+      </SnapSheet>
+    </>
   );
 }
 
@@ -244,9 +280,19 @@ export function LiveSessionRoute() {
   return (
     <AppShell>
       <div className="flex min-h-dvh justify-center bg-surface-sub">
-        <div className="relative h-dvh w-full overflow-hidden bg-black sm:my-auto sm:h-[min(853px,calc(100dvh-3rem))] sm:max-w-md sm:rounded-lg sm:border sm:border-outline">
-          {!sessionToken ? (
-            <div className="flex h-full flex-col items-center justify-center gap-5 p-6 pt-safe pb-safe">
+        <div className="relative h-dvh w-full overflow-hidden bg-surface-sub sm:my-auto sm:h-[min(853px,calc(100dvh-3rem))] sm:max-w-md sm:rounded-lg sm:border sm:border-outline">
+          {sessionToken ? (
+            <SessionPanel
+              key={sessionToken}
+              sessionToken={sessionToken}
+              voiceEnabled={voiceEnabled}
+              micUnavailable={micUnavailable}
+              onEnded={handleEnded}
+              registerCommands={registerCommands}
+              onEvent={handlePanelEvent}
+            />
+          ) : (
+            <div className="relative flex h-full flex-col items-center justify-center gap-5 p-6 pt-safe pb-safe">
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/5 via-black/40 to-black/80" aria-hidden="true" />
               <div className="relative flex w-full flex-col items-center gap-5 text-center">
                 <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-white/10">
@@ -281,16 +327,6 @@ export function LiveSessionRoute() {
                 )}
               </div>
             </div>
-          ) : (
-            <SessionPanel
-              key={sessionToken}
-              sessionToken={sessionToken}
-              voiceEnabled={voiceEnabled}
-              micUnavailable={micUnavailable}
-              onEnded={handleEnded}
-              registerCommands={registerCommands}
-              onEvent={handlePanelEvent}
-            />
           )}
         </div>
       </div>
