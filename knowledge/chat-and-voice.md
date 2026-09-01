@@ -38,7 +38,7 @@ App
 ### File locations (planned)
 
 ```
-src/features/chat/
+apps/web/src/features/chat/
 ├── components/ChatPanel.tsx
 ├── components/MessageList.tsx
 ├── components/Composer.tsx
@@ -47,7 +47,7 @@ src/features/chat/
 ├── services/chat-service.ts
 └── types/chat.ts
 
-src/features/voice/
+apps/web/src/features/voice/
 ├── components/VoiceControls.tsx
 ├── hooks/use-voice-session.ts
 └── services/voice-service.ts

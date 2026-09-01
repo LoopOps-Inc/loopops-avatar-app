@@ -56,12 +56,12 @@ Inspired by conversational banking demos (e.g. Citi Sky), but scoped to Actinver
 
 | Layer                           | Responsibility                                     |
 | ------------------------------- | -------------------------------------------------- |
-| `src/features/avatar/`          | LiveAvatar session, video surface, chat panel      |
-| `src/features/chat/` (planned)  | Message list, composer, action chips               |
-| `src/features/voice/` (planned) | Mic capture, voice UI state                        |
-| `src/services/`                 | Token exchange, agent stream, future backend calls |
-| `src/styles/`                   | Design tokens + Tailwind v4 wiring                 |
-| `src/router.tsx`                | TanStack Router code-based tree, lazy routes       |
+| `apps/web/src/features/avatar/`          | LiveAvatar session, video surface, chat panel      |
+| `apps/web/src/features/chat/` (planned)  | Message list, composer, action chips               |
+| `apps/web/src/features/voice/` (planned) | Mic capture, voice UI state                        |
+| `apps/web/src/services/`                 | Token exchange, agent stream, future backend calls |
+| `apps/web/src/styles/`                   | Design tokens + Tailwind v4 wiring                 |
+| `apps/web/src/router.tsx`                | TanStack Router code-based tree, lazy routes       |
 
 ### Backend agent tools (planned)
 
@@ -85,7 +85,7 @@ Chat and voice share one session context. Switching modes does not reset convers
 
 ### Service layer
 
-All backend calls go through `src/services/`. Components never call `fetch` directly. See `.agents/rules/code-style-rules.md`.
+All backend calls go through `apps/web/src/services/`. Components never call `fetch` directly. See `.agents/rules/code-style-rules.md`.
 
 ### Dev proxy for API keys
 
@@ -96,7 +96,7 @@ All backend calls go through `src/services/`. Components never call `fetch` dire
 Mirror loopops-web-app convention:
 
 ```
-src/features/<feature>/
+apps/web/src/features/<feature>/
 ├── components/
 ├── hooks/
 ├── services/

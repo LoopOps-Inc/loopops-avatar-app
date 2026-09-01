@@ -6,45 +6,18 @@
   "engines": {
     "node": ">=22.12.0"
   },
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
-    "check": "tsc --noEmit",
-    "lint": "eslint src/",
+    "dev": "npm run dev -w apps/web",
+    "build": "npm run build -w apps/web",
+    "preview": "npm run preview -w apps/web",
+    "check": "npm run check -w apps/web",
+    "lint": "npm run lint -w apps/web",
     "format": "prettier --write .",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "npm run test -w apps/web",
+    "test:watch": "npm run test:watch -w apps/web",
     "prepare": "lefthook install"
-  },
-  "dependencies": {
-    "@heygen/liveavatar-web-sdk": "^0.0.18",
-    "@tailwindcss/vite": "^4.2.2",
-    "@tanstack/react-router": "^1.168.10",
-    "@vitejs/plugin-react": "^6.0.1",
-    "lucide-react": "^1.39.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "tailwindcss": "^4.2.2",
-    "vite": "^8.0.3"
-  },
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.2",
-    "@types/node": "^25.5.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "eslint": "^10.1.0",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.0.0",
-    "jsdom": "^29.1.1",
-    "lefthook": "^2.1.6",
-    "prettier": "^3.8.1",
-    "prettier-plugin-tailwindcss": "^0.7.2",
-    "typescript": "^6.0.2",
-    "typescript-eslint": "^8.59.1",
-    "vitest": "^4.1.8"
   }
 }

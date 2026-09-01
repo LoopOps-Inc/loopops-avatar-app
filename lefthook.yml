@@ -8,7 +8,7 @@ pre-commit:
 
     eslint:
       glob: '*.{js,ts,jsx,tsx}'
-      run: npx eslint --fix {staged_files}
+      run: npx eslint --fix --config apps/web/eslint.config.js {staged_files}
 
 # CI runs lint + check + build. Pre-push only verifies the production build once
 # (includes tsc) — avoids duplicate full-project typecheck on every commit/push.

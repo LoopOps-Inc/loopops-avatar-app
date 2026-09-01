@@ -35,7 +35,7 @@ Auth priority: CLI + `HEYGEN_API_KEY` → MCP OAuth (if connected in Cursor) →
 | Field                      | Value                                                              |
 | -------------------------- | ------------------------------------------------------------------ |
 | Identity file              | `AVATAR-ACTINVER.md`                                               |
-| App config                 | `src/config/avatar.ts`                                             |
+| App config                 | `apps/web/src/config/avatar.ts`                                             |
 | Group ID                   | `378cae579aef4c1189398b008dec0cd1`                                 |
 | Look ID (landscape)        | `f00b90bab23243bc93a1484ebd63d8c9`                                 |
 | Look ID (portrait, mobile) | `ec08a8bb0119489aa0019a090274c631`                                 |
@@ -50,9 +50,9 @@ Live Avatar session tokens use `LIVEAVATAR_API_KEY` from [app.liveavatar.com](ht
 | Layer                                                 | Responsibility                                                   |
 | ----------------------------------------------------- | ---------------------------------------------------------------- |
 | Backend (production)                                  | Create LiveAvatar sessions, hold API keys, return session tokens |
-| `src/services/liveavatar-service.ts`                  | Mint session tokens (dev proxy), future backend calls            |
-| `src/features/avatar/`                                | SDK session lifecycle, video surface, chat panel                 |
-| `src/features/avatar/hooks/use-liveavatar-session.ts` | React glue over the SDK (events → state)                         |
+| `apps/web/src/services/liveavatar-service.ts`                  | Mint session tokens (dev proxy), future backend calls            |
+| `apps/web/src/features/avatar/`                                | SDK session lifecycle, video surface, chat panel                 |
+| `apps/web/src/features/avatar/hooks/use-liveavatar-session.ts` | React glue over the SDK (events → state)                         |
 
 ### Session lifecycle
 
@@ -76,7 +76,7 @@ Live Avatar session tokens use `LIVEAVATAR_API_KEY` from [app.liveavatar.com](ht
 - Only the Wayne avatar (`dd73ea75-1218-4ef3-92ce-606d5f7fbc0a`) is available
 - Sessions auto-terminate after ~1 minute
 - No credit usage
-- Defaults in `src/config/avatar.ts` → `liveAvatarSandbox`
+- Defaults in `apps/web/src/config/avatar.ts` → `liveAvatarSandbox`
 
 ## Patterns
 

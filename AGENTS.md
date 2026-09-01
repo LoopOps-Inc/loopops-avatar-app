@@ -16,21 +16,29 @@ Shared rules for **Cursor**, **GitHub Copilot**, **Claude Code**, **Gemini**, an
 Installed at `~/.cursor/skills/heygen-skills` per [HeyGen install guide](https://github.com/heygen-com/skills/blob/master/INSTALL_FOR_AGENTS.md). Requires `HEYGEN_API_KEY` in `.env` or HeyGen MCP connected in Cursor. CLI: `~/.local/bin/heygen`.
 
 | Design tokens (agents) | `DESIGN.md` |
-| Design tokens (code) | `src/styles/tokens.css` + `src/styles/global.css` |
+| Design tokens (code) | `apps/web/src/styles/tokens.css` + `apps/web/src/styles/global.css` |
 
 ## Project scope
 
-Web app for the **Actinver** talking-head avatar:
+Monorepo for the **Actinver** talking-head avatar:
+
+```
+apps/web/        # Vite + React frontend (this app)
+services/agent/  # agent backend placeholder (Python / FastAPI / LangGraph, reserved)
+```
 
 - **HeyGen LiveAvatar** for video/voice output ([docs.liveavatar.com](https://docs.liveavatar.com/)), via `@heygen/liveavatar-web-sdk` (FULL mode)
-- **Custom backend** (Python or TypeScript) with LangChain / LangGraph + **Gemini**
+- **Custom backend** (Python or TypeScript) with LangChain / LangGraph + **Gemini** — see reference architecture in the sibling repo `actinver-ai-advisor`
 - **Two interaction modes**: chat (typed) and conversation (voice)
 - Investment portfolio Q&A, product recommendations, and guided invest/retire/sell flows
 - PWA-ready; desktop and mobile browsers
 
+All frontend source lives under `apps/web/` — feature layout, tokens, and services are relative to that directory.
+
 Sibling repos for reference:
 
 - `../loopops-web-app` — canonical design tokens, writing style, chat patterns; this app mirrors its stack (Vite + TanStack Router + Tailwind + TypeScript)
+- `../actinver-ai-advisor` — reference architecture for the monorepo layout (`apps/`, `services/`, `infra/`, `docs/`)
 
 ## Commands
 
@@ -38,9 +46,11 @@ Sibling repos for reference:
 npm run dev       # dev server (port 8080, /liveavatar-api proxy)
 npm run build     # tsc --noEmit && vite build
 npm run check     # typecheck only
-npm run lint      # eslint src/
+npm run lint      # eslint apps/web/src/
 npm test          # vitest run
 ```
+
+Root scripts delegate to the `apps/web` workspace (`npm -w apps/web`). Run them from the repo root.
 
 Package manager: **npm**.
 
@@ -54,17 +64,17 @@ When a rule should be encoded for agents, document it in `knowledge/`, not in ad
 
 ### Design tokens — no hardcoded colors
 
-Use `src/styles/tokens.css` primitives and the semantic Tailwind utilities from `src/styles/global.css` (`bg-surface`, `text-content`, `bg-filled-dark`, etc.). Never scatter hex values in components.
+Use `apps/web/src/styles/tokens.css` primitives and the semantic Tailwind utilities from `apps/web/src/styles/global.css` (`bg-surface`, `text-content`, `bg-filled-dark`, etc.). Never scatter hex values in components.
 
 Primary CTA buttons use **filled-dark** (`bg-filled-dark` / `text-filled-dark-fg`), not brand blue. Blue (`text-accent`, `bg-accent`) is for links and brand accents only.
 
 ### API calls — service layer only
 
-Never use raw `fetch` in components. Place network calls in `src/services/`. The LiveAvatar API key is injected by the Vite dev proxy (`LIVEAVATAR_API_KEY` in `.env`); production tokens come from the backend.
+Never use raw `fetch` in components. Place network calls in `apps/web/src/services/`. The LiveAvatar API key is injected by the Vite dev proxy (`LIVEAVATAR_API_KEY` in `apps/web/.env`); production tokens come from the backend.
 
 ### i18n — every user-facing string
 
-i18n is wired: all copy goes through `t('namespace.key')` from `src/i18n`. Add keys to **both** `es.json` and `en.json`. Keep copy short and direct, following [`knowledge/writing-style.md`](./knowledge/writing-style.md): no AI filler, no em dashes, no emojis.
+i18n is wired: all copy goes through `t('namespace.key')` from `apps/web/src/i18n`. Add keys to **both** `es.json` and `en.json`. Keep copy short and direct, following [`knowledge/writing-style.md`](./knowledge/writing-style.md): no AI filler, no em dashes, no emojis.
 
 ### Clean UI rendering
 
@@ -73,11 +83,11 @@ When editing JSX/TSX, ensure no stray text or typos appear outside React tags.
 ### Feature module layout
 
 ```
-src/features/<feature>/
+apps/web/src/features/<feature>/
 ├── components/
 ├── hooks/
 ├── services/
 └── types/
 ```
 
-Shared theme: `src/styles/`. Shared services: `src/services/`. Routes: code-based tree in `src/router.tsx`, components lazy-loaded from features.
+Shared theme: `apps/web/src/styles/`. Shared services: `apps/web/src/services/`. Routes: code-based tree in `apps/web/src/router.tsx`, components lazy-loaded from features.

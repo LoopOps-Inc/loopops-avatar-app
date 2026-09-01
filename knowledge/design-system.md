@@ -9,7 +9,7 @@ source: ../loopops-web-app/knowledge/design-system.md
 
 ## Overview
 
-Ported from **loopops-web-app** for brand consistency across LoopOps and Actinver avatar experiences. Implemented with **Tailwind CSS v4**: primitives in `src/styles/tokens.css`, semantic mapping and `@theme inline` wiring in `src/styles/global.css`.
+Ported from **loopops-web-app** for brand consistency across LoopOps and Actinver avatar experiences. Implemented with **Tailwind CSS v4**: primitives in `apps/web/src/styles/tokens.css`, semantic mapping and `@theme inline` wiring in `apps/web/src/styles/global.css`.
 
 **Spacing:** 4px grid (Tailwind default scale aligns).
 

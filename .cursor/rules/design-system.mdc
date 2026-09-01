@@ -18,8 +18,8 @@ alwaysApply: false
 
 ## Key files
 
-- `src/styles/tokens.css` — color/radius primitives as CSS variables
-- `src/styles/global.css` — semantic mapping + `@theme inline` Tailwind wiring
+- `apps/web/src/styles/tokens.css` — color/radius primitives as CSS variables
+- `apps/web/src/styles/global.css` — semantic mapping + `@theme inline` Tailwind wiring
 - `DESIGN.md` — agent-readable token mirror (synced from loopops-web-app)
 - `knowledge/design-system.md` — usage rules
 

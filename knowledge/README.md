@@ -18,19 +18,19 @@
 ### Tech stack
 
 - **Vite** + **React 19** + **TypeScript**
-- **TanStack Router** — code-based route tree in `src/router.tsx`
-- **Tailwind CSS v4** — tokens in `src/styles/tokens.css`, wiring in `src/styles/global.css`
+- **TanStack Router** — code-based route tree in `apps/web/src/router.tsx`
+- **Tailwind CSS v4** — tokens in `apps/web/src/styles/tokens.css`, wiring in `apps/web/src/styles/global.css`
 - **@heygen/liveavatar-web-sdk** — FULL mode talking head (WebRTC)
 - **Backend** — LangChain / LangGraph + Gemini, investment tools (planned)
 
 ### Key entry points
 
 - `index.html` — app shell, fonts
-- `src/main.tsx` — React root
-- `src/router.tsx` — route tree (lazy routes from features)
-- `src/features/avatar/` — LiveAvatar demo feature
-- `src/services/` — API services (token minting)
-- `src/config/avatar.ts` — Actinver + sandbox avatar config
+- `apps/web/src/main.tsx` — React root
+- `apps/web/src/router.tsx` — route tree (lazy routes from features)
+- `apps/web/src/features/avatar/` — LiveAvatar demo feature
+- `apps/web/src/services/` — API services (token minting)
+- `apps/web/src/config/avatar.ts` — Actinver + sandbox avatar config
 
 ### Sibling repos
 

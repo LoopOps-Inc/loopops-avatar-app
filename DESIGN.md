@@ -80,7 +80,7 @@ components:
 
 # LoopOps Avatar Design System
 
-Agent-readable token mirror. Code implementation: `src/styles/tokens.css` (primitives) + `src/styles/global.css` (semantic mapping and Tailwind wiring).
+Agent-readable token mirror. Code implementation: `apps/web/src/styles/tokens.css` (primitives) + `apps/web/src/styles/global.css` (semantic mapping and Tailwind wiring).
 
 Synced from **loopops-web-app** `DESIGN.md` v1.1. See `knowledge/design-system.md` for usage rules.
 
@@ -101,4 +101,4 @@ Primary CTAs use **filled-dark** (`bg-filled-dark`), not brand blue. Blue is for
 | outline       | `border-outline`     | neutral-20      | neutral-60      |
 | accent        | `bg-accent`          | brand-accent-50 | brand-accent-50 |
 
-Dark mode inverts via `.dark` class on the root element (see `src/styles/global.css`).
+Dark mode inverts via `.dark` class on the root element (see `apps/web/src/styles/global.css`).
