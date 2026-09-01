@@ -1,4 +1,29 @@
 {
+  "nav": {
+    "label": "Navegación principal",
+    "advisor": "Asesor",
+    "demo": "Avatar demo"
+  },
+  "advisor": {
+    "title": "Asesor AI",
+    "subtitle": "Consulta tu portafolio y el contexto de mercado",
+    "greeting": "Hola {{name}}, ¿en qué te ayudo?",
+    "loading": "Conectando con el asesor...",
+    "empty": "Pregúntame sobre tu portafolio o el mercado.",
+    "suggestion_portfolio": "¿Cómo va mi portafolio?",
+    "suggestion_market": "¿Qué pasa con el peso?",
+    "input_label": "Mensaje para el asesor",
+    "input_placeholder": "Escribe tu pregunta",
+    "send": "Enviar",
+    "you": "Tú",
+    "assistant": "Asesor",
+    "portfolio_title": "Resumen de portafolio",
+    "attribution_title": "Atribución del periodo",
+    "sources_title": "Fuentes",
+    "as_of": "Al {{date}}",
+    "mock_notice": "Modo demostración con datos de ejemplo.",
+    "link_demo": "Probar el avatar en vivo"
+  },
   "demo": {
     "title": "Demo LiveAvatar",
     "subtitle": "Avatar Wayne · ~1 min · sin créditos",

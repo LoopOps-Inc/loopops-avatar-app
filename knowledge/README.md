@@ -8,6 +8,7 @@
 | Doc                                              | Scope       | Description                                               |
 | ------------------------------------------------ | ----------- | --------------------------------------------------------- |
 | [poc-scope.md](./poc-scope.md)                   | POC         | What we build now vs production BA architecture           |
+| [../docs/README.md](../docs/README.md)           | POC         | Tino product context (distilled from client briefs)       |
 | [architecture.md](./architecture.md)             | System      | Web client + LiveAvatar + backend + Gemini agent overview |
 | [chat-and-voice.md](./chat-and-voice.md)         | Feature     | Chat and voice modes, streaming, sessions                 |
 | [heygen-live-avatar.md](./heygen-live-avatar.md) | Integration | LiveAvatar Web SDK, session lifecycle, sandbox            |

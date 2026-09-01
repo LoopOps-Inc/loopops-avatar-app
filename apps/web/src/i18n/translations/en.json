@@ -1,4 +1,29 @@
 {
+  "nav": {
+    "label": "Main navigation",
+    "advisor": "Advisor",
+    "demo": "Avatar demo"
+  },
+  "advisor": {
+    "title": "AI Advisor",
+    "subtitle": "Ask about your portfolio and market context",
+    "greeting": "Hi {{name}}, how can I help?",
+    "loading": "Connecting to the advisor...",
+    "empty": "Ask about your portfolio or the market.",
+    "suggestion_portfolio": "How is my portfolio doing?",
+    "suggestion_market": "What is happening with the peso?",
+    "input_label": "Message for the advisor",
+    "input_placeholder": "Type your question",
+    "send": "Send",
+    "you": "You",
+    "assistant": "Advisor",
+    "portfolio_title": "Portfolio summary",
+    "attribution_title": "Period attribution",
+    "sources_title": "Sources",
+    "as_of": "As of {{date}}",
+    "mock_notice": "Demo mode with sample data.",
+    "link_demo": "Try the live avatar"
+  },
   "demo": {
     "title": "LiveAvatar Demo",
     "subtitle": "Wayne avatar · ~1 min · no credits",

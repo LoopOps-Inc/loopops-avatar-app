@@ -17,7 +17,7 @@ This document defines what we build now versus what the BA reference architectur
 | ---------------------- | ------------ | ----------------------------------------------------------------------- |
 | API contract           | Shared       | Done — `packages/contracts`                                             |
 | Backend (`apps/agent`) | Backend dev  | **Not started** — see [`apps/agent/README.md`](../apps/agent/README.md) |
-| Web UI (`apps/web`)    | Frontend dev | `/demo` live; `/advisor` after API is ready                             |
+| Frontend (`apps/web`)  | Frontend dev | `/advisor` + mock domain data in `apps/web/src/mocks/`                  |
 | HeyGen sandbox         | Frontend dev | Done at `/demo`                                                         |
 
 ## In scope

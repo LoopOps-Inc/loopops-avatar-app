@@ -20,7 +20,17 @@ export default defineConfig(({ mode }) => {
     headers: apiKey ? { 'X-API-KEY': apiKey } : {},
   };
 
-  const proxy = { '/liveavatar-api': liveAvatarProxy };
+  const advisorProxy: ProxyOptions = {
+    target: 'http://localhost:8000',
+    changeOrigin: true,
+    secure: false,
+    rewrite: (requestPath) => requestPath.replace(/^\/api/, ''),
+  };
+
+  const proxy = {
+    '/liveavatar-api': liveAvatarProxy,
+    '/api': advisorProxy,
+  };
 
   return {
     plugins: [react(), tailwindcss()],
