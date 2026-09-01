@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@heygen/liveavatar-web-sdk": "^0.0.18",
+    "@loopops/contracts": "*",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/react-router": "^1.168.10",
     "@vitejs/plugin-react": "^6.0.1",
@@ -25,7 +26,8 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "tailwindcss": "^4.2.2",
-    "vite": "^8.0.3"
+    "vite": "^8.0.3",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

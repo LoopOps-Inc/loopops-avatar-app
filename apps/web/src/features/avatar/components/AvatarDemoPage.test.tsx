@@ -40,6 +40,7 @@ vi.mock('@heygen/liveavatar-web-sdk', () => {
     stop = vi.fn().mockResolvedValue(undefined);
     attach = vi.fn();
     message = vi.fn().mockResolvedValue(undefined);
+    repeat = vi.fn();
     interrupt = vi.fn();
     keepAlive = vi.fn().mockResolvedValue(undefined);
   }
