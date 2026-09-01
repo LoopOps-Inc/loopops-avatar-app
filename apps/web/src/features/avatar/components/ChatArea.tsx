@@ -1,43 +1,10 @@
 import { useEffect, useRef } from 'react';
-import { Loader2, Mic, MicOff } from 'lucide-react';
-import { UIPayloadCards } from '@/features/advisor/components/ui-payload-cards';
+import { Mic, MicOff } from 'lucide-react';
 import { useTranslation } from '@/i18n';
 import type { ChatMessage } from '../types';
+import { ChatBubble } from './ChatBubble';
+import { ChatLoadingList, ComposerSkeleton } from './ChatLoading';
 import { Composer } from './Composer';
-
-function formatTime(timestamp: number): string {
-  return new Date(timestamp).toLocaleTimeString('es-MX', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function ChatBubble({ message }: { message: ChatMessage }) {
-  const { t } = useTranslation();
-  const isUser = message.sender === 'user';
-  return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div
-        className={`max-w-[85%] rounded-xl px-3.5 py-2 text-sm ${
-          isUser
-            ? 'rounded-br-sm border border-white/20 bg-white/20 text-white'
-            : 'rounded-bl-sm border border-white/10 bg-white/5 text-white backdrop-blur-sm'
-        }`}
-      >
-        <span className="mb-0.5 flex items-baseline justify-between gap-2">
-          <span className="text-[11px] font-medium tracking-wide text-white/60 uppercase">
-            {isUser ? t('live.user') : t('live.avatar')}
-          </span>
-          <span className="text-[10px] text-white/60 tabular-nums">{formatTime(message.timestamp)}</span>
-        </span>
-        {message.message && <p className="leading-relaxed break-words">{message.message}</p>}
-        {message.uiComponents && message.uiComponents.length > 0 && (
-          <UIPayloadCards components={message.uiComponents} />
-        )}
-      </div>
-    </div>
-  );
-}
 
 type ChatAreaProps = {
   messages: ChatMessage[];
@@ -56,9 +23,7 @@ type ChatAreaProps = {
 /**
  * Scrollable chat transcript plus composer. Lives inside the avatar sheet:
  * the sheet's snap points control how much of this area is visible, so the
- * transcript is always rendered (no collapsed/expanded modes). While the
- * live session connects, skeletons stand in for the transcript and the
- * composer.
+ * transcript is always rendered (no collapsed/expanded modes).
  */
 export function ChatArea({
   messages,
@@ -82,20 +47,7 @@ export function ChatArea({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2 px-4 pt-1 pb-safe">
       {loading ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-3 pt-2">
-          <p className="flex items-center gap-2 text-xs font-medium text-white/70">
-            <Loader2
-              className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none"
-              aria-hidden="true"
-            />
-            {t('live.connecting')}
-          </p>
-          <div className="flex flex-col gap-2" aria-hidden="true">
-            <div className="h-9 w-3/5 animate-pulse rounded-xl bg-white/10 motion-reduce:animate-none" />
-            <div className="ml-auto h-9 w-2/5 animate-pulse rounded-xl bg-white/10 motion-reduce:animate-none" />
-            <div className="h-9 w-1/2 animate-pulse rounded-xl bg-white/10 motion-reduce:animate-none" />
-          </div>
-        </div>
+        <ChatLoadingList />
       ) : (
         <div
           role="log"
@@ -125,10 +77,7 @@ export function ChatArea({
       )}
 
       {loading ? (
-        <div className="flex items-center gap-2" aria-hidden="true">
-          <div className="h-11 flex-1 animate-pulse rounded-full border border-white/10 bg-white/10 motion-reduce:animate-none" />
-          <div className="h-11 w-11 animate-pulse rounded-full bg-filled-dark/50 motion-reduce:animate-none" />
-        </div>
+        <ComposerSkeleton />
       ) : (
         <div className="flex items-center gap-2">
           <Composer disabled={!connected || busy} onSend={onSend} />

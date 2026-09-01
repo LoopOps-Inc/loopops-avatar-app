@@ -8,19 +8,7 @@ import type {
 } from '@loopops/contracts';
 import { Info, TriangleAlert } from 'lucide-react';
 import { useTranslation } from '@/i18n';
-
-const moneyFormatter = new Intl.NumberFormat('es-MX', {
-  style: 'currency',
-  currency: 'MXN',
-  maximumFractionDigits: 2,
-});
-
-function formatDate(iso: string): string {
-  const date = new Date(`${iso}T00:00:00`);
-  return Number.isNaN(date.getTime())
-    ? iso
-    : date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
-}
+import { formatDate, moneyFormatter } from './ui-payload-format';
 
 function ReturnBadge({ value, period }: { value: number; period: string }) {
   const positive = value >= 0;
