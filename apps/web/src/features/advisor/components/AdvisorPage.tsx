@@ -146,12 +146,6 @@ export function AdvisorRoute() {
   }, []);
 
   useEffect(() => {
-    if (!videoMode) {
-      setSessionControls(null);
-    }
-  }, [videoMode]);
-
-  useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 

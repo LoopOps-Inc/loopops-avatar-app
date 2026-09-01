@@ -26,6 +26,17 @@
   --brand-accent-60: #021d73;
   --brand-accent-70: #011050;
 
+  --brand-ink: #041e41;
+  --brand-gold: #927b2f;
+  --brand-gold-bright: #f0ca4d;
+
+  --gray-chat-bg: #f7f8fa;
+  --gray-chat-border: #e2e4e9;
+  --gray-chat-border-soft: #ebebeb;
+  --gray-chat-meta: #4b5563;
+  --gray-chat-date: #6d7382;
+  --gray-chat-placeholder: #9398a5;
+
   /* Actinver advisor CTA (gold + navy) */
   --actinver-cta-bg: #f0ca4d;
   --actinver-cta-fg: #041e41;
@@ -53,6 +64,8 @@
   --radius-md: 24px;
   --radius-lg: 32px;
   --radius-cta: 26.5px;
+  --radius-bubble: 20px;
+  --radius-tail: 4px;
   --radius-full: 999px;
 
   /* Alpha primitives (frosted glass overlays) */

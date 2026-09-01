@@ -34,8 +34,8 @@ const demoRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/demo',
   component: lazyRouteComponent(
-    () => import('@/features/avatar/components/AvatarDemoPage'),
-    'AvatarDemoRoute',
+    () => import('@/features/avatar/components/LiveSessionScreen'),
+    'LiveSessionRoute',
   ),
 });
 

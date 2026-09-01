@@ -167,7 +167,7 @@ export const FormDraftSchema = z.object({
   productName: z.string(),
   amount: MoneySchema,
   settlementDate: z.string(),
-  prefilledFields: z.record(z.string()),
+  prefilledFields: z.record(z.string(), z.string()),
   keyTermsPlainLanguage: z.array(z.string()),
 });
 export type FormDraft = z.infer<typeof FormDraftSchema>;

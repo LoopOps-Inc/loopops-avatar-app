@@ -3,10 +3,16 @@ import {
   AgentEventsEnum,
   ConnectionQuality,
   LiveAvatarSession,
+  SessionDisconnectReason,
   SessionEvent,
   SessionState,
 } from '@heygen/liveavatar-web-sdk';
-import type { ChatMessage, MessageSender } from '../types';
+import type { ChatMessage, MessageSender, SessionEndReason } from '../types';
+
+type UseLiveAvatarSessionOptions = {
+  /** Enable mic input (voice mode). The session must be created with it. */
+  voiceChat?: boolean;
+};
 
 type UseLiveAvatarSessionResult = {
   sessionState: SessionState;
@@ -14,32 +20,54 @@ type UseLiveAvatarSessionResult = {
   connectionQuality: ConnectionQuality;
   isUserTalking: boolean;
   isAvatarTalking: boolean;
+  isMicMuted: boolean;
   messages: ChatMessage[];
+  endReason: SessionEndReason | null;
   start: () => Promise<void>;
   stop: () => Promise<void>;
   attach: (element: HTMLMediaElement) => void;
-  sendMessage: (message: string) => Promise<unknown>;
+  sendMessage: (message: string) => string;
   /** Lip-sync the given text without invoking the vendor LLM. */
   repeat: (message: string) => string;
-  interrupt: () => unknown;
-  keepAlive: () => Promise<unknown>;
+  interrupt: () => void;
+  keepAlive: () => Promise<void>;
+  setMicMuted: (muted: boolean) => void;
 };
+
+function mapDisconnectReason(reason: SessionDisconnectReason): SessionEndReason {
+  switch (reason) {
+    case SessionDisconnectReason.CLIENT_INITIATED:
+      return 'user';
+    case SessionDisconnectReason.SESSION_START_FAILED:
+      return 'error';
+    default:
+      return 'server';
+  }
+}
 
 /**
  * React glue over @heygen/liveavatar-web-sdk, adapted from the official demo.
  *
  * The session instance is created once per mount via a lazy useState
- * initializer. Creating it inside an effect under React StrictMode spawns two
- * sessions — the first one orphaned but still running server-side, which
- * wastes a session slot and shows up as two LiveKit rooms. Consumers must
- * remount with a new token for a fresh session; the demo page does exactly
- * that. User transcription chunks are cumulative (full phrase so far, replace
- * the last user message); avatar chunks are individual words (append).
+ * initializer (StrictMode-safe; creating it in an effect spawns orphaned
+ * LiveKit rooms). Consumers remount with a new token for a fresh session.
+ * User transcription chunks are cumulative (replace); avatar chunks append.
+ *
+ * Voice mode: the mic is auto-muted while the avatar speaks (echo guard) and
+ * restored afterwards unless the user muted it manually. End reasons come
+ * from SESSION_DISCONNECTED; our own stop() wins so UI intents are truthful.
  */
-export function useLiveAvatarSession(sessionToken: string): UseLiveAvatarSessionResult {
-  const startAttemptedRef = useRef(false);
+export function useLiveAvatarSession(
+  sessionToken: string,
+  options: UseLiveAvatarSessionOptions = {},
+): UseLiveAvatarSessionResult {
+  const voiceChat = options.voiceChat ?? false;
 
-  const [session] = useState(() => new LiveAvatarSession(sessionToken, { voiceChat: false }));
+  const startAttemptedRef = useRef(false);
+  const userStoppedRef = useRef(false);
+  const userMutedRef = useRef(false);
+
+  const [session] = useState(() => new LiveAvatarSession(sessionToken, { voiceChat }));
 
   const [sessionState, setSessionState] = useState<SessionState>(SessionState.INACTIVE);
   const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>(
@@ -48,16 +76,22 @@ export function useLiveAvatarSession(sessionToken: string): UseLiveAvatarSession
   const [isStreamReady, setIsStreamReady] = useState(false);
   const [isUserTalking, setIsUserTalking] = useState(false);
   const [isAvatarTalking, setIsAvatarTalking] = useState(false);
+  const [isMicMuted, setIsMicMuted] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [endReason, setEndReason] = useState<SessionEndReason | null>(null);
   const currentSenderRef = useRef<MessageSender | null>(null);
 
   useEffect(() => {
     const handleStateChanged = (state: SessionState) => {
       setSessionState(state);
       if (state === SessionState.DISCONNECTED) {
-        session.removeAllListeners();
         setIsStreamReady(false);
       }
+    };
+
+    const handleDisconnected = (reason: SessionDisconnectReason) => {
+      setEndReason(userStoppedRef.current ? 'user' : mapDisconnectReason(reason));
+      session.removeAllListeners();
     };
 
     const upsertMessage = (sender: MessageSender, text: string, mode: 'replace' | 'append') => {
@@ -88,6 +122,7 @@ export function useLiveAvatarSession(sessionToken: string): UseLiveAvatarSession
     };
 
     session.on(SessionEvent.SESSION_STATE_CHANGED, handleStateChanged);
+    session.on(SessionEvent.SESSION_DISCONNECTED, handleDisconnected);
     session.on(SessionEvent.SESSION_STREAM_READY, () => setIsStreamReady(true));
     session.on(SessionEvent.SESSION_CONNECTION_QUALITY_CHANGED, setConnectionQuality);
 
@@ -106,6 +141,35 @@ export function useLiveAvatarSession(sessionToken: string): UseLiveAvatarSession
     };
   }, [session]);
 
+  // Echo guard: mute the mic while the avatar speaks, restore afterwards
+  // unless the user muted it manually. Only for voice sessions.
+  useEffect(() => {
+    if (!voiceChat || !isAvatarTalking) return;
+    void session.voiceChat
+      .mute()
+      .then(() => setIsMicMuted(true))
+      .catch(() => {});
+    return () => {
+      if (!userMutedRef.current) {
+        void session.voiceChat
+          .unmute()
+          .then(() => setIsMicMuted(false))
+          .catch(() => {});
+      }
+    };
+  }, [isAvatarTalking, session, voiceChat]);
+
+  // Keep idle-but-active sessions alive while the page is visible.
+  useEffect(() => {
+    if (sessionState !== SessionState.CONNECTED) return;
+    const id = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void session.keepAlive().catch(() => {});
+      }
+    }, 25_000);
+    return () => window.clearInterval(id);
+  }, [sessionState, session]);
+
   const start = useCallback(async () => {
     if (startAttemptedRef.current) return;
     startAttemptedRef.current = true;
@@ -118,6 +182,8 @@ export function useLiveAvatarSession(sessionToken: string): UseLiveAvatarSession
   }, [session]);
 
   const stop = useCallback(async () => {
+    userStoppedRef.current = true;
+    setEndReason('user');
     await session.stop();
   }, [session]);
 
@@ -129,7 +195,7 @@ export function useLiveAvatarSession(sessionToken: string): UseLiveAvatarSession
   );
 
   const sendMessage = useCallback(
-    async (message: string) => {
+    (message: string) => {
       return session.message(message);
     },
     [session],
@@ -150,13 +216,27 @@ export function useLiveAvatarSession(sessionToken: string): UseLiveAvatarSession
     return session.keepAlive();
   }, [session]);
 
+  const setMicMuted = useCallback(
+    (muted: boolean) => {
+      userMutedRef.current = muted;
+      const action = muted ? session.voiceChat.mute : session.voiceChat.unmute;
+      void action
+        .call(session.voiceChat)
+        .then(() => setIsMicMuted(muted))
+        .catch(() => setIsMicMuted(session.voiceChat.isMuted));
+    },
+    [session],
+  );
+
   return {
     sessionState,
     isStreamReady,
     connectionQuality,
     isUserTalking,
     isAvatarTalking,
+    isMicMuted,
     messages,
+    endReason,
     start,
     stop,
     attach,
@@ -164,5 +244,6 @@ export function useLiveAvatarSession(sessionToken: string): UseLiveAvatarSession
     repeat,
     interrupt,
     keepAlive,
+    setMicMuted,
   };
 }
