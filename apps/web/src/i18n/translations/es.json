@@ -1,8 +1,8 @@
 {
-  "demo": {
-    "title": "Demo LiveAvatar",
-    "subtitle": "Avatar Wayne · ~1 min · sin créditos",
-    "start": "Iniciar sandbox",
+  "live": {
+    "title": "Tu asesor Actinver",
+    "subtitle": "Avatar Wayne · sandbox de ~1 min · sin créditos",
+    "start": "Iniciar conversación",
     "starting": "Iniciando...",
     "connecting": "Conectando...",
     "transcript": "Transcripción",
@@ -12,12 +12,18 @@
     "send": "Enviar",
     "end": "Terminar",
     "interrupt": "Interrumpir",
-    "keep_alive": "Keep alive",
-    "note": "Sandbox: sesión de ~1 minuto.",
-    "ended_by_server": "La sesión se cerró (~1 minuto). Puedes iniciar otra.",
     "avatar_talking": "Avatar hablando",
+    "listening": "Escuchando...",
+    "state_connected": "En vivo",
+    "state_disconnecting": "Cerrando",
+    "state_offline": "Sin conexión",
+    "quality_poor": "Señal débil",
+    "mic_mute": "Silenciar micro",
+    "mic_unmute": "Activar micro",
+    "mic_unavailable": "Micrófono no disponible: escribe tus mensajes.",
     "user": "Tú",
     "avatar": "Avatar",
+    "ended_by_server": "La sesión se cerró (~1 minuto). Puedes iniciar otra.",
     "error_unknown": "Error desconocido"
   }
 }

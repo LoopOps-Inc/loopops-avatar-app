@@ -127,3 +127,49 @@ export const ChatMessageRequestSchema = z.object({
   message: z.string().min(1),
 });
 export type ChatMessageRequest = z.infer<typeof ChatMessageRequestSchema>;
+
+// ============================================================
+// Embed bridge protocol (v1) — WebView <-> host app postMessage
+// ============================================================
+
+export const EMBED_BRIDGE_VERSION = 1 as const;
+
+/** Host app -> WebView commands. */
+export const EmbedCommandSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('start') }),
+  z.object({ type: z.literal('stop') }),
+  z.object({
+    type: z.literal('setMuted'),
+    payload: z.object({ muted: z.boolean() }),
+  }),
+]);
+export type EmbedCommand = z.infer<typeof EmbedCommandSchema>;
+
+/** WebView -> host app events. */
+export const EmbedEventSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('sessionState'),
+    payload: z.object({ state: z.string(), quality: z.string() }),
+  }),
+  z.object({
+    type: z.literal('message'),
+    payload: z.object({
+      sender: z.enum(['user', 'avatar']),
+      message: z.string(),
+      timestamp: z.number(),
+    }),
+  }),
+  z.object({ type: z.literal('error'), payload: z.object({ message: z.string() }) }),
+  z.object({
+    type: z.literal('ended'),
+    payload: z.object({ reason: z.enum(['user', 'server', 'error']) }),
+  }),
+]);
+export type EmbedEvent = z.infer<typeof EmbedEventSchema>;
+
+export const EmbedEnvelopeSchema = z.object({
+  version: z.literal(EMBED_BRIDGE_VERSION),
+  ts: z.number(),
+  message: z.union([EmbedCommandSchema, EmbedEventSchema]),
+});
+export type EmbedEnvelope = z.infer<typeof EmbedEnvelopeSchema>;

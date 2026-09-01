@@ -5,3 +5,5 @@ export type ChatMessage = {
   message: string;
   timestamp: number;
 };
+
+export type SessionEndReason = 'user' | 'server' | 'error';

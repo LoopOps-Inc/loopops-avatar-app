@@ -1,8 +1,8 @@
 {
-  "demo": {
-    "title": "LiveAvatar Demo",
-    "subtitle": "Wayne avatar · ~1 min · no credits",
-    "start": "Start sandbox",
+  "live": {
+    "title": "Your Actinver advisor",
+    "subtitle": "Wayne avatar · ~1 min sandbox · no credits",
+    "start": "Start conversation",
     "starting": "Starting...",
     "connecting": "Connecting...",
     "transcript": "Transcript",
@@ -12,12 +12,18 @@
     "send": "Send",
     "end": "End",
     "interrupt": "Interrupt",
-    "keep_alive": "Keep alive",
-    "note": "Sandbox: ~1 minute session.",
-    "ended_by_server": "The session ended (~1 minute). You can start another.",
     "avatar_talking": "Avatar speaking",
+    "listening": "Listening...",
+    "state_connected": "Live",
+    "state_disconnecting": "Ending",
+    "state_offline": "Offline",
+    "quality_poor": "Weak signal",
+    "mic_mute": "Mute mic",
+    "mic_unmute": "Unmute mic",
+    "mic_unavailable": "Microphone unavailable: type your messages.",
     "user": "You",
     "avatar": "Avatar",
+    "ended_by_server": "The session ended (~1 minute). You can start another.",
     "error_unknown": "Unknown error"
   }
 }

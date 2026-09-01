@@ -16,18 +16,18 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  beforeLoad: () => {
-    throw redirect({ to: '/demo' });
-  },
+  component: lazyRouteComponent(
+    () => import('@/features/avatar/components/LiveSessionScreen'),
+    'LiveSessionRoute',
+  ),
 });
 
 const demoRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/demo',
-  component: lazyRouteComponent(
-    () => import('@/features/avatar/components/AvatarDemoPage'),
-    'AvatarDemoRoute',
-  ),
+  beforeLoad: () => {
+    throw redirect({ to: '/' });
+  },
 });
 
 const routeTree = rootRoute.addChildren([indexRoute, demoRoute]);
