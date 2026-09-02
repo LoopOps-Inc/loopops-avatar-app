@@ -24,7 +24,11 @@ describe('createAgentAdvisorService', () => {
       handlers.onToken(', todo bien');
       handlers.onUi({ type: 'citations', payload: { items: [] } } as UIComponent);
       handlers.onCitations({ items: [{ title: 'F', url: 'https://f' }] });
-      handlers.onDone({ turn_id: 't1', evidence_id: 'e1', service_type: 'advisory' } as SseDoneEvent);
+      handlers.onDone({
+        turn_id: 't1',
+        evidence_id: 'e1',
+        service_type: 'advisory',
+      } as SseDoneEvent);
     });
 
     const service = createAgentAdvisorService('thread-1');

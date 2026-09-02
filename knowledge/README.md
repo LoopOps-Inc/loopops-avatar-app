@@ -13,7 +13,7 @@
 | [architecture.md](./architecture.md)                     | System      | Web client + LiveAvatar + backend + Gemini agent overview |
 | [chat-and-voice.md](./chat-and-voice.md)                 | Feature     | Chat and voice modes, streaming, sessions                 |
 | [heygen-live-avatar.md](./heygen-live-avatar.md)         | Integration | LiveAvatar Web SDK, session lifecycle, sandbox            |
-| [design-system.md](./design-system.md)                   | UI          | Tailwind tokens, semantic utilities, dark mode            |
+| [design-system.md](./design-system.md)                   | UI          | Tailwind tokens, semantic utilities, radius scale         |
 | [writing-style.md](./writing-style.md)                   | Agents      | Prose style for copy and docs                             |
 
 ## Quick reference
@@ -31,8 +31,8 @@
 - `index.html` — app shell, fonts
 - `apps/web/src/main.tsx` — React root
 - `apps/web/src/router.tsx` — route tree (lazy routes from features)
-- `apps/web/src/features/advisor/` — unified advisor screen (chat + avatar toggle)
-- `apps/web/src/features/avatar/` — LiveAvatar sandbox (`/demo`, dev only)
+- `apps/web/src/features/avatar/` — live session at `/demo` (index redirects here)
+- `apps/web/src/features/advisor/` — shared chat cards and mock advisor service
 - `apps/web/src/services/` — API services (token minting)
 - `apps/web/src/config/avatar.ts` — Actinver + sandbox avatar config
 - `apps/agent/` — Python BFF handoff (`README.md`, `AGENTS.md`)

@@ -21,15 +21,6 @@ const indexRoute = createRoute({
   },
 });
 
-const advisorRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/advisor',
-  component: lazyRouteComponent(
-    () => import('@/features/advisor/components/AdvisorPage'),
-    'AdvisorRoute',
-  ),
-});
-
 const demoRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/demo',
@@ -39,7 +30,7 @@ const demoRoute = createRoute({
   ),
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, advisorRoute, demoRoute]);
+const routeTree = rootRoute.addChildren([indexRoute, demoRoute]);
 
 export const router = createRouter({ routeTree, defaultPreload: 'intent' });
 

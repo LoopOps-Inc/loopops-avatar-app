@@ -7,4 +7,5 @@
 export const actinverAvatar = {
   name: 'Tino',
   language: 'es',
+  previewImageUrl: '/tino-icon.png',
 } as const;

@@ -17,7 +17,7 @@ from actinver_agent.deps import Dependencies
 from actinver_agent.errors import ApiError
 from actinver_agent.graph.state import FIRST_TURN_CONSENTS, ConsentType
 from tests.api.test_api import create_session
-from tests.conftest import auth_headers, make_ctx, parse_sse, token_for
+from tests.conftest import auth_headers, make_ctx, token_for
 
 CLIENT = "cl_demo_moderado"
 
@@ -79,6 +79,46 @@ def test_voice_turn_over_websocket(client: TestClient, settings: Settings) -> No
     assert complete["evidence_id"] and complete["turn_id"]
     for message in messages:
         assert "livekit_agent_token" not in json.dumps(message)
+
+
+def test_client_speak_is_accepted(client: TestClient, settings: Settings) -> None:
+    _ack_all(client, settings)
+    session = create_session(client)
+    avatar = _start_avatar(client, session["thread_id"])
+    token = token_for(CLIENT)
+
+    with client.websocket_connect(f"{avatar['audio_ws_path']}?access_token={token}") as ws:
+        ws.send_text(json.dumps({"type": "client.ready", "has_video": True, "has_audio": True}))
+        greeting = json.loads(ws.receive_text())
+        assert greeting["type"] == "caption"
+        ws.send_text(json.dumps({"type": "client.speak", "text": "Tu portafolio va bien."}))
+        ws.send_text(json.dumps({"type": "client.foreground"}))
+
+    broker = client.app.state.deps.broker
+    assert broker is not None
+    active = broker.get(avatar["avatar_session_id"])
+    assert active is not None
+    deadline = time.monotonic() + 3.0
+    while time.monotonic() < deadline:
+        if any(s["type"] == "agent.speak" for s in active.channel.sent):  # type: ignore[attr-defined]
+            break
+        time.sleep(0.05)
+    speaks = [s for s in active.channel.sent if s["type"] == "agent.speak"]  # type: ignore[attr-defined]
+    assert speaks and sum(s["bytes"] for s in speaks) > 0, "client.speak must reach the vendor"
+
+
+def test_greeting_waits_for_client_ready(client: TestClient, settings: Settings) -> None:
+    _ack_all(client, settings)
+    session = create_session(client)
+    avatar = _start_avatar(client, session["thread_id"])
+    token = token_for(CLIENT)
+
+    with client.websocket_connect(f"{avatar['audio_ws_path']}?access_token={token}") as ws:
+        ws.send_text(json.dumps({"type": "client.foreground"}))
+        ws.send_text(json.dumps({"type": "client.ready", "has_video": True, "has_audio": True}))
+        greeting = json.loads(ws.receive_text())
+        assert greeting["type"] == "caption"
+        assert "Tino" in greeting["text"]
 
 
 def test_websocket_requires_owner(client: TestClient, settings: Settings) -> None:
@@ -151,48 +191,4 @@ async def test_filler_bank_is_warm_and_rotates(deps: Dependencies) -> None:
     seen = {fillers.next_filler()[0] for _ in range(8)}
     assert len(seen) >= 4, "fillers rotate so they do not become a tic"
     text, pcm = await fillers.greeting("José")
-    assert "José" in text and pcm
-
-
-async def test_speak_turn_pushes_audio_to_vendor_channel(deps: Dependencies) -> None:
-    broker = deps.broker
-    assert broker is not None
-    session = await broker.start(
-        make_ctx(CLIENT), thread_id="th_bridge", first_name="José", consent_version="2026-08"
-    )
-    try:
-        await broker.speak_turn(session, "Tu portafolio va al alza este mes.")
-        sent = session.channel.sent  # type: ignore[attr-defined]
-        speaks = [s for s in sent if s["type"] == "agent.speak"]
-        assert speaks and sum(s["bytes"] for s in speaks) > 0
-        assert any(s["type"] == "agent.speak_end" for s in sent)
-    finally:
-        await broker.stop(session.avatar_session_id, reason="user")
-
-
-def test_typed_turn_speaks_into_live_avatar_session(client: TestClient, settings: Settings) -> None:
-    """Speech bridge: a chat turn's approved speech reaches the avatar channel."""
-    _ack_all(client, settings)
-    session = create_session(client)
-    avatar = _start_avatar(client, session["thread_id"])
-
-    response = client.post(
-        f"/v1/threads/{session['thread_id']}/messages",
-        json={"text": "¿Cómo va mi portafolio?"},
-        headers=auth_headers(CLIENT),
-    )
-    assert response.status_code == 200, response.text
-    tokens = [data for event, data in parse_sse(response.text) if event == "token"]
-    assert tokens, "the turn must produce speech for the bridge to speak"
-
-    broker = client.app.state.deps.broker
-    assert broker is not None
-    active = broker.get(avatar["avatar_session_id"])
-    assert active is not None
-    deadline = time.monotonic() + 3.0
-    while time.monotonic() < deadline:
-        if any(s["type"] == "agent.speak" for s in active.channel.sent):  # type: ignore[attr-defined]
-            break
-        time.sleep(0.05)
-    speaks = [s for s in active.channel.sent if s["type"] == "agent.speak"]  # type: ignore[attr-defined]
-    assert speaks, "typed turn speech must reach the avatar channel"
+    assert "Tino" in text and pcm

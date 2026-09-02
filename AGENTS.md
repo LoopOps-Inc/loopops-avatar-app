@@ -31,9 +31,9 @@ apps/agent/         # Python BFF — not implemented; see apps/agent/README.md
 packages/contracts/ # Shared API contract (TypeScript + Zod)
 ```
 
-- **Backend-owned avatar media**: the agent backend (`services/agent`) serves avatar sessions via `POST /v1/avatar/session` (LiveKit URL + token, audio WebSocket); the web app renders them with `livekit-client` on `/advisor`.
+- **Backend-owned avatar media**: the agent backend (`services/agent`) serves avatar sessions via `POST /v1/avatar/session` (LiveKit URL + token, audio WebSocket); the web app renders them with `livekit-client` on `/demo`.
 - **Custom backend** (Python or TypeScript) with LangChain / LangGraph + **Gemini** — see reference architecture in the sibling repo `actinver-ai-advisor`
-- **Unified advisor screen** (`/advisor`): one chat thread with optional talking avatar toggle. Embeds use `?embed=1`. See [`knowledge/unified-advisor-avatar.md`](./knowledge/unified-advisor-avatar.md).
+- **Live session** (`/demo`): talking-head session plus chat transcript. `/` redirects here. See [`knowledge/unified-advisor-avatar.md`](./knowledge/unified-advisor-avatar.md).
 - **Input modes** (Phase 3 for voice): typed chat and conversation (voice) share the same `thread_id`
 - Investment portfolio Q&A, product recommendations, and guided invest/retire/sell flows
 - PWA-ready; desktop and mobile browsers
@@ -57,6 +57,8 @@ docker compose up -d --build   # full stack: web on :8080 + agent on :8443
 docker compose logs -f web
 ```
 
+After changing auth env vars, recreate the agent and web-token containers so a fresh token is minted: `docker compose up -d --force-recreate agent web-token web`.
+
 Root scripts delegate to the `apps/web` workspace (`npm -w apps/web`). Run them from the repo root.
 
 Package manager: **npm**.
@@ -73,7 +75,7 @@ When a rule should be encoded for agents, document it in `knowledge/`, not in ad
 
 Use `apps/web/src/styles/tokens.css` primitives and the semantic Tailwind utilities from `apps/web/src/styles/global.css` (`bg-surface`, `text-content`, `bg-filled-dark`, etc.). Never scatter hex values in components.
 
-Primary CTA buttons use **filled-dark** (`bg-filled-dark` / `text-filled-dark-fg`), not brand blue. Blue (`text-accent`, `bg-accent`) is for links and brand accents only.
+Primary CTA buttons use **filled-dark** (`bg-filled-dark` / `text-filled-dark-fg`), not brand blue. There is no accent blue token today; add `brand-accent-50` back to `tokens.css` and `global.css` when a screen needs links or brand accents.
 
 ### API calls — service layer only
 

@@ -26,6 +26,8 @@ export type Disclosure = z.infer<typeof DisclosureSchema>;
 
 export const SessionResponseSchema = z.object({
   thread_id: z.string(),
+  /** ISO-8601 timestamp for when the advisor thread was first opened. */
+  thread_started_at: z.string().datetime({ offset: true }),
   capabilities: CapabilitiesSchema,
   disclosures_required: z.array(DisclosureSchema),
   client: z.object({
@@ -232,6 +234,38 @@ export const ClientConfigResponseSchema = z.object({
   poll_interval_s: z.number().optional(),
 });
 export type ClientConfigResponse = z.infer<typeof ClientConfigResponseSchema>;
+
+export const InvestorSummarySchema = z.object({
+  id_cliente_pk: z.number(),
+  numero_cliente_unico: z.number(),
+  nombre_completo: z.string(),
+  rfc: z.string(),
+  correo_electronico: z.string().nullable().optional(),
+  perfil_riesgo: z.string().nullable().optional(),
+  total_contratos: z.number().optional(),
+});
+export type InvestorSummary = z.infer<typeof InvestorSummarySchema>;
+
+export const InvestorsListResponseSchema = z.object({
+  investors: z.array(InvestorSummarySchema),
+  total: z.number(),
+});
+export type InvestorsListResponse = z.infer<typeof InvestorsListResponseSchema>;
+
+export const DevTokenRequestSchema = z.object({
+  client_id: z.string(),
+  roles: z.array(z.string()).optional(),
+  ttl_s: z.number().min(60).max(86400).optional(),
+});
+export type DevTokenRequest = z.infer<typeof DevTokenRequestSchema>;
+
+export const DevTokenResponseSchema = z.object({
+  access_token: z.string(),
+  client_id: z.string(),
+  token_type: z.string().optional(),
+  expires_in: z.number(),
+});
+export type DevTokenResponse = z.infer<typeof DevTokenResponseSchema>;
 
 export const AvatarSessionResponseSchema = z.object({
   avatar_session_id: z.string(),

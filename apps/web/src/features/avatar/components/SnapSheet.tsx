@@ -9,6 +9,8 @@ type SnapSheetProps = {
   onActiveIndexChange: (index: number) => void;
   /** Accessible name for the sheet region. */
   label: string;
+  /** Day label shown in the drag header (e.g. "Hoy"). Replaces the default handle bar. */
+  headerLabel?: string;
   /**
    * Layer behind the sheet that fills exactly the space the sheet leaves
    * free (the video base). Its height tracks the sheet's live position,
@@ -31,11 +33,13 @@ type SnapSheetProps = {
  * (Replaced a vaul drawer: its initial snap effect raced on mount and left
  * the sheet hidden at the CSS initial transform.)
  */
+const SHEET_CORNER_RADIUS_PX = 32;
 export function SnapSheet({
   snaps,
   activeIndex,
   onActiveIndexChange,
   label,
+  headerLabel,
   above,
   className = '',
   children,
@@ -63,9 +67,9 @@ export function SnapSheet({
   }, []);
 
   const y = useMotionValue(0);
-  // The sheet is a full-height layer translated down by `y`: the exposed
-  // region above it is exactly `y` tall (0 at the full-screen snap).
-  const aboveHeight = useTransform(y, (value) => Math.max(0, value));
+  // Extend past the sheet top by the corner radius so video fills the curved
+  // cutouts in the sheet's rounded border (otherwise the frame bg shows through).
+  const aboveHeight = useTransform(y, (value) => Math.max(0, value + SHEET_CORNER_RADIUS_PX));
 
   // First measurement: start hidden below the fold, then slide in.
   useEffect(() => {
@@ -110,7 +114,7 @@ export function SnapSheet({
       {above && (
         <motion.div
           style={{ height: aboveHeight }}
-          className="absolute inset-x-0 top-0 overflow-hidden bg-black"
+          className="absolute -inset-x-8 top-0 overflow-hidden bg-black [&_video]:object-top"
         >
           {above}
         </motion.div>
@@ -127,14 +131,19 @@ export function SnapSheet({
           dragElastic={0.12}
           dragMomentum={false}
           onDragEnd={handleDragEnd}
-          className={`border-outline bg-surface text-content flex h-full w-full flex-col overflow-hidden rounded-t-lg border-t shadow-2xl sm:rounded-lg ${className}`}
+          className={`text-content flex h-full w-full flex-col overflow-hidden rounded-t-[32px] border-t bg-white shadow-2xl sm:rounded-[32px] ${className}`}
         >
           <div
             onPointerDown={(event) => dragControls.start(event)}
             className="shrink-0 cursor-grab touch-none pt-3 pb-1 active:cursor-grabbing"
-            aria-hidden="true"
           >
-            <div className="bg-outline mx-auto h-1.5 w-12 rounded-full" />
+            {headerLabel ? (
+              <p className="font-heading text-content-small text-center text-xs font-semibold">
+                {headerLabel}
+              </p>
+            ) : (
+              <div className="bg-outline mx-auto h-1.5 w-12 rounded-full" aria-hidden="true" />
+            )}
           </div>
           {children}
         </motion.div>

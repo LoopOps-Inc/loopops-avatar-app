@@ -23,19 +23,18 @@ The product goal is different. Users (and the host app via webview) need **one a
 
 ## Decision
 
-**Merge Advisor and Demo into a single `/advisor` experience.**
+**Merge Advisor and Demo into a single live session.** `/advisor` was removed. `/` redirects to `/demo`.
 
 - One `thread_id`, one message list, one composer.
-- Avatar is optional and toggleable within the same screen.
-- `/demo` remains as an **internal HeyGen sandbox** for SDK and session lifecycle testing. It is not the user-facing product route.
-- Embeds load `/advisor?embed=1` (full viewport, no nav).
+- Avatar session lives on `/demo` (HeyGen FULL mode today).
+- Embeds can load `/demo` in a webview.
 
 ## Rationale
 
 1. **One brain** — Portfolio answers, market data, and cards must come from the Actinver LangGraph agent, not HeyGen's vendor LLM.
 2. **One thread** — Switching avatar on/off must not reset history. Host apps embed a single URL.
 3. **Split-channel rendering** — The agent already returns `speech` (qualitative narrative) and `ui_payload[]` (exact figures). Text and cards render in chat; `speech` drives avatar lip-sync. Exact numbers never go to the avatar vendor.
-4. **Mobile-first embed** — The host app opens a webview. Layout is full-screen video on top, chat docked at the bottom (implemented in the avatar session panel, now the target layout for `/advisor`).
+4. **Mobile-first embed** — The host app opens a webview. Layout is full-screen video on top, chat docked at the bottom (implemented in the avatar session panel).
 
 ## Architecture
 
@@ -79,24 +78,23 @@ Avatar toggle ON:  subscribe to WebRTC video; speak agent `speech` only.
 
 Do **not** point end users or embeds at `/demo`. It does not use the Actinver agent.
 
-### Route map (after merge)
+### Route map
 
-| Route              | Audience               | Purpose                                |
-| ------------------ | ---------------------- | -------------------------------------- |
-| `/advisor`         | Product, webview embed | Unified advisor chat + optional avatar |
-| `/advisor?embed=1` | Host app webview       | Same, no nav, full viewport            |
-| `/demo`            | Developers             | HeyGen sandbox spike only              |
+| Route   | Audience | Purpose                                       |
+| ------- | -------- | --------------------------------------------- |
+| `/`     | Users    | Redirects to `/demo`                          |
+| `/demo` | Users    | Live session: HeyGen avatar + chat transcript |
 
 ## POC phasing
 
 Replaces the old "Phase 1 chat, Phase 2 avatar on separate demo" plan.
 
-| Phase                             | Deliverable                                                                | Avatar behavior                                                |
-| --------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| **1 — Chat** (done / in progress) | `/advisor` with mock or real SSE, `UIPayloadRenderer`                      | Avatar off; text-only                                          |
-| **2a — UI merge**                 | Single screen: mobile layout, shared `useAdvisorChat` state, avatar toggle | Toggle shows video panel; session lifecycle from sandbox hooks |
-| **2b — Speech bridge**            | Forward agent `speech` to avatar speak API when backend exposes it         | Avatar lip-syncs Actinver answers, not HeyGen LLM              |
-| **3 — Voice**                     | Mic capture, STT → same thread                                             | Voice and typed input share history                            |
+| Phase                      | Deliverable                                                                | Avatar behavior                                                |
+| -------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| **1 — Chat** (in progress) | `/demo` chat transcript with mock advisor stream                           | Avatar session optional                                        |
+| **2a — UI merge**          | Single screen: mobile layout, shared `useAdvisorChat` state, avatar toggle | Toggle shows video panel; session lifecycle from sandbox hooks |
+| **2b — Speech bridge**     | Forward agent `speech` to avatar speak API when backend exposes it         | Avatar lip-syncs Actinver answers, not HeyGen LLM              |
+| **3 — Voice**              | Mic capture, STT → same thread                                             | Voice and typed input share history                            |
 
 Phase 2a can ship before the BFF avatar-broker exists. The toggle may start/stop a sandbox video session for layout and SDK validation while chat stays on the advisor thread. Phase 2b wires the real speech path.
 
@@ -106,7 +104,7 @@ Phase 2a can ship before the BFF avatar-broker exists. The toggle may start/stop
 | -------- | ---------------------------------------------------------------------- |
 | Contract | `speech` + `ui_payload[]` per turn (`@loopops/contracts`)              |
 | Backend  | Sessions, chat SSE, mock tools; later avatar-broker endpoint           |
-| Frontend | Unified `/advisor` screen, embed mode, avatar toggle                   |
+| Frontend | `/demo` live session, chat transcript, avatar session                  |
 | HeyGen   | Sandbox validation at `/demo`; LITE integration via broker in Phase 2b |
 
 ### Out of scope (unchanged)
@@ -119,7 +117,7 @@ Phase 2a can ship before the BFF avatar-broker exists. The toggle may start/stop
 
 ### Shared session state
 
-Lift `useAdvisorChat` into a `SessionProvider` (or equivalent) at the advisor route level. Avatar hooks read the same `thread_id` and message list. Toggling avatar mounts or unmounts the WebRTC surface without clearing messages.
+Lift `useAdvisorChat` into a `SessionProvider` (or equivalent) at the live session route. Avatar hooks read the same `thread_id` and message list.
 
 ### Avatar toggle
 
@@ -130,7 +128,7 @@ Lift `useAdvisorChat` into a `SessionProvider` (or equivalent) at the advisor ro
 ### Embed contract for host apps
 
 ```
-URL:     https://<host>/advisor?embed=1
+URL:     https://<host>/demo
 Layout:  100dvh, safe-area insets, chat pinned to bottom
 Nav:     hidden
 Locale:  same i18n keys as standalone (`advisor.*`)
@@ -139,19 +137,8 @@ Locale:  same i18n keys as standalone (`advisor.*`)
 ### File layout (target)
 
 ```
-apps/web/src/features/advisor/
-├── components/
-│   ├── AdvisorPage.tsx          # unified screen
-│   ├── AdvisorMessageList.tsx
-│   ├── AdvisorComposer.tsx
-│   ├── AvatarPanel.tsx          # video surface + session controls (from avatar feature)
-│   └── UIPayloadRenderer.tsx
-├── hooks/
-│   ├── use-advisor-chat.ts      # thread + SSE
-│   └── use-avatar-session.ts    # LiveAvatar lifecycle (adapted from use-liveavatar-session)
-└── types.ts
-
-apps/web/src/features/avatar/      # keep for /demo sandbox only
+apps/web/src/features/avatar/      # live session at /demo
+apps/web/src/features/advisor/     # shared chat cards + mock advisor service
 ```
 
 ## Gotchas

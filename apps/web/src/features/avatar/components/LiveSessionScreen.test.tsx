@@ -68,6 +68,8 @@ vi.mock('../hooks/use-liveavatar-session', async () => {
         interrupt: () => {},
         keepAlive: async () => {},
         setMicMuted: () => {},
+        speak: () => {},
+        unlockPlayback: async () => {},
       };
     },
   };
@@ -75,6 +77,7 @@ vi.mock('../hooks/use-liveavatar-session', async () => {
 
 const advisorSession = {
   thread_id: 'thread-1',
+  thread_started_at: '2026-08-02T04:00:00.000Z',
 } as SessionResponse;
 
 const avatarSession = {
@@ -109,7 +112,7 @@ describe('LiveSessionRoute', () => {
 
   it('renders the welcome screen with a single start action', () => {
     render(<LiveSessionRoute />);
-    expect(screen.getByRole('heading', { name: 'Consulta con Tino' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Habla con Tino' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Iniciar conversación' })).toBeInTheDocument();
   });
 

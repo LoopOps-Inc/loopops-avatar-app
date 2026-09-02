@@ -1,9 +1,5 @@
 export type SessionState =
-  | 'INACTIVE'
-  | 'CONNECTING'
-  | 'CONNECTED'
-  | 'DISCONNECTING'
-  | 'DISCONNECTED';
+  'INACTIVE' | 'CONNECTING' | 'CONNECTED' | 'DISCONNECTING' | 'DISCONNECTED';
 
 export type ConnectionQuality = 'UNKNOWN' | 'GOOD' | 'BAD';
 

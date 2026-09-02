@@ -107,7 +107,9 @@ export function useAdvisorChat({
         }
       } catch (err) {
         if (!disposedRef.current) {
-          appendAvatarMessage(err instanceof Error && err.message ? err.message : t('live.error_unknown'));
+          appendAvatarMessage(
+            err instanceof Error && err.message ? err.message : t('live.error_unknown'),
+          );
         }
       } finally {
         busyRef.current = false;

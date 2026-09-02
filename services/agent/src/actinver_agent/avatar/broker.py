@@ -246,49 +246,35 @@ class AvatarBroker:
         text, pcm = await self._fillers.greeting(session.first_name)
         await self.speak_system(session, text, pcm)
 
-    async def speak_system(self, session: ActiveSession, text: str, pcm: bytes) -> None:
+    async def speak_system(
+        self, session: ActiveSession, text: str, pcm: bytes, *, notify_caption: bool = True
+    ) -> None:
         """Play a system-generated utterance (filler, greeting, idle prompt)."""
         if session.ended or not pcm:
+            log.warning(
+                "avatar.speak_system_skipped",
+                avatar_session_id=session.avatar_session_id,
+                ended=session.ended,
+                pcm_bytes=len(pcm),
+            )
             return
         try:
+            if notify_caption:
+                await session.notify({"type": "caption", "text": text, "system": True})
             event_id = await session.channel.speak(pcm, flush=True)
             if event_id:
                 await session.channel.speak_end(event_id)
             session.touch_avatar()
-            await session.notify({"type": "caption", "text": text, "system": True})
+            log.info(
+                "avatar.speak_system_ok",
+                avatar_session_id=session.avatar_session_id,
+                pcm_bytes=len(pcm),
+                text_len=len(text),
+                notify_caption=notify_caption,
+            )
+            await session.notify({"type": "agent.speaking"})
         except Exception as exc:
             log.warning("avatar.system_speech_failed", reason=type(exc).__name__)
-
-    async def speak_turn(self, session: ActiveSession, text: str) -> None:
-        """Speak a completed chat turn's approved speech (speech bridge, docs
-        01-architecture/05 §2): typed turns share the thread, the avatar speaks
-        the final answer instead of streaming raw tokens."""
-        if session.ended or not text.strip():
-            return
-        pcm = bytearray()
-        try:
-            async for chunk in self._deps.tts.synthesize_stream(text):
-                pcm.extend(chunk)
-        except Exception as exc:
-            log.warning("avatar.turn_tts_failed", reason=type(exc).__name__)
-            return
-        if not pcm:
-            return
-        try:
-            with contextlib.suppress(Exception):
-                await session.channel.interrupt()
-            event_id = await session.channel.speak(bytes(pcm), flush=True)
-            if event_id:
-                await session.channel.speak_end(event_id)
-            session.touch_avatar()
-            log.info(
-                "avatar.turn_spoken",
-                avatar_session_id=session.avatar_session_id,
-                chars=len(text),
-                bytes=len(pcm),
-            )
-        except Exception as exc:
-            log.warning("avatar.turn_speech_failed", reason=type(exc).__name__)
 
     # ── Lifecycle loops ──────────────────────────────────────────────────────
 

@@ -11,7 +11,7 @@ describe('Composer', () => {
   it('sends the trimmed message and clears the input', () => {
     const onSend = vi.fn();
     const { getByLabelText } = render(<Composer onSend={onSend} />);
-    const input = getByLabelText('Mensaje para el avatar') as HTMLInputElement;
+    const input = getByLabelText('Mensaje para el avatar') as HTMLTextAreaElement;
     fireEvent.change(input, { target: { value: '  hola  ' } });
     fireEvent.submit(input.closest('form')!);
     expect(onSend).toHaveBeenCalledWith('hola');

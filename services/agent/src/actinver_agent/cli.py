@@ -57,6 +57,18 @@ def _migrate(args: argparse.Namespace) -> int:
     cfg = Config(str(root / "alembic.ini"))
     cfg.set_main_option("script_location", str(root / "migrations"))
     command.upgrade(cfg, args.revision)
+
+    # Automatically seed retrieval corpus on migration in local/dev
+    try:
+        from actinver_agent.retrieval.seed import seed_all
+
+        async def _seed(deps: Any) -> None:
+            await seed_all(deps)
+
+        asyncio.run(_with_deps(_seed))
+    except Exception as exc:
+        print(f"(retrieval seed skipped: {exc})")
+
     return 0
 
 

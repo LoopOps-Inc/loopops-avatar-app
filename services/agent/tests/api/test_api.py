@@ -138,6 +138,7 @@ def test_dpop_with_wrong_key_is_rejected(client: TestClient) -> None:
 def test_session_capabilities_and_disclosures(client: TestClient) -> None:
     session = create_session(client)
     assert session["thread_id"].startswith("th_")
+    assert session["thread_started_at"]
     assert session["capabilities"] == {
         "chat": True,
         "voice": True,

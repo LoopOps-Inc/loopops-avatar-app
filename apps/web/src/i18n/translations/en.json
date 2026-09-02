@@ -1,8 +1,7 @@
 {
   "nav": {
     "label": "Main navigation",
-    "advisor": "Tino",
-    "demo": "Avatar demo"
+    "advisor": "Tino"
   },
   "advisor": {
     "title": "Tino",
@@ -50,6 +49,7 @@
   },
   "live": {
     "title": "Talk with Tino",
+    "start_banner_title": "Talk with Tino",
     "subtitle": "Your AI financial advisor",
     "greeting": "Hi, I'm Tino. Ask me about your portfolio or where to invest.",
     "suggestion_1": "Low-risk debt ETFs",

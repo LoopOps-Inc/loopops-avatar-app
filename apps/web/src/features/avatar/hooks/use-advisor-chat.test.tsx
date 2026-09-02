@@ -101,10 +101,7 @@ describe('useAdvisorChat', () => {
   });
 
   it('greets once when the session becomes enabled', async () => {
-    const service = fakeService(
-      {},
-      [{ event: 'token', data: { text: 'Hola, soy Tino.' } }],
-    );
+    const service = fakeService({}, [{ event: 'token', data: { text: 'Hola, soy Tino.' } }]);
     const { result, speak, rerender } = renderAdvisor(service, { greet: true });
     rerender({ enabled: true });
     await vi.waitFor(() => {

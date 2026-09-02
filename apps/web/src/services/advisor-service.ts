@@ -4,10 +4,14 @@ import {
   type ClientConfigResponse,
   type ConsentType,
   type ConsentsResponse,
+  type DevTokenResponse,
+  type InvestorsListResponse,
   type SessionResponse,
   AvatarSessionResponseSchema,
   ClientConfigResponseSchema,
   ConsentsResponseSchema,
+  DevTokenResponseSchema,
+  InvestorsListResponseSchema,
   SessionResponseSchema,
   SseCitationsEventSchema,
   SseDoneEventSchema,
@@ -19,6 +23,7 @@ import {
 import { z } from 'zod';
 import { appEnv } from '@/config/env';
 import { getLocale } from '@/i18n';
+import { authHeaders } from './dev-auth';
 import type { AdvisorSseHandlers } from './advisor-types';
 
 export type { AdvisorSseHandlers } from './advisor-types';
@@ -130,7 +135,7 @@ export async function createAdvisorSession(
 ): Promise<SessionResponse> {
   const res = await fetch(`${appEnv.advisorApiBase}/v1/sessions`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ channel, locale: getLocale() }),
   });
   if (!res.ok) {
@@ -141,7 +146,9 @@ export async function createAdvisorSession(
 }
 
 export async function getConsents(): Promise<ConsentsResponse> {
-  const res = await fetch(`${appEnv.advisorApiBase}/v1/consents`);
+  const res = await fetch(`${appEnv.advisorApiBase}/v1/consents`, {
+    headers: { ...authHeaders() },
+  });
   if (!res.ok) {
     await throwProblem(res);
   }
@@ -159,6 +166,7 @@ export async function ackConsent(
     headers: {
       'content-type': 'application/json',
       'idempotency-key': idempotencyKey(),
+      ...authHeaders(),
     },
     body: JSON.stringify({ type, version, granted: true, channel }),
   });
@@ -194,6 +202,28 @@ export async function getClientConfig(): Promise<ClientConfigResponse> {
   return ClientConfigResponseSchema.parse(json);
 }
 
+export async function listInvestors(): Promise<InvestorsListResponse> {
+  const res = await fetch(`${appEnv.advisorApiBase}/v1/config/investors`);
+  if (!res.ok) {
+    await throwProblem(res);
+  }
+  const json: unknown = await res.json();
+  return InvestorsListResponseSchema.parse(json);
+}
+
+export async function mintDevToken(clientId: string): Promise<DevTokenResponse> {
+  const res = await fetch(`${appEnv.advisorApiBase}/v1/auth/dev-token`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ client_id: clientId }),
+  });
+  if (!res.ok) {
+    await throwProblem(res);
+  }
+  const json: unknown = await res.json();
+  return DevTokenResponseSchema.parse(json);
+}
+
 const AvatarPreflightResponseSchema = z.object({
   media_reachable: z.boolean(),
   voice_offered: z.boolean(),
@@ -218,6 +248,7 @@ export async function createAvatarSession(
     headers: {
       'content-type': 'application/json',
       'idempotency-key': idempotencyKey(),
+      ...authHeaders(),
     },
     body: JSON.stringify({ thread_id: threadId, orientation }),
   });
@@ -237,6 +268,7 @@ export async function stopAvatarSession(
     headers: {
       'content-type': 'application/json',
       'idempotency-key': idempotencyKey(),
+      ...authHeaders(),
     },
     body: JSON.stringify({ avatar_session_id: avatarSessionId, reason }),
   });
@@ -253,7 +285,11 @@ export async function sendAdvisorMessage(
 ): Promise<void> {
   const res = await fetch(`${appEnv.advisorApiBase}/v1/threads/${threadId}/messages`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+    headers: {
+      'content-type': 'application/json',
+      accept: 'text/event-stream',
+      ...authHeaders(),
+    },
     body: JSON.stringify(request),
     signal,
   });

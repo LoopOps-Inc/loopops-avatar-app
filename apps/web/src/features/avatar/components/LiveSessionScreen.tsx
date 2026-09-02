@@ -11,9 +11,11 @@ import {
 import { useTranslation } from '@/i18n';
 import { SessionPanel, type PanelCommands } from './SessionPanel';
 import { StartScreen } from './StartScreen';
+import { avatarLog } from '../lib/avatar-debug';
 
 type DemoSession = {
   threadId: string;
+  threadStartedAt: string;
   avatar: AvatarSessionResponse;
 };
 
@@ -41,32 +43,40 @@ export function LiveSessionRoute() {
   const [error, setError] = useState<string | null>(null);
   const [endedByServer, setEndedByServer] = useState(false);
   const commandsRef = useRef<PanelCommands | null>(null);
+  const audioUnlockedRef = useRef(false);
 
   const handleEnded = useCallback((reason: 'user' | 'server' | 'error') => {
+    audioUnlockedRef.current = false;
     setDemoSession(null);
     setEndedByServer(reason === 'server');
   }, []);
 
-  const handleStart = useCallback(async () => {
-    setStarting(true);
-    setError(null);
-    setEndedByServer(false);
-    const micAvailable = await probeMic();
-    setMicUnavailable(!micAvailable);
-    try {
-      const advisorSession = await createAdvisorSession();
-      await ackFirstTurnDisclosures();
-      await ackVoiceConsent();
-      const avatar = await createAvatarSession(advisorSession.thread_id, 'portrait');
-      setVoiceEnabled(micAvailable);
-      setDemoSession({ threadId: advisorSession.thread_id, avatar });
-    } catch (err) {
-      setError(
-        err instanceof Error && err.message ? err.message : t('live.error_unknown'),
-      );
-    } finally {
-      setStarting(false);
-    }
+  const handleStart = useCallback(() => {
+    audioUnlockedRef.current = true;
+    avatarLog('session.start', { audioUnlocked: true });
+    void (async () => {
+      setStarting(true);
+      setError(null);
+      setEndedByServer(false);
+      const micAvailable = await probeMic();
+      setMicUnavailable(!micAvailable);
+      try {
+        const advisorSession = await createAdvisorSession();
+        await ackFirstTurnDisclosures();
+        await ackVoiceConsent();
+        const avatar = await createAvatarSession(advisorSession.thread_id, 'portrait');
+        setVoiceEnabled(micAvailable);
+        setDemoSession({
+          threadId: advisorSession.thread_id,
+          threadStartedAt: advisorSession.thread_started_at,
+          avatar,
+        });
+      } catch (err) {
+        setError(err instanceof Error && err.message ? err.message : t('live.error_unknown'));
+      } finally {
+        setStarting(false);
+      }
+    })();
   }, [t]);
 
   const handleCommand = useCallback(
@@ -105,9 +115,11 @@ export function LiveSessionRoute() {
             <SessionPanel
               key={demoSession.avatar.avatar_session_id}
               threadId={demoSession.threadId}
+              threadStartedAt={demoSession.threadStartedAt}
               avatarSession={demoSession.avatar}
               voiceEnabled={voiceEnabled}
               micUnavailable={micUnavailable}
+              audioUnlockedRef={audioUnlockedRef}
               onEnded={handleEnded}
               registerCommands={registerCommands}
               onEvent={handlePanelEvent}

@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
-import type { UIComponent } from '@loopops/contracts';
-import type { AvatarSessionResponse } from '@loopops/contracts';
+import type { RefObject } from 'react';
+import type { AvatarSessionResponse, UIComponent } from '@loopops/contracts';
 import { useLivekitAvatarSession } from '@/features/advisor/hooks/use-livekit-avatar-session';
 import { stopAvatarSession } from '@/services/advisor-service';
 import type { ConnectionQuality, SessionState } from '../lib/session-status';
@@ -8,6 +8,7 @@ import type { SessionEndReason } from '../types';
 
 type UseLiveAvatarSessionOptions = {
   voiceChat?: boolean;
+  audioUnlockedRef?: RefObject<boolean>;
   onTranscriptFinal?: (text: string) => void;
   onCaption?: (text: string) => void;
   onUi?: (component: UIComponent) => void;
@@ -22,15 +23,17 @@ type UseLiveAvatarSessionResult = {
   isMicMuted: boolean;
   micError: boolean;
   endReason: SessionEndReason | null;
-  videoRef: React.RefObject<HTMLVideoElement | null>;
+  videoRef: React.RefObject<HTMLVideoElement>;
   start: () => Promise<void>;
   stop: () => Promise<void>;
   attach: (element: HTMLMediaElement) => void;
   sendMessage: (message: string) => string;
+  speak: (text: string) => void;
   repeat: (message: string) => void;
   interrupt: () => void;
   keepAlive: () => Promise<void>;
   setMicMuted: (muted: boolean) => void;
+  unlockPlayback: (unmute?: boolean) => Promise<void>;
 };
 
 const LIVEKIT_QUALITY_MAP: Record<string, ConnectionQuality> = {
@@ -41,13 +44,10 @@ const LIVEKIT_QUALITY_MAP: Record<string, ConnectionQuality> = {
 
 export function useLiveAvatarSession(
   avatarSession: AvatarSessionResponse,
-  {
-    onTranscriptFinal,
-    onCaption,
-    onUi,
-  }: UseLiveAvatarSessionOptions = {},
+  { audioUnlockedRef, onTranscriptFinal, onCaption, onUi }: UseLiveAvatarSessionOptions = {},
 ): UseLiveAvatarSessionResult {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoElementRef = videoRef as React.RefObject<HTMLVideoElement>;
   const userStoppedRef = useRef(false);
   const [isAvatarTalking, setIsAvatarTalking] = useState(false);
   const [endReason, setEndReason] = useState<SessionEndReason | null>(null);
@@ -56,7 +56,8 @@ export function useLiveAvatarSession(
     livekitUrl: avatarSession.livekit_url,
     livekitToken: avatarSession.livekit_client_token,
     audioWsPath: avatarSession.audio_ws_path,
-    videoRef,
+    videoRef: videoElementRef,
+    audioUnlockedRef,
     handlers: {
       onTranscriptPartial: () => {},
       onTranscriptFinal: (text) => onTranscriptFinal?.(text),
@@ -74,7 +75,7 @@ export function useLiveAvatarSession(
       },
     },
   });
-  const { sendBargeIn, sendKeepAlive, startMic, stopMic } = livekit;
+  const { sendBargeIn, sendKeepAlive, sendSpeak, startMic, stopMic, unlockPlayback } = livekit;
 
   const resolvedEndReason: SessionEndReason | null =
     endReason ?? (livekit.status === 'failed' ? 'error' : null);
@@ -103,7 +104,20 @@ export function useLiveAvatarSession(
 
   const sendMessage = useCallback(() => '', []);
 
-  const repeat = useCallback(() => {}, []);
+  const speak = useCallback(
+    (text: string) => {
+      const trimmed = text.trim();
+      if (trimmed) sendSpeak(trimmed);
+    },
+    [sendSpeak],
+  );
+
+  const repeat = useCallback(
+    (message: string) => {
+      speak(message);
+    },
+    [speak],
+  );
 
   const interrupt = useCallback(() => {
     sendBargeIn();
@@ -133,14 +147,16 @@ export function useLiveAvatarSession(
     isMicMuted: !livekit.micActive,
     micError: livekit.micError,
     endReason: resolvedEndReason,
-    videoRef,
+    videoRef: videoElementRef,
     start,
     stop,
     attach,
     sendMessage,
+    speak,
     repeat,
     interrupt,
     keepAlive,
     setMicMuted,
+    unlockPlayback,
   };
 }

@@ -41,6 +41,7 @@ function sseResponse(events: Array<{ event: string; data: string }>): Response {
 
 const sessionFixture = {
   thread_id: 'th_1',
+  thread_started_at: '2026-08-02T04:00:00.000Z',
   capabilities: { chat: true, voice: true, advisory: true, transactional: false },
   disclosures_required: [],
   client: { first_name: 'Rodrigo', risk_category: 'moderado' },
@@ -243,9 +244,7 @@ describe('sendAdvisorMessage', () => {
     expect(JSON.parse(init.body)).toEqual({ text: '¿Cómo va mi portafolio?' });
 
     expect(handlers.onToken).toHaveBeenCalledWith('Hola');
-    expect(handlers.onUi).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'market_quote' }),
-    );
+    expect(handlers.onUi).toHaveBeenCalledWith(expect.objectContaining({ type: 'market_quote' }));
     expect(handlers.onCitations).toHaveBeenCalledWith({ items: [{ title: 'Banxico' }] });
     expect(handlers.onFormSpec).toHaveBeenCalledWith(expect.objectContaining({ form_id: 'frm_1' }));
     expect(handlers.onDone).toHaveBeenCalledWith(
@@ -261,8 +260,8 @@ describe('sendAdvisorMessage', () => {
     );
     const handlers = makeHandlers();
 
-    await expect(
-      sendAdvisorMessage('th_1', { text: 'Hola' }, handlers),
-    ).rejects.toBeInstanceOf(ApiError);
+    await expect(sendAdvisorMessage('th_1', { text: 'Hola' }, handlers)).rejects.toBeInstanceOf(
+      ApiError,
+    );
   });
 });

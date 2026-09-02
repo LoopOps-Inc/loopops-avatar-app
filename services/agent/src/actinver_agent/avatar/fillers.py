@@ -77,6 +77,7 @@ class FillerBank:
         return DURATION_WARNING_ES, self._special.get("duration", b"")
 
     async def greeting(self, first_name: str) -> tuple[str, bytes]:
-        """The greeting is synthesised per first name and cached per avatar/voice."""
-        text = f"Hola {first_name}, ¿en qué te ayudo hoy?"
-        return text, await self._synth_cached(f"filler:{self._voice}:greet:{first_name}", text)
+        """Opening line for a live session; cached per avatar/voice."""
+        _ = first_name
+        text = "Hola, soy Tino. Pregúntame sobre tu portafolio o en qué invertir."
+        return text, await self._synth_cached(f"filler:{self._voice}:greet:opening", text)

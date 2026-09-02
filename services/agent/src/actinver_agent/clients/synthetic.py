@@ -424,6 +424,57 @@ CLIENTS: dict[str, dict[str, Any]] = {
 def _client(client_id: str) -> dict[str, Any]:
     if "core_down" in FAULTS:
         raise CoreUnavailable("core banking unavailable (fault injected)")
+    if client_id in CLIENTS:
+        return CLIENTS[client_id]
+
+    # Map dataset investors by id_cliente_pk (1..20) or numero_cliente_unico (200001..200020)
+    dataset_investor_names = {
+        1: ("Mariano", "Agresivo"),
+        2: ("Marisol", "Agresivo"),
+        4: ("Adalberto", "Agresivo"),
+        5: ("Jacinto", "Conservador"),
+        6: ("Caridad", "Conservador"),
+        7: ("Pamela", "Agresivo"),
+        8: ("Magdalena", "Agresivo"),
+        9: ("Sergio", "Moderado"),
+        10: ("Darío", "Conservador"),
+        11: ("Eloy", "Agresivo"),
+        12: ("Eugenia", "Conservador"),
+        13: ("Luis Miguel", "Moderado"),
+        14: ("Jorge", "Moderado"),
+        15: ("Caridad", "Agresivo"),
+        16: ("Alejandra", "Conservador"),
+        17: ("Abigail", "Agresivo"),
+        18: ("Mayte", "Agresivo"),
+        19: ("Citlali", "Agresivo"),
+        20: ("Oswaldo", "Agresivo"),
+    }
+
+    num = None
+    if client_id.isdigit():
+        val = int(client_id)
+        if val in dataset_investor_names:
+            num = val
+        elif 200001 <= val <= 200020:
+            pk_val = val - 200000
+            if pk_val in dataset_investor_names:
+                num = pk_val
+
+    if num is not None:
+        name, perfil = dataset_investor_names[num]
+        base_key = (
+            "cl_demo_agresivo"
+            if perfil == "Agresivo"
+            else "cl_demo_conservador"
+            if perfil == "Conservador"
+            else "cl_demo_moderado"
+        )
+        base = dict(CLIENTS[base_key])
+        base["client_id"] = client_id
+        base["first_name"] = name
+        base["register"] = "tu"
+        return base
+
     try:
         return CLIENTS[client_id]
     except KeyError as exc:

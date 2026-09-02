@@ -93,7 +93,11 @@ else
 fi
 ensure_secret "actinver/formspec-hmac" "$(random_hex)"
 ensure_secret "actinver/suitability-hmac" "$(random_hex)"
-ensure_secret "actinver/dev-signing-key" "${DEV_SIGNING_KEY:-$(random_hex)}"
+if [ -n "${DEV_SIGNING_KEY:-}" ]; then
+  set_secret "actinver/dev-signing-key" "$DEV_SIGNING_KEY"
+else
+  ensure_secret "actinver/dev-signing-key" "$(random_hex)"
+fi
 ensure_secret "actinver/client-hash-salt" "$(random_hex)"
 if [ -n "${GEMINI_API_KEY:-}" ]; then
   set_secret "actinver/gemini-api-key" "$GEMINI_API_KEY"

@@ -72,6 +72,7 @@ class CreateSessionRequest(BaseModel):
 
 class SessionResponse(BaseModel):
     thread_id: str
+    thread_started_at: datetime
     capabilities: Capabilities
     disclosures_required: list[DisclosureRequired]
     client: SessionClient
@@ -276,6 +277,21 @@ class DisclosureText(BaseModel):
 # ── Config poll, telemetry, health ────────────────────────────────────────────
 
 
+class DevTokenRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    client_id: str = Field(default="200001", description="Client ID or numero_cliente_unico")
+    roles: list[str] = Field(default_factory=list, description="Roles to grant")
+    ttl_s: int = Field(default=900, ge=60, le=86400, description="Token lifetime in seconds")
+
+
+class DevTokenResponse(BaseModel):
+    access_token: str
+    client_id: str
+    token_type: str = "Bearer"  # noqa: S105
+    expires_in: int
+
+
 class ClientConfigResponse(BaseModel):
     kill_switch: bool
     kill_switch_message: str | None
@@ -286,6 +302,21 @@ class ClientConfigResponse(BaseModel):
     disclosure_versions: dict[str, str]
     promotor: PromotorContact
     poll_interval_s: int = 30
+
+
+class InvestorSummary(BaseModel):
+    id_cliente_pk: int
+    numero_cliente_unico: int
+    nombre_completo: str
+    rfc: str
+    correo_electronico: str | None = None
+    perfil_riesgo: str | None = None
+    total_contratos: int = 4
+
+
+class InvestorsListResponse(BaseModel):
+    investors: list[InvestorSummary]
+    total: int
 
 
 class TelemetryEvent(BaseModel):

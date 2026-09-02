@@ -35,7 +35,7 @@ export function SuggestionChips({ onSend, disabled = false }: SuggestionChipsPro
           type="button"
           disabled={disabled}
           onClick={() => onSend(t(key))}
-          className="border-outline bg-filled-dark font-ui text-filled-dark-fg flex h-10 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="border-outline bg-filled-dark text-filled-dark-fg flex h-10 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <SparkIcon className="h-4 w-4 shrink-0" />
           {t(key)}
