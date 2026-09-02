@@ -56,7 +56,7 @@ def mint_dev_access_token(
     roles: list[str] | None = None,
     jkt: str | None = None,
     device_id: str | None = None,
-    ttl_s: int = 900,
+    ttl_s: int = 86400,
     issuer: str = DEV_ISSUER,
     audience: str = DEV_AUDIENCE,
 ) -> str:

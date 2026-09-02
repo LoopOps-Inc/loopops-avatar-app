@@ -281,7 +281,9 @@ class DevTokenRequest(BaseModel):
 
     client_id: str = Field(default="200001", description="Client ID or numero_cliente_unico")
     roles: list[str] = Field(default_factory=list, description="Roles to grant")
-    ttl_s: int = Field(default=900, ge=60, le=86400, description="Token lifetime in seconds")
+    ttl_s: int = Field(
+        default=86400, ge=60, le=604800, description="Token lifetime in seconds (default 24h)"
+    )
 
 
 class DevTokenResponse(BaseModel):

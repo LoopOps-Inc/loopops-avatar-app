@@ -89,7 +89,7 @@ def main() -> None:
     parser.add_argument("--client", default="cl_demo_moderado", help="client_id (token subject)")
     parser.add_argument("--roles", default="", help="comma-separated roles, e.g. compliance,risk")
     parser.add_argument("--device-id", default="dev-device-1")
-    parser.add_argument("--ttl", type=int, default=900, help="token TTL seconds (<= 900)")
+    parser.add_argument("--ttl", type=int, default=86400, help="token TTL seconds (default 86400 / 24h)")
     parser.add_argument("--dpop", action="store_true", help="also print a DPoP proof header")
     parser.add_argument("--method", default="POST", help="HTTP method for the DPoP proof")
     parser.add_argument(

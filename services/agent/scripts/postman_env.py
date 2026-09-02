@@ -24,7 +24,7 @@ OUT = ROOT / "docs" / "postman" / "local.postman_environment.json"
 
 
 def _token(args: list[str]) -> dict:
-    result = subprocess.run(  # noqa: S603 - fixed, local script
+    result = subprocess.run(
         [sys.executable, str(ROOT / "scripts" / "dev_token.py"), *args, "--json"],
         check=True,
         capture_output=True,

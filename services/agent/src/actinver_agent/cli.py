@@ -293,7 +293,7 @@ def build_parser() -> argparse.ArgumentParser:
     token.add_argument("--client-id", default="cl_demo_moderado")
     token.add_argument("--roles", nargs="*", default=[])
     token.add_argument("--device-id", default="dev-device-1")
-    token.add_argument("--ttl", type=int, default=900)
+    token.add_argument("--ttl", type=int, default=86400)
     token.add_argument("--key", default=None)
     token.add_argument("--dpop", action="store_true")
     token.add_argument("--method", default="POST")

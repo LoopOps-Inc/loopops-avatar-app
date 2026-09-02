@@ -41,7 +41,7 @@ class AuthSettings(BaseSettings):
     dpop_required: bool = False
     dpop_clock_skew_s: int = 60
     dpop_nonce_ttl_s: int = 300
-    access_token_max_ttl_s: int = 900
+    access_token_max_ttl_s: int = 86400
 
 
 class VertexSettings(BaseSettings):
