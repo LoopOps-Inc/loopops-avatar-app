@@ -1,0 +1,116 @@
+schema: spec-driven
+strict_tdd: false
+
+context: |
+  Tech stack: npm workspaces monorepo (Node >=22.12). apps/web is Vite 8 + React 18.2 (lockfile 18.3.1) + TypeScript + TanStack Router + Tailwind CSS v4. apps/native is React Native 0.74 + Expo SDK 51. packages/contracts is Zod TypeScript types (@loopops/contracts). packages/eslint-config-native is shared ESLint config. services/agent is Python 3.12 FastAPI + LangGraph + Gemini (package actinver-agent).
+  Architecture: Actinver talking-head advisor. Browser /demo uses livekit-client; services/agent owns avatar sessions (POST /v1/avatar/session, LiveKit URL + token, audio WebSocket). Chat and voice share thread_id. Native embeds the web app in a WebView for NOM-151. Design tokens live in apps/web/src/styles/. i18n es/en. No raw fetch in components.
+  Testing: No workspace-wide test command covers every in-scope project. Root `npm test` runs only apps/web (vitest). Native has `npm run test:native` (jest script; apps/native/node_modules is currently missing). Agent has `make test` (pytest, 80% floor). packages/contracts and packages/eslint-config-native have no test scripts. Strict TDD is disabled for that reason.
+  Style: knowledge/writing-style.md. Design tokens only (no hardcoded colors). Feature modules under apps/web/src/features/<name>/. User-facing copy through t('namespace.key') in both es.json and en.json. Knowledge docs follow Context → Architecture → Patterns → Gotchas.
+
+projects:
+  - path: apps/web
+    stack: Vite + React 18 + TypeScript + TanStack Router + Tailwind CSS v4 + livekit-client
+    test_command: npm run test -w apps/web
+    test_framework: vitest
+    coverage_command: —
+    lint_command: npm run lint -w apps/web
+    typecheck_command: npm run check -w apps/web
+    format_command: npm run format
+    layers:
+      unit: vitest
+      integration: "@testing-library/react + jsdom"
+      e2e: —
+  - path: apps/native
+    stack: React Native 0.74 + Expo SDK 51 + TypeScript + react-native-webview
+    test_command: npm run test -w apps/native
+    test_framework: jest
+    coverage_command: —
+    lint_command: —
+    typecheck_command: —
+    format_command: npm run format
+    notes: "package.json test script is ./node_modules/.bin/jest; eslint.config.js and tsconfig.json exist but have no npm scripts. apps/native/node_modules was missing at init (2026-09-02)."
+    layers:
+      unit: jest
+      integration: "@testing-library/react-native (imported by tests; @testing-library/react-hooks is the declared dep)"
+      e2e: —
+  - path: packages/contracts
+    stack: TypeScript + Zod (@loopops/contracts)
+    test_command: —
+    test_framework: —
+    coverage_command: —
+    lint_command: —
+    typecheck_command: —
+    format_command: npm run format
+    layers:
+      unit: —
+      integration: —
+      e2e: —
+  - path: packages/eslint-config-native
+    stack: ESLint flat config package (@loopops/eslint-config-native)
+    test_command: —
+    test_framework: —
+    coverage_command: —
+    lint_command: —
+    typecheck_command: —
+    format_command: npm run format
+    layers:
+      unit: —
+      integration: —
+      e2e: —
+  - path: services/agent
+    stack: Python 3.12 + FastAPI + LangGraph + Gemini + pytest
+    test_command: make test
+    test_framework: pytest
+    coverage_command: make test
+    lint_command: make lint
+    typecheck_command: make typecheck
+    format_command: make lint
+    notes: "pytest addopts enable --cov=actinver_agent --cov-fail-under=80 and skip integration by default. Integration: make test-integration. Stack smoke: make smoke."
+    layers:
+      unit: pytest tests/unit
+      integration: "pytest tests/api + tests/graph + tests/contract + respx/httpx; make test-integration for compose stack"
+      e2e: "make smoke / tests/integration (httpx against docker compose); Newman via make postman-check"
+
+testing:
+  strict_tdd: false
+  detected: 2026-09-02
+  workspace_test_command: ""
+  workspace_test_command_note: >
+    Root `npm test` is `npm run test -w apps/web` and does not cover apps/native,
+    packages/contracts, packages/eslint-config-native, or services/agent.
+    `npm run test:native` and `make -C services/agent test` are independent.
+    No explicit workspace-level command runs the complete in-scope set.
+    Strict TDD therefore remains false.
+
+rules:
+  proposal:
+    - Include a rollback plan for risky changes
+    - Read the relevant knowledge/ doc before proposing feature work
+    - Do not start a named change from init; sdd-new / sdd-explore owns change creation
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex chat, voice, or avatar flows
+    - Document architecture decisions with rationale
+    - Keep API calls in apps/web/src/services/; never raw fetch in components
+    - Use design tokens from apps/web/src/styles/; never hardcoded colors
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+    - Forecast the 400-line PR review budget before apply
+  apply:
+    guidelines:
+      - Follow existing feature-module layout under apps/web/src/features/
+      - Add i18n keys to both apps/web/src/i18n/translations/es.json and en.json
+      - Follow knowledge/writing-style.md for user-facing copy
+      - Run each project's own test command; do not treat npm test as workspace-wide
+    tdd: false
+    test_command: ""
+  verify:
+    test_command: ""
+    build_command: npm run build
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas
+    - knowledge/architecture.md still describes apps/agent as planned; the live backend is services/agent

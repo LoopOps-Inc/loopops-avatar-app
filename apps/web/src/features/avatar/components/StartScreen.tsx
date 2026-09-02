@@ -1,30 +1,22 @@
 import { ArrowRight, Loader2 } from 'lucide-react';
-import type { InvestorSummary } from '@loopops/contracts';
 import { actinverAvatar } from '@/config/avatar';
 import { useTranslation } from '@/i18n';
-import { InvestorSelect } from './InvestorSelect';
 
 type StartScreenProps = {
   starting: boolean;
   error: string | null;
   endedByServer: boolean;
   onStart: () => void;
-  investors: InvestorSummary[];
-  selectedInvestorId: number | null;
-  onSelectInvestor: (numeroClienteUnico: number) => void;
-  investorsLoading: boolean;
+  onCloseSession: () => void;
 };
 
-/** Pre-session CTA: pick a demo investor, then start a live conversation with Tino. */
+/** Pre-session CTA: start a live conversation with Tino, or return to login. */
 export function StartScreen({
   starting,
   error,
   endedByServer,
   onStart,
-  investors,
-  selectedInvestorId,
-  onSelectInvestor,
-  investorsLoading,
+  onCloseSession,
 }: StartScreenProps) {
   const { t } = useTranslation();
 
@@ -32,13 +24,6 @@ export function StartScreen({
     <div className="bg-surface-sub flex h-full flex-col">
       <div className="flex-1" aria-hidden="true" />
       <div className="px-safe pb-safe flex flex-col gap-3 p-4">
-        <InvestorSelect
-          investors={investors}
-          selectedId={selectedInvestorId}
-          onSelect={onSelectInvestor}
-          disabled={starting}
-          loading={investorsLoading}
-        />
         <button
           type="button"
           onClick={onStart}
@@ -71,6 +56,14 @@ export function StartScreen({
               <ArrowRight className="text-advisor-submit-fg h-5 w-5" strokeWidth={2.5} />
             )}
           </span>
+        </button>
+        <button
+          type="button"
+          onClick={onCloseSession}
+          disabled={starting}
+          className="border-outline text-content rounded-cta bg-surface min-h-11 w-full cursor-pointer border px-6 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {t('live.close_session')}
         </button>
         {error && (
           <div

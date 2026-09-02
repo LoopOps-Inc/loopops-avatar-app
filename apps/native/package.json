@@ -7,7 +7,12 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test": "./node_modules/.bin/jest"
+    "test": "jest",
+    "reverse": "adb reverse tcp:8080 tcp:8080",
+    "reverse:8001": "adb reverse tcp:8080 tcp:8001",
+    "reverse:forward": "adb reverse tcp:8001 tcp:8080",
+    "reverse:status": "adb reverse --list",
+    "reverse:clean": "adb reverse --remove-all"
   },
   "dependencies": {
     "@loopops/contracts": "*",

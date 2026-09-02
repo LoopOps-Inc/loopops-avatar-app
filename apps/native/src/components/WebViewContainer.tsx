@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { PermissionsAndroid, Platform, StyleSheet, View, Text, ActivityIndicator } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { theme } from '../styles/theme';
 
@@ -15,6 +15,9 @@ export const WebViewContainer: React.FC<WebViewContainerProps> = ({
   onSessionInitialized,
 }) => {
   const webViewRef = useRef<WebView>(null);
+  const [hasPermissionChecked, setHasPermissionChecked] = useState<boolean>(
+    Platform.OS !== 'android',
+  );
 
   // Injected JavaScript script to facilitate immediate setup of the WebView Bridge
   const injectedJavaScript = `
@@ -52,9 +55,12 @@ export const WebViewContainer: React.FC<WebViewContainerProps> = ({
     true; // note: this is required for injectedJavaScript to succeed
   `;
 
-  // Provide high-fidelity responses back to WebView
+  // Handle native Android permission requests on mount
   useEffect(() => {
-    // If we need to send immediate configs, we can invoke injectJavaScript.
+    if (Platform.OS === 'android') {
+      PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO)
+        .finally(() => setHasPermissionChecked(true));
+    }
   }, []);
 
   // Public method to complete the NOM-151 signature and notify WebView
@@ -68,14 +74,14 @@ export const WebViewContainer: React.FC<WebViewContainerProps> = ({
       },
     };
     webViewRef.current?.injectJavaScript(
-      `window.postMessage(JSON.stringify(${JSON.stringify(responseMessage)}), '*');`
+      `window.postMessage(JSON.stringify(${JSON.stringify(responseMessage)}), '*');`,
     );
   };
 
   const handleMessage = (event: WebViewMessageEvent) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-      console.log("Received Bridge Message from WebView: ", data);
+      console.log('Received Bridge Message from WebView: ', data);
 
       if (data.type === 'TRIGGER_NOM_151') {
         onTriggerNom151(data.payload.formId, data.payload.taxId);
@@ -84,9 +90,18 @@ export const WebViewContainer: React.FC<WebViewContainerProps> = ({
         onSessionInitialized(generatedThreadId);
       }
     } catch (e) {
-      console.warn("Failed to parse WebView message: ", event.nativeEvent.data, e);
+      console.warn('Failed to parse WebView message: ', event.nativeEvent.data, e);
     }
   };
+
+  if (!hasPermissionChecked) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.brandGoldBright} />
+        <Text style={styles.loadingText}>Verificando permisos de audio...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
