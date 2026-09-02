@@ -62,7 +62,13 @@ describe('LoginScreen', () => {
     vi.useFakeTimers();
     render(<LoginScreen />);
 
-    expect(screen.getByTestId('auth-splash')).toBeInTheDocument();
+    const splash = screen.getByTestId('auth-splash');
+    expect(splash).toBeInTheDocument();
+    expect(splash).toHaveClass('bg-surface');
+    expect(splash.querySelector('img')).toHaveAttribute(
+      'src',
+      expect.stringContaining('evaluar-test-media-bucket'),
+    );
     expect(screen.getByLabelText('Número de cliente')).toBeInTheDocument();
 
     await act(async () => {
@@ -78,6 +84,10 @@ describe('LoginScreen', () => {
     render(<LoginScreen />);
 
     expect(screen.queryByTestId('auth-splash')).not.toBeInTheDocument();
+    expect(screen.getByTestId('auth-login-logo')).toHaveAttribute(
+      'src',
+      expect.stringContaining('evaluar-test-media-bucket'),
+    );
     expect(screen.getByLabelText('Número de cliente')).toBeInTheDocument();
   });
 
@@ -158,26 +168,20 @@ describe('LoginScreen', () => {
 
   it('stays on login when mint fails', async () => {
     stubMatchMedia(true);
-    vi.mocked(mintDevToken).mockRejectedValue(
-      new ApiError('UNAUTHENTICATED', 'bad credentials'),
-    );
+    vi.mocked(mintDevToken).mockRejectedValue(new ApiError('UNAUTHENTICATED', 'bad credentials'));
     render(<LoginScreen />);
 
     fillCredentials('200001', 'wrong');
     fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Cliente o contraseña incorrectos',
-    );
+    expect(await screen.findByRole('alert')).toHaveTextContent('Cliente o contraseña incorrectos');
     expect(navigateMock).not.toHaveBeenCalled();
     expect(getDevAuth()).toBeNull();
   });
 
   it('maps VALIDATION_ERROR to auth copy', async () => {
     stubMatchMedia(true);
-    vi.mocked(mintDevToken).mockRejectedValue(
-      new ApiError('VALIDATION_ERROR', 'invalid body'),
-    );
+    vi.mocked(mintDevToken).mockRejectedValue(new ApiError('VALIDATION_ERROR', 'invalid body'));
     render(<LoginScreen />);
 
     fillCredentials('200001', 'secret-pass');

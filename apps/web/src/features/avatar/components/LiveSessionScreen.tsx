@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import type { AvatarSessionResponse, EmbedCommand } from '@loopops/contracts';
 import { AppShell } from '@/components/AppShell';
 import { useEmbedBridge } from '@/features/embed/hooks/use-embed-bridge';
@@ -8,6 +9,7 @@ import {
   createAdvisorSession,
   createAvatarSession,
 } from '@/services/advisor-service';
+import { clearDevAuth } from '@/services/dev-auth';
 import { useTranslation } from '@/i18n';
 import { SessionPanel, type PanelCommands } from './SessionPanel';
 import { StartScreen } from './StartScreen';
@@ -37,6 +39,7 @@ async function probeMic(): Promise<boolean> {
  */
 export function LiveSessionRoute() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [demoSession, setDemoSession] = useState<DemoSession | null>(null);
   const demoSessionRef = useRef<DemoSession | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
@@ -113,6 +116,14 @@ export function LiveSessionRoute() {
     })();
   }, [t, setSession]);
 
+  const handleCloseSession = useCallback(() => {
+    clearDevAuth();
+    setSession(null);
+    setError(null);
+    setEndedByServer(false);
+    void navigate({ to: '/' });
+  }, [navigate, setSession]);
+
   const handleCommand = useCallback(
     (command: EmbedCommand) => {
       switch (command.type) {
@@ -164,6 +175,7 @@ export function LiveSessionRoute() {
               error={error}
               endedByServer={endedByServer}
               onStart={() => void handleStart()}
+              onCloseSession={handleCloseSession}
             />
           )}
         </div>

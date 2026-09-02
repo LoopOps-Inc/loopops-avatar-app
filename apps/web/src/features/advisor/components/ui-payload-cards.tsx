@@ -645,7 +645,7 @@ function UnsupportedCard({ type }: { type: string }) {
 }
 
 const CARD_BODY_STYLES =
-  'flex w-full flex-col gap-2 rounded-xl border border-outline-soft bg-surface-sub px-3 py-2.5 text-left';
+  'flex w-full flex-col gap-2 rounded-xl border border-outline-soft bg-surface-sub px-3 py-2.5 text-left text-content';
 
 /**
  * Maps one server component to its card. Returns `null` only when the payload
