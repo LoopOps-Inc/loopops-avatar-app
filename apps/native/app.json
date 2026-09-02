@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Actinver Tino Mobile",
+    "slug": "actinver-tino-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0b121f"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.actinver.tino.advisor",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Esta aplicación requiere acceder a tu ubicación geográfica exacta únicamente para cumplir con los requisitos obligatorios de la firma digital electrónica NOM-151."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0b121f"
+      },
+      "package": "com.actinver.tino.advisor",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "INTERNET"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Permite que Actinver obtenga tu ubicación para certificar la firma NOM-151."
+        }
+      ]
+    ]
+  }
+}

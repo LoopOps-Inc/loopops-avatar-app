@@ -4,11 +4,10 @@ Monorepo for the Actinver talking-head avatar: web frontend (HeyGen LiveAvatar +
 
 ```
 ├── apps/
-│   └── web/          # Vite + React 19 frontend
+│   ├── web/          # Vite + React 19 frontend
+│   └── native/       # React Native + Expo mobile application (New)
 ├── services/
 │   └── agent/        # agent backend (Python 3.12 / FastAPI / LangGraph / Gemini) — see services/agent/README.md
-│   ├── web/          # Vite + React 19 frontend
-│   └── agent/        # Python BFF — see README.md + AGENTS.md (backend team)
 ├── packages/
 │   └── contracts/    # Shared API contract (TypeScript + Zod)
 ├── knowledge/        # architecture docs (read before coding)
@@ -28,6 +27,15 @@ Reference architecture: sibling repo `actinver-ai-advisor`.
 
 Mirrors `../loopops-web-app` conventions. i18n via `apps/web/src/i18n` (es/en, `t('demo.key')`), light-only theme, PWA manifest + favicon in `apps/web/public/`.
 
+## Stack (apps/native)
+
+- React Native + Expo SDK 51 + TypeScript
+- `react-native-webview` for secure hybrid integration
+- `livekit-client` / WebRTC for live avatar video streaming
+- `@loopops/contracts` shared validations
+- `expo-location` for precise geo-timestamp compliance (NOM-151)
+- Jest for testing native components and hooks
+
 ## Setup
 
 ```sh
@@ -39,14 +47,22 @@ Set `LIVEAVATAR_API_KEY` in `.env` at the **repo root** (from https://app.liveav
 
 ## Run
 
-Root scripts delegate to the `apps/web` workspace; run them from the repo root.
+Root scripts delegate to the workspaces; run them from the repo root.
 
+### Web application
 ```sh
 npm run dev       # http://localhost:8080
 npm run build     # typecheck + production build
 npm run check     # tsc --noEmit
 npm run lint      # eslint apps/web/src/
 npm test          # vitest
+```
+
+### Mobile App (apps/native)
+```sh
+npm run start -w apps/native      # Launch Metro bundler
+npm run ios -w apps/native        # Run in iOS simulator
+npm run android -w apps/native    # Run in Android emulator
 ```
 
 Open http://localhost:8080/demo and start a sandbox session.
@@ -82,8 +98,8 @@ For production, remove `is_sandbox`, swap in the Actinver avatar, and mint token
 │   │   ├── main.tsx           # entry point
 │   │   └── router.tsx         # TanStack Router tree
 │   └── index.html
+├── apps/native/           # React Native App with dual hybrid/standalone strategy
 └── services/agent/        # agent backend: chat/voice API, suitability, guardrails, evidence (docker compose up)
-└── apps/agent/            # Python BFF (backend team)
 ```
 
 ## Agent docs
