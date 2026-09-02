@@ -10,6 +10,7 @@ import {
   type RemoteVideoTrack,
 } from 'livekit-client';
 import { appEnv } from '@/config/env';
+import { avatarLog } from '@/features/avatar/lib/avatar-debug';
 
 export type AvatarConnectionStatus =
   'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'failed';
@@ -32,6 +33,8 @@ type LivekitAvatarSessionOptions = {
   audioWsPath: string;
   videoRef: RefObject<HTMLVideoElement | null>;
   handlers: LivekitAvatarHandlers;
+  /** Set synchronously inside the start-session click handler so playback can unlock. */
+  audioUnlockedRef?: RefObject<boolean>;
 };
 
 export function buildAudioWsUrl(audioWsPath: string): string {
@@ -58,6 +61,7 @@ export function useLivekitAvatarSession({
   audioWsPath,
   videoRef,
   handlers,
+  audioUnlockedRef,
 }: LivekitAvatarSessionOptions) {
   const [status, setStatus] = useState<AvatarConnectionStatus>('connecting');
   const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>(
@@ -72,10 +76,51 @@ export function useLivekitAvatarSession({
   }, [handlers]);
 
   const socketRef = useRef<WebSocket | null>(null);
+  const speakQueueRef = useRef<string[]>([]);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const userStoppedRef = useRef(false);
   const videoTrackRef = useRef<RemoteVideoTrack | null>(null);
+  const audioElementRef = useRef<HTMLMediaElement | null>(null);
+  const tracksReadyRef = useRef({ video: false, audio: false, readySent: false });
+
+  const tryStartPlayback = useCallback(
+    async (unmute = false) => {
+      if (audioUnlockedRef && !audioUnlockedRef.current) {
+        avatarLog('playback.skipped', { reason: 'not_unlocked', unmute });
+        return;
+      }
+
+      const video = videoRef.current;
+      if (video) {
+        if (unmute) video.muted = false;
+        try {
+          await video.play();
+          avatarLog('playback.video', { unmute, paused: video.paused, muted: video.muted });
+        } catch (err) {
+          avatarLog('playback.video_failed', {
+            unmute,
+            error: err instanceof Error ? err.name : 'unknown',
+          });
+        }
+      }
+
+      const audio = audioElementRef.current;
+      if (audio) {
+        try {
+          await audio.play();
+          avatarLog('playback.audio', { paused: audio.paused });
+        } catch (err) {
+          avatarLog('playback.audio_failed', {
+            error: err instanceof Error ? err.name : 'unknown',
+          });
+        }
+      } else {
+        avatarLog('playback.no_audio_element', { unmute });
+      }
+    },
+    [audioUnlockedRef, videoRef],
+  );
 
   const sendJson = useCallback((frame: Record<string, unknown>) => {
     const socket = socketRef.current;
@@ -83,6 +128,55 @@ export function useLivekitAvatarSession({
       socket.send(JSON.stringify(frame));
     }
   }, []);
+
+  const maybeSendReady = useCallback(() => {
+    const tracks = tracksReadyRef.current;
+    // HeyGen LITE muxes speech into the video track; a separate audio track is optional.
+    if (tracks.readySent || !tracks.video) {
+      avatarLog('client.ready.waiting', {
+        video: tracks.video,
+        audio: tracks.audio,
+        sent: tracks.readySent,
+        ws: socketRef.current?.readyState,
+      });
+      return;
+    }
+    const socket = socketRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    tracks.readySent = true;
+    sendJson({
+      type: 'client.ready',
+      has_video: tracks.video,
+      has_audio: tracks.audio,
+    });
+    avatarLog('client.ready.sent', { has_audio_track: tracks.audio });
+    void tryStartPlayback(true);
+  }, [sendJson, tryStartPlayback]);
+
+  const flushSpeakQueue = useCallback(() => {
+    const socket = socketRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    for (const text of speakQueueRef.current) {
+      socket.send(JSON.stringify({ type: 'client.speak', text }));
+    }
+    speakQueueRef.current = [];
+  }, []);
+
+  const sendSpeak = useCallback(
+    (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      const socket = socketRef.current;
+      if (socket?.readyState === WebSocket.OPEN) {
+        avatarLog('client.speak.sent', { chars: trimmed.length });
+        sendJson({ type: 'client.speak', text: trimmed });
+        return;
+      }
+      avatarLog('client.speak.queued', { chars: trimmed.length, ws: socket?.readyState });
+      speakQueueRef.current.push(trimmed);
+    },
+    [sendJson],
+  );
 
   const stopMic = useCallback(() => {
     const recorder = recorderRef.current;
@@ -151,6 +245,13 @@ export function useLivekitAvatarSession({
     const room = new Room({ adaptiveStream: true, dynacast: true });
     const socket = new WebSocket(buildAudioWsUrl(audioWsPath));
     socketRef.current = socket;
+    avatarLog('ws.connecting', { path: audioWsPath });
+
+    socket.onopen = () => {
+      avatarLog('ws.open');
+      flushSpeakQueue();
+      maybeSendReady();
+    };
 
     socket.onmessage = (event: MessageEvent) => {
       if (typeof event.data !== 'string') return;
@@ -161,6 +262,8 @@ export function useLivekitAvatarSession({
         return;
       }
       const text = typeof frame.text === 'string' ? frame.text : '';
+      const frameType = typeof frame.type === 'string' ? frame.type : 'unknown';
+      avatarLog('ws.message', { type: frameType, textLen: text.length });
       switch (frame.type) {
         case 'transcript.partial':
           handlersRef.current.onTranscriptPartial(text);
@@ -176,9 +279,11 @@ export function useLivekitAvatarSession({
           break;
         case 'agent.speaking':
           handlersRef.current.onAgentSpeaking();
+          void tryStartPlayback(true);
           break;
         case 'caption':
           handlersRef.current.onCaption(text);
+          void tryStartPlayback(true);
           break;
         case 'ui': {
           const parsed = UIComponentSchema.safeParse(frame);
@@ -194,6 +299,7 @@ export function useLivekitAvatarSession({
     };
 
     socket.onclose = () => {
+      avatarLog('ws.closed', { userStopped: userStoppedRef.current });
       if (!disposed && !userStoppedRef.current) {
         handlersRef.current.onClosed();
       }
@@ -206,7 +312,11 @@ export function useLivekitAvatarSession({
 
     room
       .on(RoomEvent.Connected, () => {
-        if (!disposed) setStatus('connected');
+        if (!disposed) {
+          avatarLog('livekit.connected');
+          setStatus('connected');
+          void tryStartPlayback(true);
+        }
       })
       .on(RoomEvent.Reconnecting, () => {
         if (!disposed) setStatus('reconnecting');
@@ -224,16 +334,28 @@ export function useLivekitAvatarSession({
       })
       .on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
         if (track.kind === 'video') {
+          avatarLog('livekit.video_track');
           videoTrackRef.current = track as RemoteVideoTrack;
+          tracksReadyRef.current.video = true;
           const element = videoRef.current;
           if (element) {
+            element.muted = true;
+            element.defaultMuted = true;
             (track as RemoteVideoTrack).attach(element);
+            void tryStartPlayback(false);
           }
+          maybeSendReady();
         } else if (track.kind === 'audio') {
+          avatarLog('livekit.audio_track');
+          tracksReadyRef.current.audio = true;
           const element = track.attach();
           element.autoplay = true;
+          element.style.display = 'none';
+          document.body.appendChild(element);
           audioElement = element;
-          void element.play().catch(() => {});
+          audioElementRef.current = element;
+          void tryStartPlayback(false);
+          maybeSendReady();
         }
       });
 
@@ -247,7 +369,10 @@ export function useLivekitAvatarSession({
         }
         setStatus('connected');
       } catch {
-        if (!disposed) setStatus('failed');
+        if (!disposed) {
+          avatarLog('livekit.connect_failed');
+          setStatus('failed');
+        }
       }
     })();
 
@@ -255,6 +380,7 @@ export function useLivekitAvatarSession({
     return () => {
       disposed = true;
       userStoppedRef.current = true;
+      tracksReadyRef.current = { video: false, audio: false, readySent: false };
       document.removeEventListener('visibilitychange', handleVisibility);
       const recorder = recorderRef.current;
       if (recorder && recorder.state !== 'inactive') recorder.stop();
@@ -269,10 +395,21 @@ export function useLivekitAvatarSession({
       }
       videoTrackRef.current = null;
       audioElement?.pause();
+      audioElement?.remove();
+      audioElementRef.current = null;
       void room.disconnect();
       setStatus('disconnected');
     };
-  }, [livekitUrl, livekitToken, audioWsPath, videoRef, sendJson]);
+  }, [
+    livekitUrl,
+    livekitToken,
+    audioWsPath,
+    videoRef,
+    sendJson,
+    flushSpeakQueue,
+    tryStartPlayback,
+    maybeSendReady,
+  ]);
 
   return {
     status,
@@ -284,5 +421,7 @@ export function useLivekitAvatarSession({
     stopMic,
     sendBargeIn,
     sendKeepAlive,
+    sendSpeak,
+    unlockPlayback: tryStartPlayback,
   };
 }

@@ -9,6 +9,7 @@ import { formatChatStartedAt } from '../lib/format-chat-day';
 import { sessionStateClass, sessionStateLabel } from '../lib/session-status';
 import { useLiveAvatarSession } from '../hooks/use-liveavatar-session';
 import { createAgentAdvisorService } from '../services/agent-advisor-service';
+import { avatarLog } from '../lib/avatar-debug';
 import { ChatArea } from './ChatArea';
 import { SessionRail } from './SessionRail';
 import { SnapSheet } from './SnapSheet';
@@ -24,6 +25,7 @@ type SessionPanelProps = {
   avatarSession: AvatarSessionResponse;
   voiceEnabled: boolean;
   micUnavailable: boolean;
+  audioUnlockedRef: React.RefObject<boolean>;
   onEnded: (reason: 'user' | 'server' | 'error') => void;
   registerCommands: (commands: PanelCommands | null) => void;
   onEvent: (event: EmbedEvent) => void;
@@ -40,8 +42,8 @@ const FULL_SNAP = 2;
  * (Motion) docked over it. Snap points control how much of the frame the
  * sheet occupies — the video layer resizes to the space left free and
  * collapses at the full-screen snap (future forms/firma). The advisor
- * service owns the transcript; the backend drives avatar speech during
- * voice turns, so session transcriptions only feed the chat transcript.
+ * service owns the transcript; the backend greets on the audio WebSocket and
+ * drives avatar speech for voice turns and chat replies via client.speak.
  */
 export function SessionPanel({
   threadId,
@@ -49,6 +51,7 @@ export function SessionPanel({
   avatarSession,
   voiceEnabled,
   micUnavailable,
+  audioUnlockedRef,
   onEnded,
   registerCommands,
   onEvent,
@@ -59,11 +62,21 @@ export function SessionPanel({
     appendCaption: (text: string) => void;
     appendUi: (component: UIComponent) => void;
   } | null>(null);
+  const captionBufferRef = useRef<string[]>([]);
 
   const session = useLiveAvatarSession(avatarSession, {
     voiceChat: voiceEnabled,
+    audioUnlockedRef,
     onTranscriptFinal: (text) => voiceAdvisorRef.current?.appendUserMessage(text),
-    onCaption: (text) => voiceAdvisorRef.current?.appendCaption(text),
+    onCaption: (text) => {
+      if (voiceAdvisorRef.current) {
+        avatarLog('caption.append', { chars: text.length });
+        voiceAdvisorRef.current.appendCaption(text);
+        return;
+      }
+      avatarLog('caption.buffered', { chars: text.length });
+      captionBufferRef.current.push(text);
+    },
     onUi: (component) => voiceAdvisorRef.current?.appendUi(component),
   });
   const [snapIndex, setSnapIndex] = useState(LOADING_SNAP);
@@ -82,12 +95,21 @@ export function SessionPanel({
     attach,
     interrupt,
     setMicMuted,
+    speak,
+    unlockPlayback,
   } = session;
 
   const isConnected = sessionState === 'CONNECTED';
-  const speak = useCallback(() => {}, []);
   const service = useMemo(() => createAgentAdvisorService(threadId), [threadId]);
-  const advisor = useAdvisorChat({ speak, enabled: isConnected, service });
+  const advisor = useAdvisorChat({ speak, enabled: isConnected, service, greet: false });
+
+  const sendMessage = useCallback(
+    (message: string) => {
+      void unlockPlayback(true);
+      advisor.send(message);
+    },
+    [advisor, unlockPlayback],
+  );
 
   useEffect(() => {
     voiceAdvisorRef.current = {
@@ -95,6 +117,11 @@ export function SessionPanel({
       appendCaption: advisor.appendCaption,
       appendUi: advisor.appendUi,
     };
+    for (const text of captionBufferRef.current) {
+      avatarLog('caption.flush', { chars: text.length });
+      advisor.appendCaption(text);
+    }
+    captionBufferRef.current = [];
   });
 
   useEffect(() => {
@@ -186,7 +213,7 @@ export function SessionPanel({
         isUserTalking={isUserTalking}
         isMicMuted={isMicMuted}
         micUnavailable={micUnavailable || micError}
-        onSend={advisor.send}
+        onSend={sendMessage}
         onToggleMic={() => setMicMuted(!isMicMuted)}
       />
       {/*

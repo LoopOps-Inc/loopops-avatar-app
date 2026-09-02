@@ -125,6 +125,7 @@ def test_health(http: httpx.Client) -> None:
 
 def test_session_shape(session: dict[str, Any]) -> None:
     assert session["thread_id"]
+    assert session["thread_started_at"]
     assert set(session["capabilities"]) == {"chat", "voice", "advisory", "transactional"}
     ids = {d["id"] for d in session["disclosures_required"]}
     assert {"SERVICES_GUIDE", "AI_ASSISTANT", "VOICE_RECORDING"} <= ids

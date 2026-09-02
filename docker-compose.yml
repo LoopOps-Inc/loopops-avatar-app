@@ -1,13 +1,10 @@
 include:
   - services/agent/docker-compose.yml
 
-services:
-  agent:
-    environment:
-      AUTH_ACCESS_TOKEN_MAX_TTL_S: "604800"
-      LIVEAVATAR_IS_SANDBOX: "${LIVEAVATAR_IS_SANDBOX:-true}"
-      LIVEAVATAR_VOICE_ID: "${LIVEAVATAR_VOICE_ID:-}"
+# Full-stack dev: web-token TTL follows AUTH_ACCESS_TOKEN_MAX_TTL_S (default 900s,
+# matching services/agent/.env). Set 604800 in repo-root .env for a 7-day dev token.
 
+services:
   web-token:
     image: actinver-agent:local
     user: "0:0"
@@ -15,6 +12,7 @@ services:
     environment:
       SECRETS_MANAGER_ENDPOINT: http://floci:4566
       SECRETS_MANAGER_REGION: us-east-1
+      AUTH_ACCESS_TOKEN_MAX_TTL_S: ${AUTH_ACCESS_TOKEN_MAX_TTL_S:-900}
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       AWS_DEFAULT_REGION: us-east-1
@@ -57,11 +55,12 @@ services:
                 time.sleep(3)
         if not key:
             sys.exit("[web-token] secret not available at " + endpoint)
-        token = devkeys.mint_dev_access_token(key, "cl_demo_moderado", ttl_s=604800)
+        ttl_s = int(os.environ.get("AUTH_ACCESS_TOKEN_MAX_TTL_S", "900"))
+        token = devkeys.mint_dev_access_token(key, "cl_demo_moderado", ttl_s=ttl_s)
         with open("/tokens/token", "w") as handle:
             handle.write(token)
         os.chmod("/tokens/token", 0o666)
-        print("[web-token] minted 7d dev token for cl_demo_moderado")
+        print("[web-token] minted dev token for cl_demo_moderado (ttl_s=" + str(ttl_s) + ")")
         print("[web-token] " + token)
         PY
 

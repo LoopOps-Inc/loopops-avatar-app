@@ -68,6 +68,8 @@ vi.mock('../hooks/use-liveavatar-session', async () => {
         interrupt: () => {},
         keepAlive: async () => {},
         setMicMuted: () => {},
+        speak: () => {},
+        unlockPlayback: async () => {},
       };
     },
   };

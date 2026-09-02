@@ -72,6 +72,7 @@ class CreateSessionRequest(BaseModel):
 
 class SessionResponse(BaseModel):
     thread_id: str
+    thread_started_at: datetime
     capabilities: Capabilities
     disclosures_required: list[DisclosureRequired]
     client: SessionClient
