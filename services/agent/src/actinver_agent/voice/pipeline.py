@@ -101,6 +101,12 @@ class VoiceTurnPipeline:
                     sentence = str(event.data.get("text", "")).strip()
                     if not sentence:
                         continue
+                    log.info(
+                        "voice.sentence_timing",
+                        stage="token",
+                        elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+                        chars=len(sentence),
+                    )
                     if intent is None and event.data.get("intent"):
                         with contextlib.suppress(ValueError):
                             intent = Intent(str(event.data["intent"]))
@@ -119,6 +125,12 @@ class VoiceTurnPipeline:
                             sentence_mode=True,
                         )
                     )
+                    log.info(
+                        "voice.sentence_timing",
+                        stage="guardrail",
+                        elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+                        action=verdict.action.value,
+                    )
                     if verdict.action is not GuardrailAction.PASS:
                         result.dropped_sentences += 1
                         log.warning("voice.sentence_blocked", violations=verdict.violations)
@@ -133,6 +145,11 @@ class VoiceTurnPipeline:
                         event_id = await self._session.channel.speak(pcm, flush=False)
                         if event_id:
                             last_event_id = event_id
+                    log.info(
+                        "voice.sentence_timing",
+                        stage="tts_speak",
+                        elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+                    )
                     flushed = await self._session.channel.speak(b"", flush=True)
                     last_event_id = flushed or last_event_id
                     self._session.touch_avatar()
