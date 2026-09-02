@@ -123,7 +123,8 @@ export const PositionSchema = z.object({
   asset_class: z.string(),
   quantity: z.number(),
   market_value: MoneySchema,
-  cost_basis: MoneySchema,
+  // Absent when the source system exposes no acquisition price.
+  cost_basis: MoneySchema.nullable().optional(),
   weight_pct: z.number(),
   currency: CurrencySchema,
 });

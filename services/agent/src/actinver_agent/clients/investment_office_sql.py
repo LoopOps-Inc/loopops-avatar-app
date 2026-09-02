@@ -77,7 +77,9 @@ class InvestmentOfficeSqlCore:
             # Check if it's already an id_cliente_pk (1..20) or numero_cliente_unico (200001..200020)
             if val <= 50:
                 return val
-            q = text("SELECT id_cliente_pk FROM public.inv_cliente WHERE numero_cliente_unico = :num")
+            q = text(
+                "SELECT id_cliente_pk FROM public.inv_cliente WHERE numero_cliente_unico = :num"
+            )
             res = await conn.execute(q, {"num": val})
             row = res.scalar_one_or_none()
             if row is not None:
@@ -110,7 +112,7 @@ class InvestmentOfficeSqlCore:
             WHERE  c.id_cliente_fk = :id_cliente
               AND  c.baja_logica IS NOT TRUE
               AND  c.current_flag IS TRUE
-              AND  (:tipo IS NULL OR c.tipo_contrato = :tipo)
+              AND  (CAST(:tipo AS text) IS NULL OR c.tipo_contrato = :tipo)
             ORDER BY c.num_contrato;
         """)
         res = await conn.execute(query, {"id_cliente": id_cliente, "tipo": tipo})
@@ -151,7 +153,9 @@ class InvestmentOfficeSqlCore:
             {str(r["fecha_valuacion"]) for r in rows if r.get("fecha_valuacion") is not None}
         )
         valuacion_mixta = len(fechas_valuacion) > 1
-        total_mxn = sum((Decimal(str(r["valor_mxn"])) for r in rows if r["valor_mxn"] is not None), Decimal("0"))
+        total_mxn = sum(
+            (Decimal(str(r["valor_mxn"])) for r in rows if r["valor_mxn"] is not None), Decimal("0")
+        )
 
         return {
             "por_contrato": rows,
@@ -197,9 +201,9 @@ class InvestmentOfficeSqlCore:
             JOIN   ult u ON u.id_contrato_fk = p.id_contrato_fk AND u.snap = p.snapshot_date
             JOIN   public.inv_contrato c ON c.id_contrato_pk = p.id_contrato_fk
             WHERE  p.baja_logica IS NOT TRUE
-              AND  (:instrumento IS NULL OR p.desc_instrumento = :instrumento)
-              AND  (:tipo_producto IS NULL OR p.desc_tipo_producto = :tipo_producto)
-              AND  (:emisora IS NULL OR p.clave_emisora = :emisora)
+              AND  (CAST(:instrumento AS text) IS NULL OR p.desc_instrumento = :instrumento)
+              AND  (CAST(:tipo_producto AS text) IS NULL OR p.desc_tipo_producto = :tipo_producto)
+              AND  (CAST(:emisora AS text) IS NULL OR p.clave_emisora = :emisora)
             ORDER BY p.posicion_total DESC
             LIMIT  :limite;
         """)
@@ -221,10 +225,18 @@ class InvestmentOfficeSqlCore:
                 "clave_emisora": r["clave_emisora"],
                 "desc_emisora": r["desc_emisora"],
                 "serie": r["serie"],
-                "cantidad_titulos": str(r["cantidad_titulos"]) if r["cantidad_titulos"] is not None else None,
-                "precio_cierre": str(r["precio_cierre"]) if r["precio_cierre"] is not None else None,
-                "posicion_total": str(r["posicion_total"]) if r["posicion_total"] is not None else None,
-                "fecha_vencimiento": str(r["fecha_vencimiento"]) if r["fecha_vencimiento"] else None,
+                "cantidad_titulos": str(r["cantidad_titulos"])
+                if r["cantidad_titulos"] is not None
+                else None,
+                "precio_cierre": str(r["precio_cierre"])
+                if r["precio_cierre"] is not None
+                else None,
+                "posicion_total": str(r["posicion_total"])
+                if r["posicion_total"] is not None
+                else None,
+                "fecha_vencimiento": str(r["fecha_vencimiento"])
+                if r["fecha_vencimiento"]
+                else None,
                 "fecha_valuacion": str(r["fecha_valuacion"]) if r["fecha_valuacion"] else None,
             }
             for r in res.mappings().all()
@@ -237,7 +249,8 @@ class InvestmentOfficeSqlCore:
         conn: AsyncConnection,
         *,
         id_cliente: int,
-        producto: Literal["FONDOS", "CEDE", "PRLV", "MANDATOS", "PPR", "FONDOS_COMPLEJOS"] | None = None,
+        producto: Literal["FONDOS", "CEDE", "PRLV", "MANDATOS", "PPR", "FONDOS_COMPLEJOS"]
+        | None = None,
     ) -> list[dict[str, Any]]:
         query = text("""
             SELECT * FROM (
@@ -303,7 +316,7 @@ class InvestmentOfficeSqlCore:
                 WHERE  c.id_cliente_fk = :id_cliente AND fc.baja_logica IS NOT TRUE
                 GROUP BY c.num_contrato
             ) u
-            WHERE (:producto IS NULL OR u.producto = :producto);
+            WHERE (CAST(:producto AS text) IS NULL OR u.producto = :producto);
         """)
         res = await conn.execute(query, {"id_cliente": id_cliente, "producto": producto})
         return [
@@ -359,7 +372,9 @@ class InvestmentOfficeSqlCore:
                     "desc_emisora": r["desc_emisora"],
                     "fecha_vencimiento": str(r["fecha_vencimiento"]),
                     "plazo": int(r["plazo"]) if r["plazo"] is not None else None,
-                    "posicion_total": str(r["posicion_total"]) if r["posicion_total"] is not None else None,
+                    "posicion_total": str(r["posicion_total"])
+                    if r["posicion_total"] is not None
+                    else None,
                 }
                 for r in res.mappings().all()
             )
@@ -403,7 +418,7 @@ class InvestmentOfficeSqlCore:
             FROM   public.inv_seguros s
             WHERE  s.id_cliente_fk = :id_cliente
               AND  s.baja_logica IS NOT TRUE
-              AND  (:ramo IS NULL OR s.ramo = :ramo)
+              AND  (CAST(:ramo AS text) IS NULL OR s.ramo = :ramo)
             ORDER BY s.ramo, s.numero_poliza;
         """)
         res = await conn.execute(query, {"id_cliente": id_cliente, "ramo": ramo})
@@ -416,7 +431,9 @@ class InvestmentOfficeSqlCore:
                 "prima_total": str(r["prima_total"]) if r["prima_total"] is not None else None,
                 "estatus_cobranza": r["estatus_cobranza"],
                 "estatus_poliza": r["estatus_poliza"],
-                "snapshot_date": str(r["snapshot_date"]) if r["snapshot_date"] is not None else None,
+                "snapshot_date": str(r["snapshot_date"])
+                if r["snapshot_date"] is not None
+                else None,
                 "vigencia_disponible": False,  # fecha_inicio/fin are 100% NULL in dump
             }
             for r in res.mappings().all()
@@ -450,13 +467,23 @@ class InvestmentOfficeSqlCore:
                 "num_contrato": r["num_contrato"],
                 "num_credito_sistema": r["num_credito_sistema"],
                 "tipo_credito": r["tipo_credito"],
-                "monto_original": str(r["monto_original"]) if r["monto_original"] is not None else None,
-                "saldo_insoluto_actual": str(r["saldo_insoluto_actual"]) if r["saldo_insoluto_actual"] is not None else None,
+                "monto_original": str(r["monto_original"])
+                if r["monto_original"] is not None
+                else None,
+                "saldo_insoluto_actual": str(r["saldo_insoluto_actual"])
+                if r["saldo_insoluto_actual"] is not None
+                else None,
                 # Trap T3: never map None to "0.00"
-                "saldo_vencido": str(r["saldo_vencido"]) if r["saldo_vencido"] is not None else "no_informado",
+                "saldo_vencido": str(r["saldo_vencido"])
+                if r["saldo_vencido"] is not None
+                else "no_informado",
                 "estatus_pago": r["estatus_pago"],
-                "fecha_vencimiento": str(r["fecha_vencimiento"]) if r["fecha_vencimiento"] is not None else "no_informado",
-                "snapshot_date": str(r["snapshot_date"]) if r["snapshot_date"] is not None else None,
+                "fecha_vencimiento": str(r["fecha_vencimiento"])
+                if r["fecha_vencimiento"] is not None
+                else "no_informado",
+                "snapshot_date": str(r["snapshot_date"])
+                if r["snapshot_date"] is not None
+                else None,
             }
             for r in res.mappings().all()
         ]
@@ -496,7 +523,7 @@ class InvestmentOfficeSqlCore:
                 AND  :incluir_traspasos IS TRUE
             ) m
             WHERE  m.fecha BETWEEN :desde AND :hasta
-              AND  (:tipo IS NULL OR m.tipo_movimiento = :tipo)
+              AND  (CAST(:tipo AS text) IS NULL OR m.tipo_movimiento = :tipo)
             ORDER BY m.fecha DESC
             LIMIT  :limite;
         """)
@@ -601,10 +628,14 @@ class InvestmentOfficeSqlCore:
         detalle: str,
     ) -> dict[str, Any]:
         asesores = await self.obtener_asesor(conn, id_cliente=id_cliente)
-        asesor = asesores[0] if asesores else {
-            "nombre_completo": "tu asesor patrimonial",
-            "desc_centro_financiero": "tu centro financiero",
-        }
+        asesor = (
+            asesores[0]
+            if asesores
+            else {
+                "nombre_completo": "tu asesor patrimonial",
+                "desc_centro_financiero": "tu centro financiero",
+            }
+        )
         scripts = {
             "desempeno_o_causa": (
                 f"Para revisar a detalle el rendimiento y las causas de los movimientos en tu "
@@ -630,6 +661,7 @@ class InvestmentOfficeSqlCore:
             ),
         }
         import uuid
+
         ticket_id = f"TICK-{uuid.uuid4().hex[:8].upper()}"
         return {
             "asesor": asesor,

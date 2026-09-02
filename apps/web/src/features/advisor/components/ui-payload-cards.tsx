@@ -255,9 +255,11 @@ function PortfolioPositionsCard({ payload }: { payload: PortfolioPositionsPayloa
               <span>
                 {t('advisor.weight')} {position.weight_pct.toFixed(1)}%
               </span>
-              <span>
-                {t('advisor.cost_basis')} {money(position.cost_basis)}
-              </span>
+              {position.cost_basis && (
+                <span>
+                  {t('advisor.cost_basis')} {money(position.cost_basis)}
+                </span>
+              )}
             </div>
             <div className="bg-outline/40 h-1 w-full overflow-hidden rounded-full">
               <div

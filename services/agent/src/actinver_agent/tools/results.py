@@ -79,7 +79,9 @@ class Position(BaseModel):
     asset_class: str
     quantity: float
     market_value: Money
-    cost_basis: Money
+    #: Absent when the source system does not expose an acquisition price
+    #: (the InvestmentOffice dataset forbids projecting ``precio``, trap T5).
+    cost_basis: Money | None = None
     weight_pct: float
     currency: Literal["MXN", "USD", "EUR"]
 
