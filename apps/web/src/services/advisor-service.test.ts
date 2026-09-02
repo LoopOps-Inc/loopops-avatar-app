@@ -5,10 +5,13 @@ import {
   ackFirstTurnDisclosures,
   createAdvisorSession,
   createAvatarSession,
+  listInvestors,
+  mintDevToken,
   parseSseStream,
   sendAdvisorMessage,
   stopAvatarSession,
 } from './advisor-service';
+import { clearDevAuth, setDevAuth } from './dev-auth';
 import type { AdvisorSseHandlers } from './advisor-types';
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -72,6 +75,7 @@ function makeHandlers(): AdvisorSseHandlers {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  clearDevAuth();
 });
 
 describe('parseSseStream', () => {
@@ -213,6 +217,60 @@ describe('avatar endpoints', () => {
     expect(url).toBe('/api/v1/avatar/session/stop');
     expect(init.headers['idempotency-key']).toBeDefined();
     expect(JSON.parse(init.body)).toEqual({ avatar_session_id: 'as_1', reason: 'user' });
+  });
+});
+
+describe('investor switching', () => {
+  const investorFixture = {
+    id_cliente_pk: 1,
+    numero_cliente_unico: 200001,
+    nombre_completo: 'Mariano Gonzales Santiago',
+    rfc: 'DAXI800214FE8',
+    correo_electronico: 'mariano.gonzales@gmail.com',
+    perfil_riesgo: 'Agresivo',
+    total_contratos: 4,
+  };
+
+  it('lists investors from /v1/config/investors', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ investors: [investorFixture], total: 1 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const list = await listInvestors();
+
+    expect(list.total).toBe(1);
+    expect(list.investors[0]).toMatchObject({
+      numero_cliente_unico: 200001,
+      perfil_riesgo: 'Agresivo',
+    });
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/config/investors');
+  });
+
+  it('mints a dev token for the selected client_id', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ access_token: 'tok', client_id: '200001', token_type: 'Bearer', expires_in: 900 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const token = await mintDevToken('200001');
+
+    expect(token.access_token).toBe('tok');
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/v1/auth/dev-token');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual({ client_id: '200001' });
+  });
+
+  it('sends the stored dev token as a bearer header on session calls', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(sessionFixture));
+    vi.stubGlobal('fetch', fetchMock);
+    setDevAuth({ clientId: '200001', accessToken: 'tok', expiresAt: Date.now() + 60_000 });
+
+    await createAdvisorSession('chat');
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.headers.authorization).toBe('Bearer tok');
   });
 });
 

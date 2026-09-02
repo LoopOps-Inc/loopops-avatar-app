@@ -79,6 +79,10 @@
     "ended_by_server": "The session ended. You can start another.",
     "error_unknown": "Unknown error",
     "expand": "Full screen",
-    "collapse": "Exit full screen"
+    "collapse": "Exit full screen",
+    "investor_label": "Act as",
+    "investor_default": "Demo client",
+    "investor_load_error": "Could not load clients",
+    "investor_switch_error": "Could not switch client"
   }
 }

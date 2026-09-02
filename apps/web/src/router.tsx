@@ -3,21 +3,12 @@ import {
   createRootRoute,
   createRoute,
   lazyRouteComponent,
-  redirect,
   Outlet,
 } from '@tanstack/react-router';
 
 const rootRoute = createRootRoute({
   component: function RootLayout() {
     return <Outlet />;
-  },
-});
-
-const indexRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/',
-  beforeLoad: () => {
-    throw redirect({ to: '/demo' });
   },
 });
 
@@ -30,7 +21,7 @@ const demoRoute = createRoute({
   ),
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, demoRoute]);
+const routeTree = rootRoute.addChildren([demoRoute]);
 
 export const router = createRouter({ routeTree, defaultPreload: 'intent' });
 

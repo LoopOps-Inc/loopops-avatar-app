@@ -39,6 +39,10 @@ export function setDevAuth(auth: DevAuth | null): void {
   }
 }
 
+export function clearDevAuth(): void {
+  setDevAuth(null);
+}
+
 export function getDevAuth(): DevAuth | null {
   if (current && current.expiresAt <= Date.now()) {
     setDevAuth(null);

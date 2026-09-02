@@ -7,6 +7,7 @@ import {
   ackVoiceConsent,
   createAdvisorSession,
   createAvatarSession,
+  listInvestors,
 } from '@/services/advisor-service';
 import { setLocale } from '@/i18n';
 
@@ -42,6 +43,7 @@ vi.mock('@/services/advisor-service', async (importOriginal) => {
     createAvatarSession: vi.fn(),
     stopAvatarSession: vi.fn(),
     sendAdvisorMessage: vi.fn(),
+    listInvestors: vi.fn(),
   };
 });
 
@@ -102,6 +104,7 @@ describe('LiveSessionRoute', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     stubState.set({ sessionState: 'INACTIVE', endReason: null });
+    vi.mocked(listInvestors).mockResolvedValue({ investors: [], total: 0 });
     Object.defineProperty(window.navigator, 'mediaDevices', {
       configurable: true,
       value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [] }) },
