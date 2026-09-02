@@ -1,7 +1,6 @@
 import React, { useRef, useEffect } from 'react';
-import { StyleSheet, View, Text, ActivityIndicator, PermissionsAndroid } from 'react-native';
-import { WebView, WebViewMessageEvent, PermissionRequestEvent } from 'react-native-webview';
-import { useTranslation } from 'react-i18next';
+import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
+import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { theme } from '../styles/theme';
 
 interface WebViewContainerProps {
@@ -16,33 +15,6 @@ export const WebViewContainer: React.FC<WebViewContainerProps> = ({
   onSessionInitialized,
 }) => {
   const webViewRef = useRef<WebView>(null);
-  const { t } = useTranslation();
-
-  const handlePermissionRequest = async (event: PermissionRequestEvent) => {
-    const AUDIO_CAPTURE = 'android.webkit.resource.AUDIO_CAPTURE';
-    if (!event.requestedResources.includes(AUDIO_CAPTURE)) {
-      event.deny();
-      return;
-    }
-    try {
-      const result = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-        {
-          title: t('live.mic_permission_title'),
-          message: t('live.mic_permission_message'),
-          buttonPositive: 'OK',
-          buttonNegative: 'Cancelar',
-        }
-      );
-      if (result === PermissionsAndroid.RESULTS.GRANTED) {
-        event.grant(event.requestedResources);
-      } else {
-        event.deny();
-      }
-    } catch {
-      event.deny();
-    }
-  };
 
   // Injected JavaScript script to facilitate immediate setup of the WebView Bridge
   const injectedJavaScript = `
@@ -123,7 +95,6 @@ export const WebViewContainer: React.FC<WebViewContainerProps> = ({
         source={{ uri: `${webAppUrl}/demo` }}
         injectedJavaScript={injectedJavaScript}
         onMessage={handleMessage}
-        onPermissionRequest={handlePermissionRequest}
         mediaPlaybackRequiresUserAction={false}
         style={styles.webview}
         startInLoadingState={true}

@@ -79,8 +79,6 @@ const esMX = {
     mic_mute: "Silenciar micro",
     mic_unmute: "Activar micro",
     mic_unavailable: "Micrófono no disponible: escribe tus mensajes.",
-    mic_permission_title: "Micrófono",
-    mic_permission_message: "Tino necesita el micrófono para la conversación por voz.",
     avatar: "Tino",
     ended_by_server: "La sesión se cerró. Puedes iniciar otra.",
     error_unknown: "Error desconocido",
