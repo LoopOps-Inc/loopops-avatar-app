@@ -1,44 +1,22 @@
 import { ArrowRight, Loader2 } from 'lucide-react';
-import type { InvestorSummary } from '@loopops/contracts';
 import { actinverAvatar } from '@/config/avatar';
 import { useTranslation } from '@/i18n';
-import { InvestorSelect } from './InvestorSelect';
 
 type StartScreenProps = {
   starting: boolean;
   error: string | null;
   endedByServer: boolean;
   onStart: () => void;
-  investors: InvestorSummary[];
-  selectedInvestorId: number | null;
-  onSelectInvestor: (numeroClienteUnico: number) => void;
-  investorsLoading: boolean;
 };
 
-/** Pre-session CTA: pick a demo investor, then start a live conversation with Tino. */
-export function StartScreen({
-  starting,
-  error,
-  endedByServer,
-  onStart,
-  investors,
-  selectedInvestorId,
-  onSelectInvestor,
-  investorsLoading,
-}: StartScreenProps) {
+/** Pre-session CTA: start a live conversation with Tino. */
+export function StartScreen({ starting, error, endedByServer, onStart }: StartScreenProps) {
   const { t } = useTranslation();
 
   return (
     <div className="bg-surface-sub flex h-full flex-col">
       <div className="flex-1" aria-hidden="true" />
       <div className="px-safe pb-safe flex flex-col gap-3 p-4">
-        <InvestorSelect
-          investors={investors}
-          selectedId={selectedInvestorId}
-          onSelect={onSelectInvestor}
-          disabled={starting}
-          loading={investorsLoading}
-        />
         <button
           type="button"
           onClick={onStart}

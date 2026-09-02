@@ -132,5 +132,14 @@
     "investor_switch_error": "No se pudo cambiar de cliente",
     "investor_loading": "Cargando inversionistas...",
     "investor_option": "{{name}}, {{risk}}"
+  },
+  "auth": {
+    "client_id": "Número de cliente",
+    "password": "Contraseña",
+    "submit": "Entrar",
+    "error_unauthenticated": "Cliente o contraseña incorrectos",
+    "error_validation": "Revise los datos e intente de nuevo",
+    "error_unknown": "No se pudo iniciar sesión. Intente de nuevo.",
+    "client_id_invalid": "Use solo números"
   }
 }
