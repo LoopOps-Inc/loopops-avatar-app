@@ -3,7 +3,11 @@ import { DEFAULT_LOCALE, LOCALE_STORAGE_KEY, SUPPORTED_LOCALES, type Locale } fr
 import en from './translations/en.json';
 import es from './translations/es.json';
 
-const translations: Record<Locale, Record<string, Record<string, string>>> = { es, en };
+interface TranslationTree {
+  [key: string]: string | TranslationTree;
+}
+
+const translations: Record<Locale, TranslationTree> = { es, en };
 
 function detectLocale(): Locale {
   if (typeof window === 'undefined') return DEFAULT_LOCALE;
@@ -48,9 +52,15 @@ export function t(
   locale: Locale = currentLocale,
 ): string {
   if (typeof key !== 'string' || key.length === 0) return '';
-  const [namespace, ...rest] = key.split('.');
-  const k = rest.join('.');
-  let result = translations[locale]?.[namespace]?.[k] ?? key;
+  let node: string | TranslationTree | undefined = translations[locale];
+  for (const segment of key.split('.')) {
+    if (typeof node !== 'object' || node === null) {
+      node = undefined;
+      break;
+    }
+    node = node[segment];
+  }
+  let result = typeof node === 'string' ? node : key;
   if (params) {
     for (const [pk, pv] of Object.entries(params)) {
       result = result.replace(`{{${pk}}}`, String(pv));

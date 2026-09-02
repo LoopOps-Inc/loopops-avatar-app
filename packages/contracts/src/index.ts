@@ -19,6 +19,8 @@ export const DisclosureSchema = z.object({
   id: z.string(),
   version: z.string(),
   acknowledged: z.boolean(),
+  required_for: z.enum(['first_turn', 'voice', 'optional']).optional(),
+  text_url: z.string().optional(),
 });
 export type Disclosure = z.infer<typeof DisclosureSchema>;
 
@@ -31,7 +33,27 @@ export const SessionResponseSchema = z.object({
   client: z.object({
     first_name: z.string(),
     risk_category: z.string(),
+    profile_expires_at: z.string().nullish(),
+    register: z.enum(['tu', 'usted']).optional(),
   }),
+  mode_defaults: z
+    .object({
+      default_mode: z.enum(['chat', 'voice']),
+      voice_available: z.boolean(),
+      filler_threshold_ms: z.number(),
+      thinking_ceiling_s: z.number(),
+      background_grace_s: z.number(),
+    })
+    .optional(),
+  promotor: z
+    .object({
+      name: z.string().optional(),
+      phone: z.string().optional(),
+      hours: z.string().optional(),
+    })
+    .optional(),
+  kill_switch: z.boolean().optional(),
+  risk_mode: z.enum(['normal', 'restricted']).optional(),
 });
 export type SessionResponse = z.infer<typeof SessionResponseSchema>;
 
@@ -68,6 +90,7 @@ export const CitationSchema = z.object({
   title: z.string(),
   url: z.string().optional(),
   published: z.string().optional(),
+  published_at: z.string().optional(),
   source: z.string().optional(),
 });
 export type Citation = z.infer<typeof CitationSchema>;
@@ -83,7 +106,7 @@ export const WarningBannerPayloadSchema = z.object({
 });
 export type WarningBannerPayload = z.infer<typeof WarningBannerPayloadSchema>;
 
-export const UIComponentSchema = z.discriminatedUnion('type', [
+export const UIComponentSchema = z.union([
   z.object({
     type: z.literal('portfolio_summary'),
     payload: PortfolioSummaryPayloadSchema,
@@ -114,6 +137,12 @@ export const UIComponentSchema = z.discriminatedUnion('type', [
     as_of: z.string().optional(),
     source: z.string().optional(),
   }),
+  z.object({
+    type: z.string(),
+    payload: z.record(z.unknown()).optional(),
+    as_of: z.string().nullable().optional(),
+    source: z.string().nullable().optional(),
+  }),
 ]);
 export type UIComponent = z.infer<typeof UIComponentSchema>;
 
@@ -133,16 +162,89 @@ export type SseErrorEvent = z.infer<typeof SseErrorEventSchema>;
 export const SseDoneEventSchema = z.object({
   turn_id: z.string(),
   evidence_id: z.string(),
-  service_type: z.enum(['asesorado', 'no_asesorado']),
+  service_type: z.string(),
+  service_subtype: z.string().optional(),
+  intent: z.string().optional(),
+  degraded_from: z.string().nullable().optional(),
+  disclosures_shown: z.record(z.string()).optional(),
 });
 export type SseDoneEvent = z.infer<typeof SseDoneEventSchema>;
 
-export type SseEventName = 'token' | 'ui' | 'citations' | 'error' | 'done';
+export const SseFormSpecEventSchema = z.object({ form_id: z.string() }).passthrough();
+export type SseFormSpecEvent = z.infer<typeof SseFormSpecEventSchema>;
+
+export type SseEventName = 'token' | 'ui' | 'citations' | 'form_spec' | 'error' | 'done';
 
 export const ChatMessageRequestSchema = z.object({
-  message: z.string().min(1),
+  text: z.string().min(1),
+  locale: z.string().optional(),
+  client_turn_id: z.string().optional(),
 });
 export type ChatMessageRequest = z.infer<typeof ChatMessageRequestSchema>;
+
+export const ConsentTypeSchema = z.enum([
+  'privacy_notice',
+  'investment_services_guide',
+  'ai_disclosure',
+  'voice_recording',
+  'model_improvement',
+]);
+export type ConsentType = z.infer<typeof ConsentTypeSchema>;
+
+export const ConsentViewSchema = z.object({
+  type: ConsentTypeSchema,
+  public_id: z.string(),
+  current_version: z.string(),
+  granted: z.boolean(),
+  granted_version: z.string().nullable().optional(),
+  granted_at: z.string().nullable().optional(),
+  revoked_at: z.string().nullable().optional(),
+  required_for: z.enum(['first_turn', 'voice', 'optional']),
+});
+export type ConsentView = z.infer<typeof ConsentViewSchema>;
+
+export const ConsentAckRequestSchema = z.object({
+  type: ConsentTypeSchema,
+  version: z.string(),
+  granted: z.boolean(),
+  channel: z.enum(['chat', 'voice', 'app']),
+});
+export type ConsentAckRequest = z.infer<typeof ConsentAckRequestSchema>;
+
+export const ConsentsResponseSchema = z.object({
+  consents: z.array(ConsentViewSchema),
+});
+export type ConsentsResponse = z.infer<typeof ConsentsResponseSchema>;
+
+export const ClientConfigResponseSchema = z.object({
+  kill_switch: z.boolean(),
+  kill_switch_message: z.string().optional(),
+  voice_mode: z.record(z.unknown()).optional(),
+  advisory: z.record(z.unknown()).optional(),
+  transactional: z.record(z.unknown()).optional(),
+  avatar: z.record(z.unknown()).optional(),
+  disclosure_versions: z.record(z.string()).optional(),
+  promotor: z
+    .object({
+      name: z.string().optional(),
+      phone: z.string().optional(),
+      hours: z.string().optional(),
+    })
+    .optional(),
+  poll_interval_s: z.number().optional(),
+});
+export type ClientConfigResponse = z.infer<typeof ClientConfigResponseSchema>;
+
+export const AvatarSessionResponseSchema = z.object({
+  avatar_session_id: z.string(),
+  livekit_url: z.string(),
+  livekit_client_token: z.string(),
+  max_session_duration_s: z.number(),
+  expires_at: z.string(),
+  audio_ws_path: z.string(),
+  emulated: z.boolean().optional(),
+});
+export type AvatarSessionResponse = z.infer<typeof AvatarSessionResponseSchema>;
 
 // ============================================================
 // Embed bridge protocol (v1) — WebView <-> host app postMessage

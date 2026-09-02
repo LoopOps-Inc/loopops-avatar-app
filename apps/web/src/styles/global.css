@@ -36,21 +36,7 @@
   --text-advisor-submit-fg: var(--actinver-submit-fg);
 }
 
-.dark {
-  --bg-surface: var(--neutral-70);
-  --bg-surface-sub: var(--gray-chat-bg);
-  --text-content: var(--neutral-5);
-  --text-content-sub: var(--neutral-20);
-  --text-content-muted: var(--neutral-40);
-  --text-content-inverse: var(--neutral-90);
-  --bg-filled-dark: var(--neutral-15);
-  --text-filled-dark-fg: var(--neutral-90);
-  --border-outline: var(--neutral-60);
-  --bg-accent: var(--brand-accent-50);
-  --text-accent-fg: var(--neutral-0);
-}
-
-/* Nested light scope. Wins over an ancestor .dark so a screen can stay white. */
+/* Pinned light scope for video/session surfaces. */
 .light {
   color-scheme: light;
   --bg-surface: var(--neutral-0);

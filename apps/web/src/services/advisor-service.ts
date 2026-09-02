@@ -1,17 +1,54 @@
 import {
+  type AvatarSessionResponse,
   type ChatMessageRequest,
+  type ClientConfigResponse,
+  type ConsentType,
+  type ConsentsResponse,
   type SessionResponse,
+  AvatarSessionResponseSchema,
+  ClientConfigResponseSchema,
+  ConsentsResponseSchema,
   SessionResponseSchema,
+  SseCitationsEventSchema,
   SseDoneEventSchema,
   SseErrorEventSchema,
+  SseFormSpecEventSchema,
   SseTokenEventSchema,
   UIComponentSchema,
 } from '@loopops/contracts';
+import { z } from 'zod';
 import { appEnv } from '@/config/env';
-import { createMockAdvisorSession, sendMockAdvisorMessage } from './advisor-mock';
+import { getLocale } from '@/i18n';
 import type { AdvisorSseHandlers } from './advisor-types';
 
 export type { AdvisorSseHandlers } from './advisor-types';
+
+export class ApiError extends Error {
+  readonly code: string;
+
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.code = code;
+  }
+}
+
+async function throwProblem(res: Response): Promise<never> {
+  let code = `HTTP_${res.status}`;
+  let message = `Request failed (${res.status})`;
+  try {
+    const body = (await res.json()) as { code?: unknown; message?: unknown };
+    if (typeof body?.code === 'string' && body.code) code = body.code;
+    if (typeof body?.message === 'string' && body.message) message = body.message;
+  } catch {
+    // Not application/problem+json: keep the HTTP fallback.
+  }
+  throw new ApiError(code, message);
+}
+
+function idempotencyKey(): string {
+  return crypto.randomUUID();
+}
 
 export async function* parseSseStream(
   body: ReadableStream<Uint8Array>,
@@ -63,6 +100,16 @@ async function dispatchSseEvent(
       handlers.onUi(ui);
       break;
     }
+    case 'citations': {
+      const citations = SseCitationsEventSchema.parse(parsed);
+      handlers.onCitations(citations);
+      break;
+    }
+    case 'form_spec': {
+      const form = SseFormSpecEventSchema.parse(parsed);
+      handlers.onFormSpec(form);
+      break;
+    }
     case 'error': {
       const error = SseErrorEventSchema.parse(parsed);
       handlers.onError(error);
@@ -78,20 +125,124 @@ async function dispatchSseEvent(
   }
 }
 
-export async function createAdvisorSession(): Promise<SessionResponse> {
-  if (appEnv.advisorMock) {
-    return createMockAdvisorSession();
-  }
-
+export async function createAdvisorSession(
+  channel: 'chat' | 'voice' = 'chat',
+): Promise<SessionResponse> {
   const res = await fetch(`${appEnv.advisorApiBase}/v1/sessions`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ channel, locale: getLocale() }),
   });
   if (!res.ok) {
-    throw new Error(`Session request failed (${res.status})`);
+    await throwProblem(res);
   }
   const json: unknown = await res.json();
   return SessionResponseSchema.parse(json);
+}
+
+export async function getConsents(): Promise<ConsentsResponse> {
+  const res = await fetch(`${appEnv.advisorApiBase}/v1/consents`);
+  if (!res.ok) {
+    await throwProblem(res);
+  }
+  const json: unknown = await res.json();
+  return ConsentsResponseSchema.parse(json);
+}
+
+export async function ackConsent(
+  type: ConsentType,
+  version: string,
+  channel: 'chat' | 'voice' | 'app' = 'app',
+): Promise<void> {
+  const res = await fetch(`${appEnv.advisorApiBase}/v1/consents`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'idempotency-key': idempotencyKey(),
+    },
+    body: JSON.stringify({ type, version, granted: true, channel }),
+  });
+  if (!res.ok) {
+    await throwProblem(res);
+  }
+}
+
+export async function ackFirstTurnDisclosures(): Promise<void> {
+  const { consents } = await getConsents();
+  const pending = consents.filter(
+    (consent) => consent.required_for === 'first_turn' && !consent.granted,
+  );
+  for (const consent of pending) {
+    await ackConsent(consent.type, consent.current_version, 'chat');
+  }
+}
+
+export async function ackVoiceConsent(): Promise<void> {
+  const { consents } = await getConsents();
+  const voice = consents.find((consent) => consent.type === 'voice_recording');
+  if (voice && !voice.granted) {
+    await ackConsent(voice.type, voice.current_version, 'voice');
+  }
+}
+
+export async function getClientConfig(): Promise<ClientConfigResponse> {
+  const res = await fetch(`${appEnv.advisorApiBase}/v1/config`);
+  if (!res.ok) {
+    await throwProblem(res);
+  }
+  const json: unknown = await res.json();
+  return ClientConfigResponseSchema.parse(json);
+}
+
+const AvatarPreflightResponseSchema = z.object({
+  media_reachable: z.boolean(),
+  voice_offered: z.boolean(),
+  reason: z.string().optional(),
+});
+
+export async function avatarPreflight(): Promise<z.infer<typeof AvatarPreflightResponseSchema>> {
+  const res = await fetch(`${appEnv.advisorApiBase}/v1/avatar/preflight`);
+  if (!res.ok) {
+    await throwProblem(res);
+  }
+  const json: unknown = await res.json();
+  return AvatarPreflightResponseSchema.parse(json);
+}
+
+export async function createAvatarSession(
+  threadId: string,
+  orientation: 'portrait' | 'landscape' = 'portrait',
+): Promise<AvatarSessionResponse> {
+  const res = await fetch(`${appEnv.advisorApiBase}/v1/avatar/session`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'idempotency-key': idempotencyKey(),
+    },
+    body: JSON.stringify({ thread_id: threadId, orientation }),
+  });
+  if (!res.ok) {
+    await throwProblem(res);
+  }
+  const json: unknown = await res.json();
+  return AvatarSessionResponseSchema.parse(json);
+}
+
+export async function stopAvatarSession(
+  avatarSessionId: string,
+  reason: 'user' | 'background' = 'user',
+): Promise<void> {
+  const res = await fetch(`${appEnv.advisorApiBase}/v1/avatar/session/stop`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'idempotency-key': idempotencyKey(),
+    },
+    body: JSON.stringify({ avatar_session_id: avatarSessionId, reason }),
+  });
+  if (!res.ok) {
+    await throwProblem(res);
+  }
 }
 
 export async function sendAdvisorMessage(
@@ -100,11 +251,6 @@ export async function sendAdvisorMessage(
   handlers: AdvisorSseHandlers,
   signal?: AbortSignal,
 ): Promise<void> {
-  if (appEnv.advisorMock) {
-    await sendMockAdvisorMessage(request.message, handlers);
-    return;
-  }
-
   const res = await fetch(`${appEnv.advisorApiBase}/v1/threads/${threadId}/messages`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
@@ -112,8 +258,11 @@ export async function sendAdvisorMessage(
     signal,
   });
 
-  if (!res.ok || !res.body) {
-    throw new Error(`Chat request failed (${res.status})`);
+  if (!res.ok) {
+    await throwProblem(res);
+  }
+  if (!res.body) {
+    throw new ApiError('EMPTY_STREAM', 'The chat stream closed without events');
   }
 
   for await (const { event, data } of parseSseStream(res.body)) {

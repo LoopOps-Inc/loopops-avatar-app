@@ -1,15 +1,16 @@
 import type {
   SseCitationsEvent,
   SseDoneEvent,
+  SseErrorEvent,
   SseTokenEvent,
   UIComponent,
 } from '@loopops/contracts';
 
-/** Event shape the real SSE client will emit (mirrors the chat contract). */
 export type AdvisorStreamEvent =
   | { event: 'token'; data: SseTokenEvent }
   | { event: 'ui'; data: UIComponent }
   | { event: 'citations'; data: SseCitationsEvent }
+  | { event: 'error'; data: SseErrorEvent }
   | { event: 'done'; data: SseDoneEvent };
 
 export interface AdvisorService {
