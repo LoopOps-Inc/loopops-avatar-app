@@ -26,7 +26,7 @@ export function LoginScreen() {
               src={actinverLogoUrl}
               alt=""
               data-testid="auth-login-logo"
-              className="mb-4 h-12 w-auto max-w-[200px] self-center object-contain"
+              className="mb-4 h-40 w-auto self-center object-contain"
             />
             <label htmlFor="auth-client-id" className="flex flex-col gap-1.5">
               <span className="text-content text-sm font-medium">{t('auth.client_id')}</span>

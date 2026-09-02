@@ -645,11 +645,11 @@ function UnsupportedCard({ type }: { type: string }) {
 }
 
 const CARD_BODY_STYLES =
-  'flex w-full flex-col gap-2 rounded-xl border border-outline-soft bg-surface-sub px-3 py-2.5 text-left text-content';
+  'flex w-full flex-col gap-2 rounded-xl border border-outline-soft bg-surface-sub px-3 py-2.5 text-left text-black';
 
 /**
  * Maps one server component to its card. Returns `null` only when the payload
- * fails its schema; an unrecognised `type` falls through to UnsupportedCard so
+ * fails its schema; an unrecognized `type` falls through to UnsupportedCard so
  * a server type the client has not shipped is visible instead of silent.
  */
 function useCardBody(component: UIComponent): React.ReactNode {
