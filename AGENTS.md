@@ -73,7 +73,7 @@ When a rule should be encoded for agents, document it in `knowledge/`, not in ad
 
 Use `apps/web/src/styles/tokens.css` primitives and the semantic Tailwind utilities from `apps/web/src/styles/global.css` (`bg-surface`, `text-content`, `bg-filled-dark`, etc.). Never scatter hex values in components.
 
-Primary CTA buttons use **filled-dark** (`bg-filled-dark` / `text-filled-dark-fg`), not brand blue. Blue (`text-accent`, `bg-accent`) is for links and brand accents only.
+Primary CTA buttons use **filled-dark** (`bg-filled-dark` / `text-filled-dark-fg`), not brand blue. There is no accent blue token today; add `brand-accent-50` back to `tokens.css` and `global.css` when a screen needs links or brand accents.
 
 ### API calls — service layer only
 

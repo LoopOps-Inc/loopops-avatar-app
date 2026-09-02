@@ -70,7 +70,7 @@ export function Composer({ disabled = false, onSend }: ComposerProps) {
           placeholder={t('live.input_placeholder')}
           autoComplete="off"
           enterKeyHint="send"
-          className="placeholder:text-content-muted text-content-muted bg-gray-chat-bg max-h-24 min-h-6 min-w-0 flex-1 resize-none overflow-y-auto py-2 text-sm leading-5 focus:outline-none"
+          className="placeholder:text-content-muted text-content-muted bg-surface-sub max-h-24 min-h-6 min-w-0 flex-1 resize-none overflow-y-auto py-2 text-sm leading-5 focus:outline-none"
         />
         <button
           type="submit"

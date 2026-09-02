@@ -13,19 +13,25 @@ alwaysApply: false
 <button className="rounded-cta bg-filled-dark px-6 py-2 text-filled-dark-fg">Confirmar</button>
 
 // ❌ BAD
-<button className="rounded-[26.5px] bg-[#2f2f2f] px-6 py-2 text-[#fafafa]">Confirmar</button>
+<button className="rounded-[26.5px] bg-[#041e41] px-6 py-2 text-[#ffffff]">Confirmar</button>
 ```
 
 ## Key files
 
 - `apps/web/src/styles/tokens.css` — color/radius primitives as CSS variables
 - `apps/web/src/styles/global.css` — semantic mapping + `@theme inline` Tailwind wiring
-- `DESIGN.md` — agent-readable token mirror (synced from loopops-web-app)
+- `DESIGN.md` — agent-readable token mirror
 - `knowledge/design-system.md` — usage rules
 
 ## Primary color rule — MANDATORY
 
-> **Primary action color is BLACK (filled-dark), not blue.**
+> **Primary action color is navy (filled-dark), not blue.**
 
 Primary CTAs: `bg-filled-dark` + `text-filled-dark-fg`.
-Blue (`bg-accent` / `text-accent`) is for links and brand accents only.
+Advisor send buttons: `bg-advisor-submit` + `text-advisor-submit-fg`.
+
+## Only mapped tokens exist
+
+`tokens.css` holds only the colors the app uses. A utility built from an unmapped primitive, such as `bg-gray-chat-bg`, renders nothing. To add a color: define the primitive in `tokens.css`, map it in `@theme inline` in `global.css`, then record it in `DESIGN.md`.
+
+There is no accent blue and no dark mode. Add `brand-accent-50` (`#0431c0`) back when a screen needs links or brand accents.

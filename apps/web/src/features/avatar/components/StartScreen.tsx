@@ -35,7 +35,7 @@ export function StartScreen({ starting, error, endedByServer, onStart }: StartSc
             <h1 className="font-heading text-lg font-semibold text-white">
               {t('live.start_banner_title')}
             </h1>
-            <p className="font-ui text-advisor-submit-fg mt-0.5 text-sm font-medium">
+            <p className="text-advisor-submit-fg mt-0.5 text-sm font-medium">
               {t('live.subtitle')}
             </p>
           </div>

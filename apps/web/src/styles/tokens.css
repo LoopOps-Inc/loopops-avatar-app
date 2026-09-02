@@ -6,25 +6,6 @@
 
 :root {
   --neutral-0: #ffffff;
-  --neutral-5: #fafafa;
-  --neutral-10: #f5f5f5;
-  --neutral-15: #f0f0f0;
-  --neutral-20: #eeeeee;
-  --neutral-30: #e2e2e2;
-  --neutral-40: #bebebe;
-  --neutral-50: #9a9a9a;
-  --neutral-55: #7d7d7d;
-  --neutral-60: #525252;
-  --neutral-70: #2f2f2f;
-  --neutral-80: #1a1a1a;
-  --neutral-90: #0f0f0f;
-
-  --brand-accent-0: #dfe5f9;
-  --brand-accent-5: #eaeefb;
-  --brand-accent-20: #c6d1f2;
-  --brand-accent-50: #0431c0;
-  --brand-accent-60: #021d73;
-  --brand-accent-70: #011050;
 
   --brand-ink: #041e41;
   --brand-gold: #927b2f;
@@ -45,29 +26,14 @@
   --chat-text-small: #6082b6;
   --icon-muted: var(--gray-chat-placeholder);
 
-  /* Actinver advisor CTA (gold + navy) */
-  --actinver-cta-bg: #f0ca4d;
-  --actinver-cta-fg: #041e41;
+  /* Actinver advisor submit (navy + gold) */
   --actinver-submit-bg: #041e41;
   --actinver-submit-fg: #f0ca4d;
 
-  --success-10: #eaf6ed;
   --success-50: #31a147;
-
-  --error-10: #f6e4e4;
   --error-50: #c53f3f;
-
-  --warning-10: #f0ead1;
   --warning-50: #a48823;
-
-  --info-10: #dfe5f9;
   --info-50: #6581d9;
-
-  --element-1: #306ee1;
-  --element-2: #40ad82;
-  --element-3: #dd9b25;
-  --element-4: #e7823f;
-  --element-5: #d856a8;
 
   --radius-xs: 8px;
   --radius-sm: 16px;
@@ -77,22 +43,4 @@
   --radius-bubble: 20px;
   --radius-tail: 4px;
   --radius-full: 999px;
-
-  /* Alpha primitives (frosted glass overlays) */
-  --color-black-a-5: rgba(12, 12, 13, 0.05);
-  --color-black-a-10: rgba(12, 12, 13, 0.1);
-  --color-black-a-20: rgba(12, 12, 13, 0.2);
-  --color-black-a-40: rgba(12, 12, 13, 0.4);
-  --color-black-a-70: rgba(12, 12, 13, 0.7);
-  --color-black-a-80: rgba(12, 12, 13, 0.8);
-
-  --color-white-a-10: rgba(255, 255, 255, 0.1);
-  --color-white-a-20: rgba(255, 255, 255, 0.2);
-  --color-white-a-40: rgba(255, 255, 255, 0.4);
-  --color-white-a-70: rgba(255, 255, 255, 0.7);
-  --color-white-a-80: rgba(255, 255, 255, 0.8);
-  --color-white-a-90: rgba(255, 255, 255, 0.9);
-
-  --color-crystal-overlay: color-mix(in srgb, var(--neutral-55) 55%, transparent);
-  --color-crystal-overlay-strong: color-mix(in srgb, var(--neutral-55) 80%, transparent);
 }

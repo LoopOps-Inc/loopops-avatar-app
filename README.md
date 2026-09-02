@@ -26,7 +26,7 @@ Reference architecture: sibling repo `actinver-ai-advisor`.
 - `lucide-react` icons
 - Vitest + Testing Library
 
-Mirrors `../loopops-web-app` conventions. i18n via `apps/web/src/i18n` (es/en, `t('demo.key')`), dark mode follows `prefers-color-scheme`, PWA manifest + favicon in `apps/web/public/`.
+Mirrors `../loopops-web-app` conventions. i18n via `apps/web/src/i18n` (es/en, `t('demo.key')`), light-only theme, PWA manifest + favicon in `apps/web/public/`.
 
 ## Setup
 
