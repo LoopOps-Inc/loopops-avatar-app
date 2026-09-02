@@ -131,6 +131,27 @@ def _available(saldos: list[dict[str, Any]]) -> Decimal:
     )
 
 
+def _map_client_context(
+    base: dict[str, Any], cliente: dict[str, Any], asesores: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Overlay what the dataset states onto the fallback's context.
+
+    The schema carries the client's name, their risk profile and the advisor who
+    owns their contracts. It carries no entitlements (which gate advisory and
+    execution) and no phone or hours for the advisor, only an email. Those keep
+    the fallback's values instead of being invented, so the person named is
+    real while the contact channel stays the firm's.
+    """
+    context = {**base, "promotor": dict(base.get("promotor") or {})}
+    if nombre := cliente.get("nombre"):
+        context["first_name"] = str(nombre).split()[0]
+    if perfil := cliente.get("nombre_perfil"):
+        context["risk_category"] = str(perfil).lower()
+    if asesores and (name := asesores[0].get("nombre_completo")):
+        context["promotor"]["name"] = str(name)
+    return context
+
+
 def _check_period(period: str, *, snapshots: list[str]) -> NoReturn:
     """Refuse a period the dataset's snapshots cannot produce.
 
@@ -158,6 +179,14 @@ class InvestmentOfficeCore:
 
     async def _id_cliente(self, conn: Any, client_id: str) -> int:
         return await self._sql.resolve_id_cliente(conn, client_id)
+
+    async def get_client_context(self, *, client_id: str) -> dict[str, Any]:
+        base = await self._fallback.get_client_context(client_id=client_id)
+        async with self._engine.connect() as conn:
+            id_cliente = await self._id_cliente(conn, client_id)
+            cliente = await self._sql.obtener_cliente(conn, id_cliente=id_cliente)
+            asesores = await self._sql.obtener_asesor(conn, id_cliente=id_cliente)
+        return _map_client_context(base, cliente, asesores)
 
     async def get_positions(self, *, client_id: str) -> dict[str, Any]:
         async with self._engine.connect() as conn:
@@ -219,6 +248,33 @@ class InvestmentOfficeCore:
         return {"as_of": None, "items": movimientos.get("items", [])}
 
     # ── not client data: no table in this schema ─────────────────────────────
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._fallback, name)
+
+
+class InvestmentOfficeCrm:
+    """Escalations named after the client's real advisor.
+
+    ``CrmPort`` is a separate port, so the core adapter cannot reach it: the
+    escalation card would keep naming the synthetic template's promotor while
+    the session contact named the real one. Only ``promotor_name`` comes from
+    the dataset; the case id, SLA and everything else stay on ``fallback``.
+    """
+
+    def __init__(self, engine: AsyncEngine, fallback: Any) -> None:
+        self._engine = engine
+        self._sql = InvestmentOfficeSqlCore(engine)
+        self._fallback = fallback
+
+    async def create_escalation(self, *, client_id: str, **kw: Any) -> dict[str, Any]:
+        result: dict[str, Any] = await self._fallback.create_escalation(client_id=client_id, **kw)
+        async with self._engine.connect() as conn:
+            id_cliente = await self._sql.resolve_id_cliente(conn, client_id)
+            asesores = await self._sql.obtener_asesor(conn, id_cliente=id_cliente)
+        if asesores and (name := asesores[0].get("nombre_completo")):
+            result = {**result, "promotor_name": str(name)}
+        return result
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._fallback, name)

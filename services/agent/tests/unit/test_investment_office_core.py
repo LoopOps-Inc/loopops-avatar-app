@@ -13,6 +13,7 @@ import pytest
 from actinver_agent.clients.investment_office_core import (
     _asset_class,
     _map_cash,
+    _map_client_context,
     _map_positions,
 )
 
@@ -176,3 +177,53 @@ def test_performance_is_refused_for_periods_the_snapshots_cannot_support(period:
 
     with pytest.raises(PeriodNotAvailable):
         _check_period(period, snapshots=["2023-03-31", "2024-03-31"])
+
+
+# ── client context: the real client and their real advisor ───────────────────
+
+BASE_CONTEXT = {
+    "as_of": "2026-09-02",
+    "first_name": "Plantilla",
+    "register": "tu",
+    "risk_category": "moderado",
+    "entitlements": {"advisory": True, "execution": True},
+    "promotor": {
+        "name": "Laura Méndez",
+        "phone": "+52 55 1103 6600",
+        "hours": "lunes a viernes 8:30-18:00",
+    },
+}
+
+CLIENTE = {"nombre": "Mariano", "apellido_paterno": "Salas", "nombre_perfil": "Agresivo"}
+ASESORES = [{"nombre_completo": "Alberto Hernán Guevara", "correo_electronico": "a@b.com"}]
+
+
+def test_client_context_uses_the_real_name_and_advisor() -> None:
+    context = _map_client_context(BASE_CONTEXT, CLIENTE, ASESORES)
+
+    assert context["first_name"] == "Mariano"
+    assert context["promotor"]["name"] == "Alberto Hernán Guevara"
+    assert context["risk_category"] == "agresivo"
+
+
+def test_client_context_keeps_the_institutional_contact_channel() -> None:
+    """The dataset carries the advisor's email but no phone or hours, so those
+    stay on the firm's default rather than being invented."""
+    context = _map_client_context(BASE_CONTEXT, CLIENTE, ASESORES)
+
+    assert context["promotor"]["phone"] == BASE_CONTEXT["promotor"]["phone"]
+    assert context["promotor"]["hours"] == BASE_CONTEXT["promotor"]["hours"]
+
+
+def test_client_context_keeps_entitlements_which_the_dataset_does_not_carry() -> None:
+    """Entitlements gate advisory and execution. The schema says nothing about
+    them, so they are never fabricated from this source."""
+    context = _map_client_context(BASE_CONTEXT, CLIENTE, ASESORES)
+
+    assert context["entitlements"] == BASE_CONTEXT["entitlements"]
+
+
+def test_client_context_without_an_advisor_keeps_the_default_contact() -> None:
+    context = _map_client_context(BASE_CONTEXT, CLIENTE, [])
+
+    assert context["promotor"] == BASE_CONTEXT["promotor"]

@@ -106,7 +106,10 @@ async def build_dependencies(settings: Settings) -> Dependencies:
         # Client figures come from the seeded InvestmentOffice dataset; the
         # product catalogue, committee limits and the simulation/fee engines
         # have no table there and stay on the synthetic core.
-        from actinver_agent.clients.investment_office_core import InvestmentOfficeCore
+        from actinver_agent.clients.investment_office_core import (
+            InvestmentOfficeCore,
+            InvestmentOfficeCrm,
+        )
         from actinver_agent.clients.synthetic import (
             SyntheticCoreBanking,
             SyntheticCrm,
@@ -121,7 +124,7 @@ async def build_dependencies(settings: Settings) -> Dependencies:
         core = InvestmentOfficeCore(dataset_engine, fallback=SyntheticCoreBanking())
         market = SyntheticMarketData()
         news = SyntheticNews()
-        crm = SyntheticCrm()
+        crm = InvestmentOfficeCrm(dataset_engine, fallback=SyntheticCrm())
         oms = SyntheticOms()
     else:  # pragma: no cover - needs the core API inventory
         from actinver_agent.clients.core_http import CoreBankingHttp

@@ -118,6 +118,21 @@ class InvestmentOfficeSqlCore:
         res = await conn.execute(query, {"id_cliente": id_cliente, "tipo": tipo})
         return [dict(r) for r in res.mappings().all()]
 
+    async def obtener_cliente(self, conn: AsyncConnection, *, id_cliente: int) -> dict[str, Any]:
+        """The client's own record and the name of their risk profile."""
+        query = text("""
+            SELECT c.numero_cliente_unico, c.nombre, c.apellido_paterno,
+                   c.apellido_materno, p.nombre_perfil
+            FROM   public.inv_cliente c
+            LEFT JOIN public.inv_cat_perfil_inversion p
+                   ON p.id_perfil_inv_pk = c.id_perfil_inv_fk
+            WHERE  c.id_cliente_pk = :id_cliente
+              AND  c.baja_logica IS NOT TRUE;
+        """)
+        res = await conn.execute(query, {"id_cliente": id_cliente})
+        row = res.mappings().first()
+        return dict(row) if row else {}
+
     # ── H02: Obtener Posición Total (Trap T2 & T5) ────────────────────────────
 
     async def obtener_posicion_total(
