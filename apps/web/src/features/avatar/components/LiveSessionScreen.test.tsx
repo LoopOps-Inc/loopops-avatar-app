@@ -8,7 +8,7 @@ import * as HeyGenSDK from '@heygen/liveavatar-web-sdk';
 vi.mock('@heygen/liveavatar-web-sdk', async () => await import('@/test/liveavatar-sdk-stub'));
 
 const { mockAppEnv } = vi.hoisted(() => ({
-  mockAppEnv: { liveAvatarUiOnly: false },
+  mockAppEnv: { liveAvatarUiOnly: false, advisorMock: true },
 }));
 
 vi.mock('@/config/env', () => ({
@@ -38,7 +38,7 @@ describe('LiveSessionRoute', () => {
 
   it('renders the welcome screen with a single start action', () => {
     render(<LiveSessionRoute />);
-    expect(screen.getByRole('heading', { name: 'Consulta con Tino' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Habla con Tino' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Iniciar conversación' })).toBeInTheDocument();
   });
 

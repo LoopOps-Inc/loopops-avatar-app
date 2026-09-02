@@ -11,6 +11,7 @@ function delay(ms: number): Promise<void> {
 export function createMockAdvisorSession(): SessionResponse {
   return {
     thread_id: 'th_mock_rodrigo',
+    thread_started_at: '2026-08-02T04:00:00.000Z',
     capabilities: {
       chat: true,
       voice: false,

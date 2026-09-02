@@ -38,7 +38,7 @@
 
 .dark {
   --bg-surface: var(--neutral-70);
-  --bg-surface-sub: var(--neutral-80);
+  --bg-surface-sub: var(--gray-chat-bg);
   --text-content: var(--neutral-5);
   --text-content-sub: var(--neutral-20);
   --text-content-muted: var(--neutral-40);
@@ -54,7 +54,7 @@
 .light {
   color-scheme: light;
   --bg-surface: var(--neutral-0);
-  --bg-surface-sub: var(--neutral-10);
+  --bg-surface-sub: var(--gray-chat-bg);
   --text-content: var(--neutral-90);
   --text-content-sub: var(--neutral-60);
   --text-content-muted: var(--gray-chat-placeholder);

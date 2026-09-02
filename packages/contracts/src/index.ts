@@ -24,6 +24,8 @@ export type Disclosure = z.infer<typeof DisclosureSchema>;
 
 export const SessionResponseSchema = z.object({
   thread_id: z.string(),
+  /** ISO-8601 timestamp for when the advisor thread was first opened. */
+  thread_started_at: z.string().datetime({ offset: true }),
   capabilities: CapabilitiesSchema,
   disclosures_required: z.array(DisclosureSchema),
   client: z.object({

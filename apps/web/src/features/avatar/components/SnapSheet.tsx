@@ -9,6 +9,8 @@ type SnapSheetProps = {
   onActiveIndexChange: (index: number) => void;
   /** Accessible name for the sheet region. */
   label: string;
+  /** Day label shown in the drag header (e.g. "Hoy"). Replaces the default handle bar. */
+  headerLabel?: string;
   /**
    * Layer behind the sheet that fills exactly the space the sheet leaves
    * free (the video base). Its height tracks the sheet's live position,
@@ -36,6 +38,7 @@ export function SnapSheet({
   activeIndex,
   onActiveIndexChange,
   label,
+  headerLabel,
   above,
   className = '',
   children,
@@ -132,9 +135,14 @@ export function SnapSheet({
           <div
             onPointerDown={(event) => dragControls.start(event)}
             className="shrink-0 cursor-grab touch-none pt-3 pb-1 active:cursor-grabbing"
-            aria-hidden="true"
           >
-            <div className="bg-outline mx-auto h-1.5 w-12 rounded-full" />
+            {headerLabel ? (
+              <p className="font-heading text-content-small text-center text-xs font-semibold">
+                {headerLabel}
+              </p>
+            ) : (
+              <div className="bg-outline mx-auto h-1.5 w-12 rounded-full" aria-hidden="true" />
+            )}
           </div>
           {children}
         </motion.div>

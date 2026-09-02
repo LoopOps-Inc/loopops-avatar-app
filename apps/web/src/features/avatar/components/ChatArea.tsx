@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef } from 'react';
 import { Mic, MicOff } from 'lucide-react';
 import { useTranslation } from '@/i18n';
+import { formatChatDayLabel } from '../lib/format-chat-day';
 import type { ChatMessage } from '../types';
 import { ChatBubble } from './ChatBubble';
 import { ChatLoadingList, ComposerSkeleton } from './ChatLoading';
@@ -21,30 +22,10 @@ type ChatAreaProps = {
   onToggleMic: () => void;
 };
 
-const DAY_MS = 86_400_000;
-
 function startOfDay(timestamp: number): number {
   const date = new Date(timestamp);
   date.setHours(0, 0, 0, 0);
   return date.getTime();
-}
-
-function formatDayLabel(
-  timestamp: number,
-  locale: string,
-  today: string,
-  yesterday: string,
-): string {
-  const todayStart = startOfDay(Date.now());
-  const diffDays = Math.round((todayStart - startOfDay(timestamp)) / DAY_MS);
-  if (diffDays === 0) return today;
-  if (diffDays === 1) return yesterday;
-  const date = new Date(timestamp);
-  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'es-MX', {
-    day: 'numeric',
-    month: 'long',
-    year: date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
-  }).format(date);
 }
 
 /**
@@ -95,7 +76,7 @@ export function ChatArea({
               <Fragment key={`${msg.timestamp}-${i}`}>
                 {showDaySeparator && (
                   <p className="font-heading text-content-small py-1 text-left text-xs font-semibold">
-                    {formatDayLabel(
+                    {formatChatDayLabel(
                       msg.timestamp,
                       locale,
                       t('live.day_today'),

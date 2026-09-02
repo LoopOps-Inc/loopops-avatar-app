@@ -39,6 +39,7 @@
   },
   "live": {
     "title": "Talk with Tino",
+    "start_banner_title": "Talk with Tino",
     "subtitle": "Your AI financial advisor",
     "poc_note": "Wayne avatar · ~1 min sandbox · no credits",
     "suggestion_1": "Low-risk debt ETFs",

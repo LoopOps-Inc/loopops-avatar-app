@@ -1,5 +1,11 @@
-import { useRef, useState } from 'react';
-import type { FormEvent } from 'react';
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from 'react';
 import { Send } from 'lucide-react';
 import { useTranslation } from '@/i18n';
 
@@ -8,13 +14,25 @@ type ComposerProps = {
   onSend: (message: string) => void;
 };
 
+const MAX_INPUT_HEIGHT_PX = 96;
+
 export function Composer({ disabled = false, onSend }: ComposerProps) {
   const { t } = useTranslation();
   const [input, setInput] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const resizeInput = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, MAX_INPUT_HEIGHT_PX)}px`;
+  }, []);
+
+  useLayoutEffect(() => {
+    resizeInput();
+  }, [input, resizeInput]);
+
+  const submit = () => {
     const trimmed = input.trim();
     if (!trimmed) return;
     onSend(trimmed);
@@ -24,28 +42,41 @@ export function Composer({ disabled = false, onSend }: ComposerProps) {
     inputRef.current?.focus();
   };
 
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    submit();
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      submit();
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-1">
-      <div className="flex h-14 min-h-11 w-full items-center rounded-full border border-[#E2E4E9] bg-[#F7F8FA] pr-1.5 pl-4">
+      <div className="border-outline bg-surface-sub flex min-h-14 w-full items-end rounded-[28px] border py-1.5 pr-1.5 pl-4">
         <label htmlFor="chat-input" className="sr-only">
           {t('live.input_label')}
         </label>
-        <input
+        <textarea
           ref={inputRef}
           id="chat-input"
-          type="text"
+          rows={1}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder={t('live.input_placeholder')}
           autoComplete="off"
           enterKeyHint="send"
-          className="placeholder:text-content-muted min-w-0 flex-1 border-[#E2E4E9] bg-transparent py-2 text-sm text-[#9398A5] focus:outline-none"
+          className="placeholder:text-content-muted text-content-muted bg-gray-chat-bg max-h-24 min-h-6 min-w-0 flex-1 resize-none overflow-y-auto py-2 text-sm leading-5 focus:outline-none"
         />
         <button
           type="submit"
           disabled={disabled}
           aria-label={t('live.send')}
-          className="bg-advisor-submit flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-white transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="bg-advisor-submit mb-0.5 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-white transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Send className="h-4 w-4" aria-hidden="true" />
         </button>

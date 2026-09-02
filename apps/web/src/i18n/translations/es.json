@@ -39,6 +39,7 @@
   },
   "live": {
     "title": "Consulta con Tino",
+    "start_banner_title": "Habla con Tino",
     "subtitle": "Tu asesor de IA financiero",
     "poc_note": "Avatar Wayne · sandbox de ~1 min · sin créditos",
     "suggestion_1": "ETFs de deuda de bajo riesgo",

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { UIComponent } from '@loopops/contracts';
 import { createMockAdvisorService } from '@/features/advisor/services/mock-advisor-service';
 import type { AdvisorService, AdvisorStreamEvent } from '@/features/advisor/services/types';
+import { createAdvisorSession } from '@/services/advisor-service';
 import type { ChatMessage } from '../types';
 
 type UseAdvisorChatOptions = {
@@ -17,6 +18,7 @@ type UseAdvisorChatOptions = {
 type UseAdvisorChatResult = {
   messages: ChatMessage[];
   isThinking: boolean;
+  threadStartedAt: string | null;
   send: (message: string) => void;
 };
 
@@ -44,6 +46,7 @@ export function useAdvisorChat({
 }: UseAdvisorChatOptions): UseAdvisorChatResult {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
+  const [threadStartedAt, setThreadStartedAt] = useState<string | null>(null);
   const busyRef = useRef(false);
   const greetedRef = useRef(false);
   const disposedRef = useRef(false);
@@ -125,6 +128,17 @@ export function useAdvisorChat({
   );
 
   useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    void createAdvisorSession().then((session) => {
+      if (!cancelled) setThreadStartedAt(session.thread_started_at);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
+
+  useEffect(() => {
     if (!enabled || !greet || !service.sendGreeting) return;
     // A previous greeting attempt may have been disposed by StrictMode's
     // simulated unmount before producing any message; retry then.
@@ -133,5 +147,5 @@ export function useAdvisorChat({
     void runTurn(service.sendGreeting());
   }, [enabled, greet, runTurn, service]);
 
-  return { messages, isThinking, send };
+  return { messages, isThinking, threadStartedAt, send };
 }

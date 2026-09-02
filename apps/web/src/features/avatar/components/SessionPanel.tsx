@@ -5,6 +5,7 @@ import type { EmbedEvent } from '@loopops/contracts';
 import { actinverAvatar } from '@/config/avatar';
 import { useAdvisorChat } from '../hooks/use-advisor-chat';
 import { useTranslation } from '@/i18n';
+import { formatChatStartedAt } from '../lib/format-chat-day';
 import { sessionStateClass, sessionStateLabel } from '../lib/session-status';
 import { useLiveAvatarSession } from '../hooks/use-liveavatar-session';
 import { ChatArea } from './ChatArea';
@@ -47,7 +48,7 @@ export function SessionPanel({
   registerCommands,
   onEvent,
 }: SessionPanelProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const session = useLiveAvatarSession(sessionToken, { voiceChat: voiceEnabled });
   const videoRef = useRef<HTMLVideoElement>(null);
   const [snapIndex, setSnapIndex] = useState(LOADING_SNAP);
@@ -114,6 +115,9 @@ export function SessionPanel({
   }, [endReason, onEvent]);
 
   const isPoorQuality = connectionQuality === ConnectionQuality.BAD;
+  const chatDayLabel = advisor.threadStartedAt
+    ? formatChatStartedAt(new Date(advisor.threadStartedAt).getTime(), locale)
+    : undefined;
   // Derived snap: compact while loading; once connected the effective snap is
   // at least the chat view (the loading snap is unreachable after connect).
   const effectiveSnap = !isConnected ? LOADING_SNAP : Math.max(snapIndex, CHAT_SNAP);
@@ -126,6 +130,7 @@ export function SessionPanel({
       activeIndex={effectiveSnap}
       onActiveIndexChange={setSnapIndex}
       label={t('live.title')}
+      headerLabel={chatDayLabel}
       above={
         <>
           {isPreview ? (

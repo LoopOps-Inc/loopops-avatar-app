@@ -12,30 +12,35 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
     minute: '2-digit',
   });
   return (
-    <div>
+    <div className={`flex gap-2 ${isUser ? 'justify-end' : 'items-end'}`}>
       {!isUser && (
-        <span className="mb-1 flex items-center gap-1.5">
-          <div className="h-8 rounded-full border border-[#927B2F] bg-[#fffdf5] p-2">
-            <Star className="h-4 w-4 text-[#927B2F]" aria-hidden="true" />
-          </div>
-        </span>
-      )}
-      <div className={`flex flex-col gap-1 ${isUser ? 'items-end' : 'items-start'}`}>
         <div
-          className={`max-w-[85%] px-3.5 py-2 ${
+          className="bg-chat-agent flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-(--brand-gold) p-2"
+          aria-hidden="true"
+        >
+          <Star className="h-4 w-4 text-(--brand-gold)" />
+        </div>
+      )}
+      <div className={`flex max-w-[85%] flex-col gap-1 ${isUser ? 'items-end' : 'items-start'}`}>
+        <div
+          className={`w-full px-3.5 py-2 ${
             isUser
               ? 'rounded-bubble bg-chat-user text-chat-user-fg'
               : 'rounded-bubble rounded-bl-tail border-chat-agent-border bg-chat-agent text-content border'
           }`}
         >
           {message.message && (
-            <p className="leading-6 wrap-break-word text-[#041E41]">{message.message}</p>
+            <p
+              className={`text-[14px] wrap-break-word ${isUser ? 'text-chat-user-fg' : 'text-content'}`}
+            >
+              {message.message}
+            </p>
           )}
           {message.uiComponents && message.uiComponents.length > 0 && (
             <UIPayloadCards components={message.uiComponents} />
           )}
         </div>
-        <span className={`text-content-small text-xs tabular-nums ${isUser ? 'pr-2' : 'pl-2'}`}>
+        <span className={`text-content-faint text-xs tabular-nums ${isUser ? 'pr-2' : 'pl-2'}`}>
           {time}
         </span>
       </div>

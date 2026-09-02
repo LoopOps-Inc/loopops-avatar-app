@@ -36,25 +36,7 @@ export function SessionRail({
     'flex h-10 w-10 cursor-pointer items-center justify-center rounded-full  bg-[#041e41] text-icon-muted transition-colors duration-200 hover:bg-outline/30';
   return (
     <div className="flex items-center justify-between gap-2 px-4 pt-2">
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <h2 className="font-heading truncate text-sm font-semibold text-black">
-          {t('live.title')}
-        </h2>
-        {/* <StatusPill>
-          <span aria-hidden="true" className={`h-2 w-2 rounded-full ${stateClass}`} />
-          {stateText}
-        </StatusPill>
-        {showQualityPill && <StatusPill>{t('live.quality_poor')}</StatusPill>}
-        {isAvatarTalking && (
-          <StatusPill>
-            <AudioLines
-              className="h-3.5 w-3.5 animate-pulse motion-reduce:animate-none"
-              aria-hidden="true"
-            />
-            {t('live.avatar_talking')}
-          </StatusPill>
-        )} */}
-      </div>
+      <div className="flex min-w-0 flex-wrap items-center gap-2"></div>
       <div className="flex shrink-0 items-center gap-2">
         {isAvatarTalking && (
           <button

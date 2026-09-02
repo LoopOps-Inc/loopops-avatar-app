@@ -3,6 +3,16 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { useAdvisorChat } from './use-advisor-chat';
 import { createMockAdvisorService } from '@/features/advisor/services/mock-advisor-service';
 
+vi.mock('@/services/advisor-service', () => ({
+  createAdvisorSession: vi.fn().mockResolvedValue({
+    thread_id: 'th_mock',
+    thread_started_at: '2026-08-02T04:00:00.000Z',
+    capabilities: { chat: true, voice: false, advisory: false, transactional: false },
+    disclosures_required: [],
+    client: { first_name: 'Rodrigo', risk_category: 'Moderado' },
+  }),
+}));
+
 const service = createMockAdvisorService({ delayMs: 0 });
 
 function renderAdvisor(overrides: Partial<Parameters<typeof useAdvisorChat>[0]> = {}) {
@@ -43,6 +53,9 @@ describe('useAdvisorChat', () => {
   it('greets once when the session becomes enabled', async () => {
     const { result, speak, rerender } = renderAdvisor({ greet: true });
     rerender({ enabled: true });
+    await waitFor(() => {
+      expect(result.current.threadStartedAt).toBe('2026-08-31T16:20:00.000Z');
+    });
     await waitFor(() => {
       expect(result.current.messages).toHaveLength(1);
     });
