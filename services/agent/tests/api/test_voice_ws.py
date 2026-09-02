@@ -121,6 +121,29 @@ def test_greeting_waits_for_client_ready(client: TestClient, settings: Settings)
         assert "Tino" in greeting["text"]
 
 
+def test_websocket_query_token_wins_over_injected_authorization(
+    client: TestClient, settings: Settings
+) -> None:
+    """Docker nginx injects a default Bearer on WS (browsers cannot set headers).
+
+    The query token is the one the start screen minted for the selected investor
+    and must win, otherwise the socket closes 4403 and the UI dumps to start.
+    """
+    _ack_all(client, settings)
+    session = create_session(client)
+    avatar = _start_avatar(client, session["thread_id"])
+    owner = token_for(CLIENT)
+    injected = token_for("cl_demo_agresivo")
+
+    with client.websocket_connect(
+        f"{avatar['audio_ws_path']}?access_token={owner}",
+        headers={"Authorization": f"Bearer {injected}"},
+    ) as ws:
+        ws.send_text(json.dumps({"type": "client.ready", "has_video": True, "has_audio": True}))
+        greeting = json.loads(ws.receive_text())
+        assert greeting["type"] == "caption"
+
+
 def test_websocket_requires_owner(client: TestClient, settings: Settings) -> None:
     _ack_all(client, settings)
     session = create_session(client)

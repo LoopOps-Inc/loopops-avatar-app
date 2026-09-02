@@ -97,6 +97,12 @@ class AudioSocketHandler:
             await websocket.close(code=CLOSE_NOT_FOUND)
             return
         if session.client_id != ctx.client_id:
+            log.warning(
+                "voice.ws_forbidden",
+                avatar_session_id=avatar_session_id,
+                session_client=session.client_id,
+                token_client=ctx.client_id,
+            )
             await websocket.close(code=CLOSE_FORBIDDEN)
             return
 
@@ -155,7 +161,10 @@ class AudioSocketHandler:
                     token = str(payload.get("token", ""))
             except (TimeoutError, orjson.JSONDecodeError, WebSocketDisconnect):
                 return None
-        header = authorization or (f"Bearer {token}" if token else None)
+        # Browsers cannot set WebSocket headers. Docker nginx injects a default
+        # Authorization when the header is empty, which would shadow the
+        # investor JWT the client put in ?access_token=. Prefer the query token.
+        header = (f"Bearer {token}" if token else None) or authorization
         try:
             # The access token was DPoP-bound when the avatar session was created;
             # browsers cannot attach a proof to the WebSocket handshake, so the
