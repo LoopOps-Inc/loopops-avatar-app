@@ -26,7 +26,7 @@ export function ChatLoadingList() {
 export function ComposerSkeleton() {
   return (
     <div
-      className="border-outline bg-surface flex h-11 flex-1 items-center rounded-full border pr-1.5 pl-4"
+      className="border-outline bg-surface flex h-11 flex-1 items-center rounded-2xl border pr-1 pl-3"
       aria-hidden="true"
     >
       <div className="bg-surface-sub h-4 flex-1 animate-pulse rounded motion-reduce:animate-none" />

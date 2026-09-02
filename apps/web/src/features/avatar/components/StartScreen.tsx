@@ -28,7 +28,7 @@ export function StartScreen({
       <div className="px-safe pb-safe flex flex-col justify-center gap-3 p-4">
         {firstName && (
           <p className="text-content font-heading text-center text-xl font-semibold">
-            ¡{t('live.welcome', { name: firstName })}!
+            {t('live.welcome', { name: firstName })}
           </p>
         )}
         <button

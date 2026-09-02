@@ -38,4 +38,24 @@ describe('Composer', () => {
     fireEvent.submit(input.closest('form')!);
     expect(onSend).not.toHaveBeenCalled();
   });
+
+  it('shows talk control and hides sound bars when idle', () => {
+    const onToggleMic = vi.fn();
+    const { getByRole, queryByTestId } = render(
+      <Composer onSend={vi.fn()} voiceEnabled isRecording={false} onToggleMic={onToggleMic} />,
+    );
+    expect(getByRole('button', { name: 'Hablar' })).toBeInTheDocument();
+    expect(queryByTestId('mic-sound-bars')).not.toBeInTheDocument();
+    fireEvent.click(getByRole('button', { name: 'Hablar' }));
+    expect(onToggleMic).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows sound bars and stop inside the composer while recording', () => {
+    const { getByRole, getByTestId, getByPlaceholderText } = render(
+      <Composer onSend={vi.fn()} voiceEnabled isRecording micLevel={0.6} onToggleMic={vi.fn()} />,
+    );
+    expect(getByTestId('mic-sound-bars')).toBeInTheDocument();
+    expect(getByRole('button', { name: 'Detener' })).toBeInTheDocument();
+    expect(getByPlaceholderText('Escuchando...')).toBeInTheDocument();
+  });
 });

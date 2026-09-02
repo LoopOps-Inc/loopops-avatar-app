@@ -87,8 +87,8 @@ export function SessionPanel({
     isStreamReady,
     connectionQuality,
     isAvatarTalking,
-    isUserTalking,
     isMicMuted,
+    micLevel,
     micError,
     endReason,
     videoRef,
@@ -212,8 +212,8 @@ export function SessionPanel({
         loading={!isConnected}
         busy={advisor.isThinking}
         voiceEnabled={voiceEnabled}
-        isUserTalking={isUserTalking}
         isMicMuted={isMicMuted}
+        micLevel={micLevel}
         micUnavailable={micUnavailable || micError}
         onSend={sendMessage}
         onToggleMic={() => setMicMuted(!isMicMuted)}

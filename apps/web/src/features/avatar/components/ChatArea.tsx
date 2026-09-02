@@ -1,5 +1,4 @@
 import { Fragment, useEffect, useRef } from 'react';
-import { Mic, MicOff } from 'lucide-react';
 import { useTranslation } from '@/i18n';
 import { formatChatDayLabel } from '../lib/format-chat-day';
 import type { ChatMessage } from '../types';
@@ -15,8 +14,9 @@ type ChatAreaProps = {
   loading?: boolean;
   busy?: boolean;
   voiceEnabled: boolean;
-  isUserTalking: boolean;
   isMicMuted: boolean;
+  /** 0–1 mic energy while recording; drives the sound bars. */
+  micLevel?: number;
   micUnavailable: boolean;
   onSend: (message: string) => void;
   onToggleMic: () => void;
@@ -39,14 +39,15 @@ export function ChatArea({
   loading = false,
   busy = false,
   voiceEnabled,
-  isUserTalking,
   isMicMuted,
+  micLevel = 0,
   micUnavailable,
   onSend,
   onToggleMic,
 }: ChatAreaProps) {
   const { t, locale } = useTranslation();
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const isRecording = !isMicMuted;
 
   useEffect(() => {
     // block: 'nearest' keeps the latest message visible without scrolling
@@ -92,11 +93,6 @@ export function ChatArea({
         </div>
       )}
 
-      {isUserTalking && !loading && (
-        <p className="text-content-small flex items-center justify-end gap-1.5 text-xs font-medium">
-          {t('live.listening')}
-        </p>
-      )}
       {micUnavailable && (
         <p role="status" className="text-content-small text-center text-xs">
           {t('live.mic_unavailable')}
@@ -104,31 +100,18 @@ export function ChatArea({
       )}
 
       {loading ? (
-        <ComposerSkeleton />
-      ) : (
-        <div className="flex items-center gap-2">
-          <Composer disabled={!connected || busy} onSend={onSend} />
-          {voiceEnabled && (
-            <button
-              type="button"
-              aria-label={isMicMuted ? t('live.mic_unmute') : t('live.mic_mute')}
-              aria-pressed={isMicMuted}
-              onClick={onToggleMic}
-              disabled={!connected}
-              className={`flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
-                isMicMuted
-                  ? 'border-error/40 bg-error/90 text-white'
-                  : 'border-outline bg-surface-sub text-icon-muted hover:bg-outline/30'
-              }`}
-            >
-              {isMicMuted ? (
-                <MicOff className="h-5 w-5" aria-hidden="true" />
-              ) : (
-                <Mic className="h-5 w-5" aria-hidden="true" />
-              )}
-            </button>
-          )}
+        <div className="flex w-full items-center">
+          <ComposerSkeleton />
         </div>
+      ) : (
+        <Composer
+          disabled={!connected || busy}
+          onSend={onSend}
+          voiceEnabled={voiceEnabled}
+          isRecording={isRecording}
+          micLevel={micLevel}
+          onToggleMic={onToggleMic}
+        />
       )}
     </div>
   );

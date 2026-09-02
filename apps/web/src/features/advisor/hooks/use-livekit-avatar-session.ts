@@ -145,6 +145,7 @@ export function useLivekitAvatarSession({
     ConnectionQuality.Unknown,
   );
   const [micActive, setMicActive] = useState(false);
+  const [micLevel, setMicLevel] = useState(0);
   const [micError, setMicError] = useState(false);
   const [roomCreds, setRoomCreds] = useState({ url: livekitUrl, token: livekitToken });
   const [prevPropCredsKey, setPrevPropCredsKey] = useState(`${livekitUrl}\0${livekitToken}`);
@@ -163,6 +164,10 @@ export function useLivekitAvatarSession({
   const speakQueueRef = useRef<string[]>([]);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
+  const micMeterRef = useRef<{
+    ctx: AudioContext;
+    raf: number;
+  } | null>(null);
   const userStoppedRef = useRef(false);
   const videoTrackRef = useRef<RemoteVideoTrack | null>(null);
   const audioElementRef = useRef<HTMLMediaElement | null>(null);
@@ -314,16 +319,64 @@ export function useLivekitAvatarSession({
     [sendJson],
   );
 
+  const stopMicMeter = useCallback(() => {
+    const meter = micMeterRef.current;
+    if (meter) {
+      cancelAnimationFrame(meter.raf);
+      void meter.ctx.close();
+      micMeterRef.current = null;
+    }
+    setMicLevel(0);
+  }, []);
+
+  const startMicMeter = useCallback(
+    (stream: MediaStream) => {
+      stopMicMeter();
+      const AudioCtx =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      void ctx.resume();
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.75;
+      source.connect(analyser);
+      const samples = new Uint8Array(analyser.fftSize);
+      let lastPaint = 0;
+      const tick = (now: number) => {
+        analyser.getByteTimeDomainData(samples);
+        let sum = 0;
+        for (let i = 0; i < samples.length; i += 1) {
+          const v = ((samples[i] ?? 128) - 128) / 128;
+          sum += v * v;
+        }
+        const rms = Math.sqrt(sum / samples.length);
+        if (now - lastPaint >= 50) {
+          // Amplify conversational speech so bars read clearly without clipping.
+          setMicLevel(Math.min(1, rms * 4));
+          lastPaint = now;
+        }
+        const handle = requestAnimationFrame(tick);
+        if (micMeterRef.current) micMeterRef.current.raf = handle;
+      };
+      micMeterRef.current = { ctx, raf: requestAnimationFrame(tick) };
+    },
+    [stopMicMeter],
+  );
+
   const stopMic = useCallback(() => {
     const recorder = recorderRef.current;
     if (recorder && recorder.state !== 'inactive') {
       recorder.stop();
     }
+    stopMicMeter();
     micStreamRef.current?.getTracks().forEach((track) => track.stop());
     micStreamRef.current = null;
     recorderRef.current = null;
     setMicActive(false);
-  }, []);
+  }, [stopMicMeter]);
 
   const startMic = useCallback(async () => {
     if (recorderRef.current || micActive) return;
@@ -340,6 +393,7 @@ export function useLivekitAvatarSession({
       };
       recorder.onstop = () => {
         sendJson({ type: 'utterance_end' });
+        stopMicMeter();
         stream.getTracks().forEach((track) => track.stop());
         if (micStreamRef.current === stream) micStreamRef.current = null;
         if (recorderRef.current === recorder) recorderRef.current = null;
@@ -348,13 +402,15 @@ export function useLivekitAvatarSession({
       recorderRef.current = recorder;
       recorder.start(250);
       sendJson({ type: 'audio_start', mime: mime || 'audio/webm' });
+      startMicMeter(stream);
       setMicActive(true);
     } catch {
+      stopMicMeter();
       micStreamRef.current = null;
       setMicError(true);
       setMicActive(false);
     }
-  }, [micActive, sendJson]);
+  }, [micActive, sendJson, startMicMeter, stopMicMeter]);
 
   const sendBargeIn = useCallback(() => {
     stopMic();
@@ -634,6 +690,8 @@ export function useLivekitAvatarSession({
     isConnected: status === 'connected',
     connectionQuality,
     micActive,
+    /** 0–1 RMS from the live mic stream while recording; 0 when idle. */
+    micLevel,
     micError,
     startMic,
     stopMic,

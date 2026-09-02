@@ -71,6 +71,7 @@ vi.mock('../hooks/use-liveavatar-session', async () => {
         isUserTalking: false,
         isAvatarTalking: false,
         isMicMuted: true,
+        micLevel: 0,
         micError: false,
         endReason: stubState.state.endReason,
         videoRef: { current: null },
@@ -110,7 +111,7 @@ async function startSession() {
   vi.mocked(ackVoiceConsent).mockResolvedValue(undefined);
   vi.mocked(createAvatarSession).mockResolvedValue(avatarSession);
   render(<LiveSessionRoute />);
-  expect(await screen.findByText('Hola, Mariano')).toBeInTheDocument();
+  expect(await screen.findByText('¡Hola, Mariano!')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversación' }));
 }
 
@@ -136,7 +137,7 @@ describe('LiveSessionRoute', () => {
 
   it('renders the welcome screen with the client first name', async () => {
     render(<LiveSessionRoute />);
-    expect(await screen.findByText('Hola, Mariano')).toBeInTheDocument();
+    expect(await screen.findByText('¡Hola, Mariano!')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Habla con Tino' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Iniciar conversación' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument();
@@ -150,7 +151,7 @@ describe('LiveSessionRoute', () => {
       expiresAt: Date.now() + 60_000,
     });
     render(<LiveSessionRoute />);
-    expect(await screen.findByText('Hola, Mariano')).toBeInTheDocument();
+    expect(await screen.findByText('¡Hola, Mariano!')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
     expect(getDevAuth()).toBeNull();
     expect(navigateMock).toHaveBeenCalledWith({ to: '/' });
@@ -175,7 +176,7 @@ describe('LiveSessionRoute', () => {
       stubState.set({ endReason: 'server' });
     });
     expect(await screen.findByText('La sesión se cerró. Puedes iniciar otra.')).toBeInTheDocument();
-    expect(screen.getByText('Hola, Mariano')).toBeInTheDocument();
+    expect(screen.getByText('¡Hola, Mariano!')).toBeInTheDocument();
     act(() => {
       stubState.set({ sessionState: 'INACTIVE', endReason: null });
     });
@@ -213,7 +214,7 @@ describe('LiveSessionRoute', () => {
     });
     expect(await screen.findByRole('status')).toHaveTextContent('Micrófono no disponible');
     expect(screen.getByLabelText('Mensaje para el avatar')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Activar micro' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Hablar' })).not.toBeInTheDocument();
     expect(createAvatarSession).toHaveBeenCalledTimes(1);
     expect(mintDevToken).not.toHaveBeenCalled();
   });
@@ -236,7 +237,7 @@ describe('LiveSessionRoute', () => {
       max_session_duration_s: 0,
     });
     render(<LiveSessionRoute />);
-    expect(await screen.findByText('Hola, Mariano')).toBeInTheDocument();
+    expect(await screen.findByText('¡Hola, Mariano!')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversación' }));
     await screen.findByText('Conectando...');
 
@@ -268,7 +269,7 @@ describe('LiveSessionRoute', () => {
   it('renders copy in english when the locale changes', async () => {
     setLocale('en');
     render(<LiveSessionRoute />);
-    expect(await screen.findByText('Hi, Mariano')).toBeInTheDocument();
+    expect(await screen.findByText('Hi, Mariano!')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Talk with Tino' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start conversation' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Close session' })).toBeInTheDocument();

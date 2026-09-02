@@ -21,6 +21,8 @@ type UseLiveAvatarSessionResult = {
   isUserTalking: boolean;
   isAvatarTalking: boolean;
   isMicMuted: boolean;
+  /** 0–1 live mic energy while recording. */
+  micLevel: number;
   micError: boolean;
   endReason: SessionEndReason | null;
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -149,6 +151,7 @@ export function useLiveAvatarSession(
     isUserTalking: livekit.micActive,
     isAvatarTalking,
     isMicMuted: !livekit.micActive,
+    micLevel: livekit.micLevel,
     micError: livekit.micError,
     endReason: resolvedEndReason,
     videoRef: videoElementRef,
