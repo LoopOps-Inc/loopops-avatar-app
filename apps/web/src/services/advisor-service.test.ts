@@ -97,6 +97,32 @@ describe('parseSseStream', () => {
     expect(events[0]).toEqual({ event: 'token', data: '{"text":"Hola"}' });
     expect(events[1]?.event).toBe('done');
   });
+
+  it('parses CRLF-framed events', async () => {
+    const text = [
+      'event: token\r',
+      'data: {"text":"Hola"}\r',
+      '\r',
+      'event: done\r',
+      'data: {"turn_id":"tn_1","evidence_id":"ev_1","service_type":"asesorado"}\r',
+      '\r',
+    ].join('\n') + '\n';
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(text));
+        controller.close();
+      },
+    });
+
+    const events = [];
+    for await (const item of parseSseStream(stream)) {
+      events.push(item);
+    }
+
+    expect(events).toHaveLength(2);
+    expect(events[0]).toEqual({ event: 'token', data: '{"text":"Hola"}' });
+    expect(events[1]?.event).toBe('done');
+  });
 });
 
 describe('createAdvisorSession', () => {
