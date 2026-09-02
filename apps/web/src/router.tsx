@@ -17,7 +17,7 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   beforeLoad: () => {
-    throw redirect({ to: '/advisor' });
+    throw redirect({ to: '/demo' });
   },
 });
 

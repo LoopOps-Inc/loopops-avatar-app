@@ -1,138 +1,153 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { SessionState, type ConnectionQuality } from '@heygen/liveavatar-web-sdk';
+import type { RefObject } from 'react';
+import type { AvatarSessionResponse, UIComponent } from '@loopops/contracts';
+import { Mic, MicOff, PhoneOff, Square } from 'lucide-react';
+import { CRYSTAL_DARK_CLASS } from '@/components/Crystal';
 import { useTranslation } from '@/i18n';
-import { useLiveAvatarSession } from '@/features/avatar/hooks/use-liveavatar-session';
+import { useLivekitAvatarSession } from '../hooks/use-livekit-avatar-session';
 import { AvatarVideoSurface } from './AvatarVideoSurface';
 
-export type AvatarSpeakFn = (text: string) => void;
-
-export type AvatarSessionControls = {
-  sessionState: SessionState;
-  isConnected: boolean;
-  connectionQuality: ConnectionQuality;
-  isAvatarTalking: boolean;
-  interrupt: () => void;
-  keepAlive: () => void;
-  close: () => void;
+export type AvatarPanelCommands = {
+  setMic: (on: boolean) => void;
 };
 
 type AvatarPanelProps = {
-  sessionToken: string;
-  active: boolean;
+  session: AvatarSessionResponse;
   onEnded: (reason: 'user' | 'server') => void;
-  onSpeakReady?: (speak: AvatarSpeakFn | null) => void;
-  onSessionControlsChange?: (controls: AvatarSessionControls | null) => void;
+  onTranscriptFinal: (text: string) => void;
+  onCaption: (text: string) => void;
+  onUi: (component: UIComponent) => void;
+  onActivity: (activity: 'thinking' | 'speaking' | 'idle') => void;
+  onTurnComplete: () => void;
+  onConnectionError: () => void;
+  commandsRef?: RefObject<AvatarPanelCommands | null>;
 };
 
+const CONTROL_BUTTON_CLASS = `${CRYSTAL_DARK_CLASS} flex min-h-11 cursor-pointer items-center gap-2 rounded-full px-4 text-xs font-medium text-white/90 transition-colors hover:bg-black/30 disabled:cursor-not-allowed disabled:opacity-40`;
+
 export function AvatarPanel({
-  sessionToken,
-  active,
+  session,
   onEnded,
-  onSpeakReady,
-  onSessionControlsChange,
+  onTranscriptFinal,
+  onCaption,
+  onUi,
+  onActivity,
+  onTurnComplete,
+  onConnectionError,
+  commandsRef,
 }: AvatarPanelProps) {
   const { t } = useTranslation();
-  const {
-    sessionState,
-    isStreamReady,
-    connectionQuality,
-    isAvatarTalking,
-    start,
-    stop,
-    attach,
-    repeat,
-    interrupt,
-    keepAlive,
-  } = useLiveAvatarSession(sessionToken);
-
   const videoRef = useRef<HTMLVideoElement>(null);
-  const userStoppedRef = useRef(false);
+  const connectionErrorFired = useRef(false);
+
+  const {
+    status,
+    isConnected,
+    micActive,
+    micError,
+    startMic,
+    stopMic,
+    sendBargeIn,
+  } = useLivekitAvatarSession({
+    livekitUrl: session.livekit_url,
+    livekitToken: session.livekit_client_token,
+    audioWsPath: session.audio_ws_path,
+    videoRef,
+    handlers: {
+      onTranscriptPartial: () => {},
+      onTranscriptFinal,
+      onThinking: () => onActivity('thinking'),
+      onFiller: () => onActivity('thinking'),
+      onAgentSpeaking: () => onActivity('speaking'),
+      onCaption,
+      onUi,
+      onTurnComplete,
+      onClosed: () => onEnded('server'),
+    },
+  });
 
   useEffect(() => {
-    if (sessionState === SessionState.DISCONNECTED) {
-      onEnded(userStoppedRef.current ? 'user' : 'server');
+    if (status === 'failed' && !connectionErrorFired.current) {
+      connectionErrorFired.current = true;
+      onConnectionError();
     }
-  }, [sessionState, onEnded]);
+  }, [status, onConnectionError]);
 
   useEffect(() => {
-    if (sessionState === SessionState.INACTIVE) {
-      void start();
-    }
-  }, [sessionState, start]);
-
-  useEffect(() => {
-    if (isStreamReady && videoRef.current) {
-      attach(videoRef.current);
-    }
-  }, [attach, isStreamReady]);
-
-  useEffect(() => {
-    if (
-      !active &&
-      sessionState !== SessionState.DISCONNECTED &&
-      sessionState !== SessionState.INACTIVE
-    ) {
-      userStoppedRef.current = true;
-      void stop();
-    }
-  }, [active, sessionState, stop]);
+    if (!commandsRef) return;
+    commandsRef.current = {
+      setMic: (on: boolean) => {
+        if (on) {
+          void startMic();
+        } else {
+          stopMic();
+        }
+      },
+    };
+    return () => {
+      commandsRef.current = null;
+    };
+  }, [commandsRef, startMic, stopMic]);
 
   const handleClose = useCallback(() => {
-    userStoppedRef.current = true;
-    void stop();
-  }, [stop]);
+    onEnded('user');
+  }, [onEnded]);
 
-  const isConnected = sessionState === SessionState.CONNECTED;
+  const handleInterrupt = useCallback(() => {
+    sendBargeIn();
+  }, [sendBargeIn]);
 
-  useEffect(() => {
-    onSessionControlsChange?.({
-      sessionState,
-      isConnected,
-      connectionQuality,
-      isAvatarTalking,
-      interrupt: () => void interrupt(),
-      keepAlive: () => void keepAlive(),
-      close: handleClose,
-    });
-    return () => onSessionControlsChange?.(null);
-  }, [
-    connectionQuality,
-    handleClose,
-    interrupt,
-    isAvatarTalking,
-    isConnected,
-    keepAlive,
-    onSessionControlsChange,
-    sessionState,
-  ]);
-
-  useEffect(() => {
-    if (!isConnected) {
-      onSpeakReady?.(null);
-      return;
+  const toggleMic = useCallback(() => {
+    if (micActive) {
+      stopMic();
+    } else {
+      void startMic();
     }
-    onSpeakReady?.((text: string) => {
-      const trimmed = text.trim();
-      if (!trimmed) return;
-      interrupt();
-      repeat(trimmed);
-    });
-    return () => onSpeakReady?.(null);
-  }, [interrupt, isConnected, onSpeakReady, repeat]);
+  }, [micActive, startMic, stopMic]);
 
   return (
-    <AvatarVideoSurface
-      videoRef={videoRef}
-      sessionState={sessionState}
-      isConnected={isConnected}
-      connectionQuality={connectionQuality}
-      isAvatarTalking={isAvatarTalking}
-      onClose={handleClose}
-      onInterrupt={() => void interrupt()}
-      onKeepAlive={() => void keepAlive()}
-      closeLabel={t('advisor.avatar_hide')}
-      sandboxNotice={t('advisor.avatar_sandbox_notice')}
-      variant="overlay"
-    />
+    <div className="absolute inset-0 size-full">
+      <AvatarVideoSurface videoRef={videoRef} isConnected={isConnected} />
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-4 flex flex-col items-center gap-2 px-4">
+        {micError && (
+          <p className="text-xs text-white/80">{t('advisor.mic_unavailable')}</p>
+        )}
+        <div className="pointer-events-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleMic}
+            disabled={!isConnected}
+            aria-pressed={micActive}
+            className={CONTROL_BUTTON_CLASS}
+          >
+            {micActive ? (
+              <Mic className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <MicOff className="h-4 w-4" aria-hidden="true" />
+            )}
+            {micActive ? t('advisor.mic_off') : t('advisor.mic_on')}
+          </button>
+          <button
+            type="button"
+            onClick={handleInterrupt}
+            disabled={!isConnected}
+            className={CONTROL_BUTTON_CLASS}
+          >
+            <Square className="h-3.5 w-3.5" aria-hidden="true" />
+            {t('advisor.interrupt')}
+          </button>
+          <button
+            type="button"
+            onClick={handleClose}
+            aria-label={t('advisor.avatar_hide')}
+            title={t('advisor.avatar_hide')}
+            className="bg-error hover:bg-error/90 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-white transition-colors duration-200"
+          >
+            <PhoneOff className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

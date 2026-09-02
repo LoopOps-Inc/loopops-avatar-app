@@ -1,22 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { Loader2, Send, Sparkles, X } from 'lucide-react';
+import type { EmbedCommand, UIComponent } from '@loopops/contracts';
+import { Loader2, Send, Sparkles, TriangleAlert, X } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
-import { appEnv } from '@/config/env';
 import { useEmbeddedMode } from '@/hooks/use-embedded-mode';
+import { useEmbedBridge } from '@/features/embed/hooks/use-embed-bridge';
+import { getClientConfig } from '@/services/advisor-service';
 import { useTranslation } from '@/i18n';
 import { useAdvisorAvatar } from '../hooks/use-advisor-avatar';
 import { useAdvisorChat } from '../hooks/use-advisor-chat';
-import { AvatarPanel, type AvatarSessionControls, type AvatarSpeakFn } from './AvatarPanel';
-import { AvatarSessionToolbar } from './AvatarSessionToolbar';
+import { AvatarPanel, type AvatarPanelCommands } from './AvatarPanel';
 import { ChatVideoSwitch } from './ChatVideoSwitch';
 import { UIPayloadRenderer } from './UIPayloadRenderer';
 
-const SUGGESTIONS = ['advisor.suggestion_portfolio', 'advisor.suggestion_market'] as const;
+const CHIPS = ['advisor.chips.portfolio', 'advisor.chips.products', 'advisor.chips.retire'] as const;
+
+const CONFIG_POLL_MS = 30_000;
 
 const ADVISOR_CHIP_CLASS =
-  'bg-advisor-cta text-advisor-cta-fg hover:opacity-90 cursor-pointer rounded-full px-3 py-1.5 text-xs transition-opacity';
-const ADVISOR_SUGGESTION_CLASS =
   'bg-advisor-cta text-advisor-cta-fg hover:opacity-90 cursor-pointer rounded-full px-4 py-2 text-sm transition-opacity disabled:cursor-not-allowed disabled:opacity-40';
 const ADVISOR_ICON_BUTTON_CLASS =
   'bg-advisor-cta text-advisor-cta-fg flex shrink-0 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40';
@@ -25,16 +26,12 @@ function MessageBubble({
   role,
   text,
   streaming,
-  chips,
-  onChipClick,
   overlay = false,
   children,
 }: {
   role: 'user' | 'assistant';
   text: string;
   streaming?: boolean;
-  chips?: { id: string; label: string }[];
-  onChipClick?: (label: string) => void;
   overlay?: boolean;
   children?: ReactNode;
 }) {
@@ -54,20 +51,6 @@ function MessageBubble({
             </p>
           )}
           {children && <div className="mt-3">{children}</div>}
-          {chips && chips.length > 0 && !streaming && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {chips.map((chip) => (
-                <button
-                  key={chip.id}
-                  type="button"
-                  onClick={() => onChipClick?.(chip.label)}
-                  className={ADVISOR_CHIP_CLASS}
-                >
-                  {chip.label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
     );
@@ -88,20 +71,6 @@ function MessageBubble({
           </p>
         )}
         {children && <div className="mt-3">{children}</div>}
-        {chips && chips.length > 0 && !streaming && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {chips.map((chip) => (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={() => onChipClick?.(chip.label)}
-                className={ADVISOR_CHIP_CLASS}
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -111,43 +80,154 @@ export function AdvisorRoute() {
   const { t } = useTranslation();
   const embedded = useEmbeddedMode();
   const avatar = useAdvisorAvatar();
-  const avatarSpeakRef = useRef<AvatarSpeakFn | null>(null);
-  const pendingSpeechRef = useRef<string | null>(null);
-  const handleSpeakReady = useCallback((speak: AvatarSpeakFn | null) => {
-    avatarSpeakRef.current = speak;
-    if (speak && pendingSpeechRef.current) {
-      speak(pendingSpeechRef.current);
-      pendingSpeechRef.current = null;
-    }
-  }, []);
-  const handleAssistantSpeech = useCallback(
-    (text: string) => {
-      if (!avatar.wantsAvatar) return;
-      if (avatarSpeakRef.current) {
-        avatarSpeakRef.current(text);
-      } else {
-        pendingSpeechRef.current = text;
-      }
-    },
-    [avatar.wantsAvatar],
-  );
-  const { session, messages, phase, error, sendMessage, isReady, isThinking } = useAdvisorChat({
-    onAssistantSpeech: handleAssistantSpeech,
-  });
+  const avatarCommandsRef = useRef<AvatarPanelCommands | null>(null);
+  const openVoiceTurnRef = useRef<string | null>(null);
+  const {
+    session,
+    messages,
+    phase,
+    error,
+    voiceActivity,
+    setVoiceActivity,
+    sendMessage,
+    appendUserMessage,
+    beginAssistantTurn,
+    setAssistantText,
+    appendAssistantUi,
+    endAssistantTurn,
+    isReady,
+    isThinking,
+  } = useAdvisorChat();
   const [input, setInput] = useState('');
-  const [sessionControls, setSessionControls] = useState<AvatarSessionControls | null>(null);
+  const [killSwitchActive, setKillSwitchActive] = useState(false);
+  const [killSwitchMessage, setKillSwitchMessage] = useState<string | null>(null);
+  const [killSwitchDismissed, setKillSwitchDismissed] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
-  const videoMode = avatar.wantsAvatar || avatar.starting || Boolean(avatar.sessionToken);
+  const videoMode = avatar.wantsAvatar || avatar.starting || Boolean(avatar.session);
   const viewportLayout = embedded || videoMode;
 
-  const handleSessionControlsChange = useCallback((controls: AvatarSessionControls | null) => {
-    setSessionControls(controls);
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const config = await getClientConfig();
+        if (!cancelled) {
+          setKillSwitchActive(config.kill_switch);
+          setKillSwitchMessage(config.kill_switch_message ?? null);
+        }
+      } catch {
+        // Config polling is best effort.
+      }
+    };
+    void poll();
+    const timer = window.setInterval(() => void poll(), CONFIG_POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
   }, []);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const handleVoiceUi = useCallback(
+    (component: UIComponent) => {
+      if (!openVoiceTurnRef.current) {
+        openVoiceTurnRef.current = beginAssistantTurn();
+      }
+      appendAssistantUi(openVoiceTurnRef.current, component);
+    },
+    [appendAssistantUi, beginAssistantTurn],
+  );
+
+  const handleCaption = useCallback(
+    (text: string) => {
+      if (!text) return;
+      setVoiceActivity('speaking');
+      if (!openVoiceTurnRef.current) {
+        openVoiceTurnRef.current = beginAssistantTurn();
+      }
+      setAssistantText(openVoiceTurnRef.current, text);
+    },
+    [beginAssistantTurn, setAssistantText, setVoiceActivity],
+  );
+
+  const handleVoiceActivity = useCallback(
+    (activity: 'thinking' | 'speaking' | 'idle') => {
+      setVoiceActivity(activity);
+    },
+    [setVoiceActivity],
+  );
+
+  const handleTurnComplete = useCallback(() => {
+    const openId = openVoiceTurnRef.current;
+    openVoiceTurnRef.current = null;
+    if (openId) {
+      endAssistantTurn(openId);
+    }
+    setVoiceActivity('idle');
+  }, [endAssistantTurn, setVoiceActivity]);
+
+  const handleTranscriptFinal = useCallback(
+    (text: string) => {
+      if (!text.trim()) return;
+      appendUserMessage(text);
+    },
+    [appendUserMessage],
+  );
+
+  const handleAvatarEnded = useCallback(
+    (reason: 'user' | 'server') => {
+      handleTurnComplete();
+      avatar.handleSessionEnded(reason);
+    },
+    [avatar, handleTurnComplete],
+  );
+
+  const handleAvatarConnectionError = useCallback(() => {
+    setVoiceActivity('idle');
+  }, [setVoiceActivity]);
+
+  const handleViewModeChange = (mode: 'chat' | 'video') => {
+    if (mode === 'video') {
+      if (session) void avatar.turnOn(session.thread_id);
+    } else {
+      avatar.requestOff();
+    }
+  };
+
+  const handleCommand = useCallback(
+    (command: EmbedCommand) => {
+      switch (command.type) {
+        case 'start':
+          if (session && !avatar.isActive && !avatar.starting) {
+            void avatar.turnOn(session.thread_id);
+          }
+          break;
+        case 'stop':
+          avatar.requestOff();
+          break;
+        case 'setMuted':
+          avatarCommandsRef.current?.setMic(!command.payload.muted);
+          break;
+      }
+    },
+    [avatar, session],
+  );
+
+  const { emit } = useEmbedBridge(handleCommand);
+
+  useEffect(() => {
+    emit({
+      type: 'sessionState',
+      payload: {
+        state: avatar.isActive ? 'connected' : avatar.starting ? 'connecting' : 'disconnected',
+        quality: 'unknown',
+      },
+    });
+  }, [avatar.isActive, avatar.starting, emit]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -157,17 +237,9 @@ export function AdvisorRoute() {
     setInput('');
   };
 
-  const handleSuggestion = (key: (typeof SUGGESTIONS)[number]) => {
+  const handleChip = (key: (typeof CHIPS)[number]) => {
     if (!isReady || isThinking) return;
     void sendMessage(t(key));
-  };
-
-  const handleViewModeChange = (mode: 'chat' | 'video') => {
-    if (mode === 'video') {
-      void avatar.turnOn();
-    } else {
-      avatar.requestOff();
-    }
   };
 
   const loading = phase === 'loading_session';
@@ -196,13 +268,13 @@ export function AdvisorRoute() {
         <div className="flex flex-col gap-3 py-6">
           <p className="text-content-sub text-center text-sm">{t('advisor.empty')}</p>
           <div className="flex flex-wrap justify-center gap-2">
-            {SUGGESTIONS.map((key) => (
+            {CHIPS.map((key) => (
               <button
                 key={key}
                 type="button"
-                onClick={() => handleSuggestion(key)}
+                onClick={() => handleChip(key)}
                 disabled={!isReady || isThinking}
-                className={ADVISOR_SUGGESTION_CLASS}
+                className={ADVISOR_CHIP_CLASS}
               >
                 {t(key)}
               </button>
@@ -217,19 +289,46 @@ export function AdvisorRoute() {
           role={message.role}
           text={message.text}
           streaming={message.streaming}
-          chips={message.chips}
           overlay={viewportLayout && videoMode}
-          onChipClick={(label) => void sendMessage(label)}
         >
           {message.uiPayload.length > 0 && <UIPayloadRenderer components={message.uiPayload} />}
         </MessageBubble>
       ))}
+
+      {avatar.isActive && voiceActivity === 'thinking' && (
+        <div className="flex justify-start">
+          <div className="bg-surface text-content-sub flex items-center gap-2 rounded-2xl px-4 py-3 text-sm">
+            <span className="bg-content-sub inline-block h-2 w-2 animate-pulse rounded-full motion-reduce:animate-none" />
+            {t('advisor.thinking')}
+          </div>
+        </div>
+      )}
       <div ref={endRef} />
     </>
   );
 
   const alerts = (
     <>
+      {killSwitchActive && !killSwitchDismissed && (
+        <div
+          role="alert"
+          className={`border-warning/30 bg-warning/10 text-warning flex items-start gap-2 rounded-2xl border px-4 py-3 text-sm ${
+            viewportLayout && videoMode ? 'mx-3 mb-2' : 'mb-2'
+          }`}
+        >
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>{killSwitchMessage || t('advisor.kill_switch')}</span>
+          <button
+            type="button"
+            onClick={() => setKillSwitchDismissed(true)}
+            aria-label={t('advisor.dismiss')}
+            className="ml-auto cursor-pointer"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      )}
+
       {(error || avatar.error) && (
         <div
           role="alert"
@@ -334,20 +433,22 @@ export function AdvisorRoute() {
       <div className="light">
         <AppShell embedded={embedded || videoMode}>
           <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden">
-            {avatar.sessionToken && (
-              <div className="absolute inset-0 size-full">
-                <AvatarPanel
-                  key={avatar.sessionToken}
-                  sessionToken={avatar.sessionToken}
-                  active={avatar.wantsAvatar}
-                  onEnded={avatar.handleSessionEnded}
-                  onSpeakReady={handleSpeakReady}
-                  onSessionControlsChange={handleSessionControlsChange}
-                />
-              </div>
+            {avatar.session && (
+              <AvatarPanel
+                key={avatar.session.avatar_session_id}
+                session={avatar.session}
+                onEnded={handleAvatarEnded}
+                onTranscriptFinal={handleTranscriptFinal}
+                onCaption={handleCaption}
+                onUi={handleVoiceUi}
+                onActivity={handleVoiceActivity}
+                onTurnComplete={handleTurnComplete}
+                onConnectionError={handleAvatarConnectionError}
+                commandsRef={avatarCommandsRef}
+              />
             )}
 
-            {!avatar.sessionToken && avatar.starting && (
+            {!avatar.session && avatar.starting && (
               <div className="bg-filled-dark absolute inset-0 flex flex-col items-center justify-center gap-3">
                 <Loader2
                   className="text-filled-dark-fg h-6 w-6 animate-spin motion-reduce:animate-none"
@@ -357,22 +458,8 @@ export function AdvisorRoute() {
               </div>
             )}
 
-            <div className="pointer-events-none relative z-10 flex flex-col gap-2 px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
-              {sessionControls && (
-                <AvatarSessionToolbar
-                  className="pointer-events-auto"
-                  sessionState={sessionControls.sessionState}
-                  isConnected={sessionControls.isConnected}
-                  connectionQuality={sessionControls.connectionQuality}
-                  isAvatarTalking={sessionControls.isAvatarTalking}
-                  onInterrupt={sessionControls.interrupt}
-                  onKeepAlive={sessionControls.keepAlive}
-                  onClose={sessionControls.close}
-                  closeLabel={t('advisor.avatar_hide')}
-                  sandboxNotice={t('advisor.avatar_sandbox_notice')}
-                />
-              )}
-              <div className="pointer-events-auto flex justify-center">{switchControl}</div>
+            <div className="pointer-events-none relative z-10 flex justify-center px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+              <div className="pointer-events-auto">{switchControl}</div>
             </div>
 
             <section
@@ -384,11 +471,6 @@ export function AdvisorRoute() {
                 aria-live="polite"
                 className="bg-surface text-content mx-3 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-2xl px-3 py-2"
               >
-                {session && (
-                  <p className="text-content-muted text-xs">
-                    {t('advisor.greeting', { name: session.client.first_name })}
-                  </p>
-                )}
                 {messageList}
               </div>
 
@@ -436,23 +518,9 @@ export function AdvisorRoute() {
                     {switchControl}
                   </div>
                   <p className="text-content-sub text-sm">{t('advisor.subtitle')}</p>
-                  {session && (
-                    <p className="text-content-muted text-xs">
-                      {t('advisor.greeting', { name: session.client.first_name })}
-                    </p>
-                  )}
-                  {appEnv.advisorMock && (
-                    <p className="text-content-muted text-xs">{t('advisor.mock_notice')}</p>
-                  )}
                 </>
               )}
             </header>
-
-            {viewportLayout && session && (
-              <p className="text-content-muted px-4 text-xs">
-                {t('advisor.greeting', { name: session.client.first_name })}
-              </p>
-            )}
 
             <div
               role="log"

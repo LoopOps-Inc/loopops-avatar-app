@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { UIComponent } from '@loopops/contracts';
+import type { AvatarSessionResponse } from '@loopops/contracts';
 import { Loader2 } from 'lucide-react';
-import { ConnectionQuality, SessionState } from '@heygen/liveavatar-web-sdk';
 import type { EmbedEvent } from '@loopops/contracts';
 import { useAdvisorChat } from '../hooks/use-advisor-chat';
 import { useTranslation } from '@/i18n';
 import { sessionStateClass, sessionStateLabel } from '../lib/session-status';
 import { useLiveAvatarSession } from '../hooks/use-liveavatar-session';
+import { createAgentAdvisorService } from '../services/agent-advisor-service';
 import { ChatArea } from './ChatArea';
 import { SessionRail } from './SessionRail';
 import { SnapSheet } from './SnapSheet';
@@ -16,7 +18,8 @@ export type PanelCommands = {
 };
 
 type SessionPanelProps = {
-  sessionToken: string;
+  threadId: string;
+  avatarSession: AvatarSessionResponse;
   voiceEnabled: boolean;
   micUnavailable: boolean;
   onEnded: (reason: 'user' | 'server' | 'error') => void;
@@ -34,12 +37,13 @@ const FULL_SNAP = 2;
  * The avatar video is the base layer; the chat lives in a bottom snap sheet
  * (Motion) docked over it. Snap points control how much of the frame the
  * sheet occupies — the video layer resizes to the space left free and
- * collapses at the full-screen snap (future forms/firma). The advisor mock
- * owns the transcript; the avatar only speaks what the advisor sends, so
- * HeyGen transcriptions are not rendered.
+ * collapses at the full-screen snap (future forms/firma). The advisor
+ * service owns the transcript; the backend drives avatar speech during
+ * voice turns, so session transcriptions only feed the chat transcript.
  */
 export function SessionPanel({
-  sessionToken,
+  threadId,
+  avatarSession,
   voiceEnabled,
   micUnavailable,
   onEnded,
@@ -47,8 +51,18 @@ export function SessionPanel({
   onEvent,
 }: SessionPanelProps) {
   const { t } = useTranslation();
-  const session = useLiveAvatarSession(sessionToken, { voiceChat: voiceEnabled });
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const voiceAdvisorRef = useRef<{
+    appendUserMessage: (text: string) => void;
+    appendCaption: (text: string) => void;
+    appendUi: (component: UIComponent) => void;
+  } | null>(null);
+
+  const session = useLiveAvatarSession(avatarSession, {
+    voiceChat: voiceEnabled,
+    onTranscriptFinal: (text) => voiceAdvisorRef.current?.appendUserMessage(text),
+    onCaption: (text) => voiceAdvisorRef.current?.appendCaption(text),
+    onUi: (component) => voiceAdvisorRef.current?.appendUi(component),
+  });
   const [snapIndex, setSnapIndex] = useState(LOADING_SNAP);
 
   const {
@@ -58,18 +72,27 @@ export function SessionPanel({
     isAvatarTalking,
     isUserTalking,
     isMicMuted,
+    micError,
     endReason,
-    start,
+    videoRef,
     stop,
     attach,
     interrupt,
-    sendMessage,
     setMicMuted,
   } = session;
 
-  const isConnected = sessionState === SessionState.CONNECTED;
-  const speak = useCallback((text: string) => sendMessage(text), [sendMessage]);
-  const advisor = useAdvisorChat({ speak, enabled: isConnected });
+  const isConnected = sessionState === 'CONNECTED';
+  const speak = useCallback(() => {}, []);
+  const service = useMemo(() => createAgentAdvisorService(threadId), [threadId]);
+  const advisor = useAdvisorChat({ speak, enabled: isConnected, service });
+
+  useEffect(() => {
+    voiceAdvisorRef.current = {
+      appendUserMessage: advisor.appendUserMessage,
+      appendCaption: advisor.appendCaption,
+      appendUi: advisor.appendUi,
+    };
+  });
 
   useEffect(() => {
     registerCommands({ stop: () => void stop(), setMicMuted });
@@ -77,16 +100,10 @@ export function SessionPanel({
   }, [registerCommands, stop, setMicMuted]);
 
   useEffect(() => {
-    if (sessionState === SessionState.INACTIVE) {
-      void start();
-    }
-  }, [sessionState, start]);
-
-  useEffect(() => {
     if (isStreamReady && videoRef.current) {
       attach(videoRef.current);
     }
-  }, [isStreamReady, attach]);
+  }, [isStreamReady, attach, videoRef]);
 
   useEffect(() => {
     onEvent({ type: 'sessionState', payload: { state: sessionState, quality: connectionQuality } });
@@ -111,7 +128,7 @@ export function SessionPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endReason, onEvent]);
 
-  const isPoorQuality = connectionQuality === ConnectionQuality.BAD;
+  const isPoorQuality = connectionQuality === 'BAD';
   // Derived snap: compact while loading; once connected the effective snap is
   // at least the chat view (the loading snap is unreachable after connect).
   const effectiveSnap = !isConnected ? LOADING_SNAP : Math.max(snapIndex, CHAT_SNAP);
@@ -163,7 +180,7 @@ export function SessionPanel({
         voiceEnabled={voiceEnabled}
         isUserTalking={isUserTalking}
         isMicMuted={isMicMuted}
-        micUnavailable={micUnavailable}
+        micUnavailable={micUnavailable || micError}
         onSend={advisor.send}
         onToggleMic={() => setMicMuted(!isMicMuted)}
       />

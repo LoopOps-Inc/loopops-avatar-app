@@ -1,28 +1,108 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import type { AvatarSessionResponse, SessionResponse } from '@loopops/contracts';
 import { LiveSessionRoute } from './LiveSessionScreen';
-import { createSandboxSessionToken } from '@/services/liveavatar-service';
+import {
+  ackFirstTurnDisclosures,
+  ackVoiceConsent,
+  createAdvisorSession,
+  createAvatarSession,
+} from '@/services/advisor-service';
 import { setLocale } from '@/i18n';
-import * as HeyGenSDK from '@heygen/liveavatar-web-sdk';
 
-vi.mock('@heygen/liveavatar-web-sdk', async () => await import('@/test/liveavatar-sdk-stub'));
+const stubState = vi.hoisted(() => {
+  const state = {
+    sessionState: 'INACTIVE' as 'INACTIVE' | 'CONNECTING' | 'CONNECTED' | 'DISCONNECTED',
+    endReason: null as 'user' | 'server' | 'error' | null,
+  };
+  const listeners = new Set<() => void>();
+  return {
+    state,
+    set: (patch: Partial<typeof state>) => {
+      Object.assign(state, patch);
+      listeners.forEach((listener) => listener());
+    },
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    snapshot: () => `${state.sessionState}:${state.endReason}`,
+  };
+});
 
-const { __emitEvent } = HeyGenSDK as unknown as {
-  __emitEvent: (event: string, payload: unknown) => void;
-};
+vi.mock('@/services/advisor-service', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/advisor-service')>();
+  return {
+    ...actual,
+    createAdvisorSession: vi.fn(),
+    ackFirstTurnDisclosures: vi.fn(),
+    ackVoiceConsent: vi.fn(),
+    createAvatarSession: vi.fn(),
+    stopAvatarSession: vi.fn(),
+    sendAdvisorMessage: vi.fn(),
+  };
+});
 
-vi.mock('@/services/liveavatar-service', () => ({
-  createSandboxSessionToken: vi.fn(),
-}));
+vi.mock('../hooks/use-liveavatar-session', async () => {
+  const { useSyncExternalStore } = await import('react');
+  return {
+    useLiveAvatarSession: () => {
+      useSyncExternalStore(stubState.subscribe, stubState.snapshot, stubState.snapshot);
+      return {
+        sessionState: stubState.state.sessionState,
+        isStreamReady: stubState.state.sessionState === 'CONNECTED',
+        connectionQuality: 'GOOD',
+        isUserTalking: false,
+        isAvatarTalking: false,
+        isMicMuted: true,
+        micError: false,
+        endReason: stubState.state.endReason,
+        videoRef: { current: null },
+        start: async () => {},
+        stop: async () => {},
+        attach: () => {},
+        sendMessage: () => '',
+        repeat: () => {},
+        interrupt: () => {},
+        keepAlive: async () => {},
+        setMicMuted: () => {},
+      };
+    },
+  };
+});
+
+const advisorSession = {
+  thread_id: 'thread-1',
+} as SessionResponse;
+
+const avatarSession = {
+  avatar_session_id: 'avatar-1',
+  livekit_url: 'wss://livekit.example',
+  livekit_client_token: 'token',
+  max_session_duration_s: 600,
+  expires_at: new Date().toISOString(),
+  audio_ws_path: '/ws/avatar',
+} as AvatarSessionResponse;
+
+async function startSession() {
+  vi.mocked(createAdvisorSession).mockResolvedValue(advisorSession);
+  vi.mocked(ackFirstTurnDisclosures).mockResolvedValue(undefined);
+  vi.mocked(ackVoiceConsent).mockResolvedValue(undefined);
+  vi.mocked(createAvatarSession).mockResolvedValue(avatarSession);
+  render(<LiveSessionRoute />);
+  fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversación' }));
+}
 
 describe('LiveSessionRoute', () => {
   beforeEach(() => {
-    vi.mocked(createSandboxSessionToken).mockReset();
+    vi.clearAllMocks();
+    stubState.set({ sessionState: 'INACTIVE', endReason: null });
     Object.defineProperty(window.navigator, 'mediaDevices', {
       configurable: true,
       value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [] }) },
     });
-    // SnapSheet measures the frame via clientHeight, always 0 in jsdom.
     vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(800);
     setLocale('es');
   });
@@ -33,27 +113,26 @@ describe('LiveSessionRoute', () => {
     expect(screen.getByRole('button', { name: 'Iniciar conversación' })).toBeInTheDocument();
   });
 
-  it('starts a session after minting a sandbox token', async () => {
-    vi.mocked(createSandboxSessionToken).mockResolvedValue('sandbox-token');
-    render(<LiveSessionRoute />);
-    fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversación' }));
+  it('starts a session through the advisor backend after the start action', async () => {
+    await startSession();
     expect(await screen.findByText('Conectando...')).toBeInTheDocument();
     expect(await screen.findByRole('region', { name: 'Consulta con Tino' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Terminar' })).toBeInTheDocument();
-    expect(createSandboxSessionToken).toHaveBeenCalledTimes(1);
+    expect(createAdvisorSession).toHaveBeenCalledTimes(1);
+    expect(ackFirstTurnDisclosures).toHaveBeenCalledTimes(1);
+    expect(ackVoiceConsent).toHaveBeenCalledTimes(1);
+    expect(createAvatarSession).toHaveBeenCalledWith('thread-1', 'portrait');
   });
 
   it('shows a compact loading state while the live session connects', async () => {
-    vi.mocked(createSandboxSessionToken).mockResolvedValue('sandbox-token');
-    render(<LiveSessionRoute />);
-    fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversación' }));
+    await startSession();
     expect(await screen.findByText('Conectando...')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Consulta con Tino' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Mensaje para el avatar')).not.toBeInTheDocument();
   });
 
-  it('shows the error message when the token request fails', async () => {
-    vi.mocked(createSandboxSessionToken).mockRejectedValue(new Error('boom'));
+  it('shows the error message when the session creation fails', async () => {
+    vi.mocked(createAdvisorSession).mockRejectedValue(new Error('boom'));
     render(<LiveSessionRoute />);
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversación' }));
     expect(await screen.findByText('boom')).toBeInTheDocument();
@@ -65,26 +144,32 @@ describe('LiveSessionRoute', () => {
       configurable: true,
       value: { getUserMedia: vi.fn().mockRejectedValue(new Error('denied')) },
     });
-    vi.mocked(createSandboxSessionToken).mockResolvedValue('sandbox-token');
-    render(<LiveSessionRoute />);
-    fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversación' }));
+    await startSession();
     await screen.findByText('Conectando...');
     act(() => {
-      __emitEvent('SESSION_STATE_CHANGED', 'CONNECTED');
+      stubState.set({ sessionState: 'CONNECTED' });
     });
     expect(await screen.findByRole('status')).toHaveTextContent('Micrófono no disponible');
     expect(screen.getByLabelText('Mensaje para el avatar')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Silenciar micro' })).not.toBeInTheDocument();
-    expect(createSandboxSessionToken).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Activar micro' })).not.toBeInTheDocument();
+    expect(createAvatarSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns to the start screen with a notice when the server ends the session', async () => {
+    await startSession();
+    await screen.findByText('Conectando...');
+    act(() => {
+      stubState.set({ endReason: 'server' });
+    });
+    expect(await screen.findByText('La sesión se cerró. Puedes iniciar otra.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Iniciar conversación' })).toBeInTheDocument();
   });
 
   it('toggles the sheet between chat and full screen snaps', async () => {
-    vi.mocked(createSandboxSessionToken).mockResolvedValue('sandbox-token');
-    render(<LiveSessionRoute />);
-    fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversación' }));
+    await startSession();
     await screen.findByText('Conectando...');
     act(() => {
-      __emitEvent('SESSION_STATE_CHANGED', 'CONNECTED');
+      stubState.set({ sessionState: 'CONNECTED' });
     });
     const expand = await screen.findByRole('button', { name: 'Pantalla completa' });
     fireEvent.click(expand);

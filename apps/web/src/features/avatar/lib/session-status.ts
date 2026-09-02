@@ -1,14 +1,20 @@
-import { SessionState } from '@heygen/liveavatar-web-sdk';
-import type { SessionState as SessionStateType } from '@heygen/liveavatar-web-sdk';
+export type SessionState =
+  | 'INACTIVE'
+  | 'CONNECTING'
+  | 'CONNECTED'
+  | 'DISCONNECTING'
+  | 'DISCONNECTED';
+
+export type ConnectionQuality = 'UNKNOWN' | 'GOOD' | 'BAD';
 
 /** Accessible label for a live-session state. */
-export function sessionStateLabel(state: SessionStateType, t: (key: string) => string): string {
+export function sessionStateLabel(state: SessionState, t: (key: string) => string): string {
   switch (state) {
-    case SessionState.CONNECTED:
+    case 'CONNECTED':
       return t('live.state_connected');
-    case SessionState.CONNECTING:
+    case 'CONNECTING':
       return t('live.connecting');
-    case SessionState.DISCONNECTING:
+    case 'DISCONNECTING':
       return t('live.state_disconnecting');
     default:
       return t('live.state_offline');
@@ -16,12 +22,12 @@ export function sessionStateLabel(state: SessionStateType, t: (key: string) => s
 }
 
 /** Status-dot classes for a live-session state. */
-export function sessionStateClass(state: SessionStateType): string {
+export function sessionStateClass(state: SessionState): string {
   switch (state) {
-    case SessionState.CONNECTED:
+    case 'CONNECTED':
       return 'bg-success';
-    case SessionState.CONNECTING:
-    case SessionState.DISCONNECTING:
+    case 'CONNECTING':
+    case 'DISCONNECTING':
       return 'animate-pulse bg-warning motion-reduce:animate-none';
     default:
       return 'bg-content-muted';

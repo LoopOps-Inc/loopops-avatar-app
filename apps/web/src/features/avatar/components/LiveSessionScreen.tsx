@@ -1,19 +1,40 @@
 import { useCallback, useRef, useState } from 'react';
-import type { EmbedCommand } from '@loopops/contracts';
+import type { AvatarSessionResponse, EmbedCommand } from '@loopops/contracts';
 import { AppShell } from '@/components/AppShell';
 import { useEmbedBridge } from '@/features/embed/hooks/use-embed-bridge';
+import {
+  ackFirstTurnDisclosures,
+  ackVoiceConsent,
+  createAdvisorSession,
+  createAvatarSession,
+} from '@/services/advisor-service';
 import { useTranslation } from '@/i18n';
 import { SessionPanel, type PanelCommands } from './SessionPanel';
 import { StartScreen } from './StartScreen';
 
+type DemoSession = {
+  threadId: string;
+  avatar: AvatarSessionResponse;
+};
+
+async function probeMic(): Promise<boolean> {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((track) => track.stop());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Route shell: owns the session lifecycle (mic probe, sandbox token, embed
- * bridge) and swaps between the start hero and the live session panel inside
- * the phone frame.
+ * Route shell: owns the session lifecycle (mic probe, advisor thread, avatar
+ * session credentials, embed bridge) and swaps between the start hero and
+ * the live session panel inside the phone frame.
  */
 export function LiveSessionRoute() {
   const { t } = useTranslation();
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [demoSession, setDemoSession] = useState<DemoSession | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [micUnavailable, setMicUnavailable] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -22,7 +43,7 @@ export function LiveSessionRoute() {
   const commandsRef = useRef<PanelCommands | null>(null);
 
   const handleEnded = useCallback((reason: 'user' | 'server' | 'error') => {
-    setSessionToken(null);
+    setDemoSession(null);
     setEndedByServer(reason === 'server');
   }, []);
 
@@ -30,22 +51,19 @@ export function LiveSessionRoute() {
     setStarting(true);
     setError(null);
     setEndedByServer(false);
-    let micAvailable = false;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((track) => track.stop());
-      micAvailable = true;
-    } catch {
-      // No mic: the session still starts, typing-only.
-    }
+    const micAvailable = await probeMic();
     setMicUnavailable(!micAvailable);
     try {
-      const { createSandboxSessionToken } = await import('@/services/liveavatar-service');
-      const token = await createSandboxSessionToken();
+      const advisorSession = await createAdvisorSession();
+      await ackFirstTurnDisclosures();
+      await ackVoiceConsent();
+      const avatar = await createAvatarSession(advisorSession.thread_id, 'portrait');
       setVoiceEnabled(micAvailable);
-      setSessionToken(token);
+      setDemoSession({ threadId: advisorSession.thread_id, avatar });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('live.error_unknown'));
+      setError(
+        err instanceof Error && err.message ? err.message : t('live.error_unknown'),
+      );
     } finally {
       setStarting(false);
     }
@@ -55,7 +73,7 @@ export function LiveSessionRoute() {
     (command: EmbedCommand) => {
       switch (command.type) {
         case 'start':
-          if (!sessionToken) void handleStart();
+          if (!demoSession) void handleStart();
           break;
         case 'stop':
           commandsRef.current?.stop();
@@ -65,7 +83,7 @@ export function LiveSessionRoute() {
           break;
       }
     },
-    [handleStart, sessionToken],
+    [handleStart, demoSession],
   );
 
   const { emit } = useEmbedBridge(handleCommand);
@@ -83,10 +101,11 @@ export function LiveSessionRoute() {
     <AppShell>
       <div className="bg-surface-sub flex min-h-dvh justify-center">
         <div className="bg-surface-sub sm:border-outline relative h-dvh w-full overflow-hidden sm:my-auto sm:h-[min(853px,calc(100dvh-3rem))] sm:max-w-md sm:rounded-lg sm:border">
-          {sessionToken ? (
+          {demoSession ? (
             <SessionPanel
-              key={sessionToken}
-              sessionToken={sessionToken}
+              key={demoSession.avatar.avatar_session_id}
+              threadId={demoSession.threadId}
+              avatarSession={demoSession.avatar}
               voiceEnabled={voiceEnabled}
               micUnavailable={micUnavailable}
               onEnded={handleEnded}
