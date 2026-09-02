@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react';
 import { AppShell } from '@/components/AppShell';
+import { actinverLogoUrl } from '@/config/avatar';
 import { useTranslation } from '@/i18n';
 import { getDevAuth } from '@/services/dev-auth';
 import { useLoginSubmit } from '../hooks/use-login-submit';
@@ -20,10 +21,13 @@ export function LoginScreen() {
       <div className="bg-surface-sub flex min-h-dvh justify-center">
         <div className="bg-surface-sub sm:border-outline relative h-dvh w-full overflow-hidden sm:my-auto sm:h-[min(853px,calc(100dvh-3rem))] sm:max-w-md sm:rounded-lg sm:border">
           <SplashOverlay skip={Boolean(getDevAuth())} />
-          <form
-            onSubmit={handleSubmit}
-            className="flex h-full flex-col justify-center gap-4 p-6"
-          >
+          <form onSubmit={handleSubmit} className="flex h-full flex-col justify-center gap-4 p-6">
+            <img
+              src={actinverLogoUrl}
+              alt=""
+              data-testid="auth-login-logo"
+              className="mb-4 h-12 w-auto max-w-[200px] self-center object-contain"
+            />
             <label htmlFor="auth-client-id" className="flex flex-col gap-1.5">
               <span className="text-content text-sm font-medium">{t('auth.client_id')}</span>
               <input

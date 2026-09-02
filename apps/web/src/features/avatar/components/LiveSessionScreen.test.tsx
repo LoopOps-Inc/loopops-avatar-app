@@ -9,7 +9,18 @@ import {
   createAvatarSession,
   mintDevToken,
 } from '@/services/advisor-service';
+import { clearDevAuth, getDevAuth, setDevAuth } from '@/services/dev-auth';
 import { setLocale } from '@/i18n';
+
+const navigateMock = vi.fn();
+
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>();
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
 
 const stubState = vi.hoisted(() => {
   const state = {
@@ -105,6 +116,7 @@ describe('LiveSessionRoute', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     stubState.set({ sessionState: 'INACTIVE', endReason: null });
+    clearDevAuth();
     Object.defineProperty(window.navigator, 'mediaDevices', {
       configurable: true,
       value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [] }) },
@@ -123,7 +135,20 @@ describe('LiveSessionRoute', () => {
     render(<LiveSessionRoute />);
     expect(screen.getByRole('heading', { name: 'Habla con Tino' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Iniciar conversación' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
+
+  it('clears auth and returns to login when closing the session', () => {
+    setDevAuth({
+      clientId: '200001',
+      accessToken: 'tok',
+      expiresAt: Date.now() + 60_000,
+    });
+    render(<LiveSessionRoute />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
+    expect(getDevAuth()).toBeNull();
+    expect(navigateMock).toHaveBeenCalledWith({ to: '/' });
   });
 
   it('starts a session through the advisor backend after the start action', async () => {
@@ -239,5 +264,6 @@ describe('LiveSessionRoute', () => {
     render(<LiveSessionRoute />);
     expect(screen.getByRole('heading', { name: 'Talk with Tino' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start conversation' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close session' })).toBeInTheDocument();
   });
 });

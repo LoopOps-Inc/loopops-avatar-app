@@ -123,6 +123,7 @@
     "mic_unavailable": "Micrófono no disponible: escribe tus mensajes.",
     "avatar": "Tino",
     "ended_by_server": "La sesión se cerró. Puedes iniciar otra.",
+    "close_session": "Cerrar sesión",
     "error_unknown": "Error desconocido",
     "expand": "Pantalla completa",
     "collapse": "Salir de pantalla completa",

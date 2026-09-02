@@ -7,10 +7,17 @@ type StartScreenProps = {
   error: string | null;
   endedByServer: boolean;
   onStart: () => void;
+  onCloseSession: () => void;
 };
 
-/** Pre-session CTA: start a live conversation with Tino. */
-export function StartScreen({ starting, error, endedByServer, onStart }: StartScreenProps) {
+/** Pre-session CTA: start a live conversation with Tino, or return to login. */
+export function StartScreen({
+  starting,
+  error,
+  endedByServer,
+  onStart,
+  onCloseSession,
+}: StartScreenProps) {
   const { t } = useTranslation();
 
   return (
@@ -49,6 +56,14 @@ export function StartScreen({ starting, error, endedByServer, onStart }: StartSc
               <ArrowRight className="text-advisor-submit-fg h-5 w-5" strokeWidth={2.5} />
             )}
           </span>
+        </button>
+        <button
+          type="button"
+          onClick={onCloseSession}
+          disabled={starting}
+          className="border-outline text-content rounded-cta bg-surface min-h-11 w-full cursor-pointer border px-6 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {t('live.close_session')}
         </button>
         {error && (
           <div

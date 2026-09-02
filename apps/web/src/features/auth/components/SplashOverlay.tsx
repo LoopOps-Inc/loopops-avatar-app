@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { TinoMark } from '@/features/avatar/components/TinoMark';
+import { actinverLogoUrl } from '@/config/avatar';
 
 const SPLASH_MS = 1500;
 
@@ -28,10 +28,10 @@ export function SplashOverlay({ skip = false }: SplashOverlayProps) {
   return (
     <div
       data-testid="auth-splash"
-      className="bg-filled-dark absolute inset-0 z-10 flex items-center justify-center"
+      className="bg-surface absolute inset-0 z-10 flex items-center justify-center"
       aria-hidden="true"
     >
-      <TinoMark className="text-advisor-submit-fg h-16 w-16" />
+      <img src={actinverLogoUrl} alt="" className="h-16 w-auto max-w-[70%] object-contain" />
     </div>
   );
 }
