@@ -44,13 +44,7 @@ const LIVEKIT_QUALITY_MAP: Record<string, ConnectionQuality> = {
 
 export function useLiveAvatarSession(
   avatarSession: AvatarSessionResponse,
-  {
-    voiceChat,
-    audioUnlockedRef,
-    onTranscriptFinal,
-    onCaption,
-    onUi,
-  }: UseLiveAvatarSessionOptions = {},
+  { audioUnlockedRef, onTranscriptFinal, onCaption, onUi }: UseLiveAvatarSessionOptions = {},
 ): UseLiveAvatarSessionResult {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const userStoppedRef = useRef(false);
