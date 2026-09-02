@@ -7,6 +7,8 @@ Client → server
   {"type":"audio_start","mime":"audio/webm;codecs=opus"}
   {"type":"utterance_end"}
   {"type":"client.barge_in","at":<epoch_ms>}
+  {"type":"client.ready","has_video":true,"has_audio":true}   after LiveKit tracks are subscribed
+  {"type":"client.speak","text":"..."}           chat-mode speech bridge (TTS + lip-sync)
   {"type":"client.background"} / {"type":"client.foreground"}
   {"type":"dev.transcript","text":"...","confidence":0.94}   dev-only (VOICE_PROVIDER=stub)
 
@@ -100,10 +102,7 @@ class AudioSocketHandler:
 
         session.notifier = lambda message: self._send(websocket, message)
         session.touch_client()
-        if not session.greeted:
-            # Cold start: the cached greeting costs no TTS latency (docs/01-architecture/03 §1).
-            session.greeted = True
-            await self._broker.greet(session)
+        log.info("voice.ws_connected", avatar_session_id=avatar_session_id)
 
         stt = self._stt_for_connection()
         utterance = _Utterance()
@@ -211,6 +210,20 @@ class AudioSocketHandler:
                 self._broker.background_grace(session.avatar_session_id)
             case "client.foreground":
                 self._broker.cancel_background_grace(session.avatar_session_id)
+            case "client.ready":
+                session.touch_client()
+                log.info(
+                    "voice.client_ready",
+                    avatar_session_id=session.avatar_session_id,
+                    has_video=bool(payload.get("has_video")),
+                    has_audio=bool(payload.get("has_audio")),
+                )
+                await self._maybe_greet(session)
+            case "client.speak":
+                text = str(payload.get("text", "")).strip()
+                if text:
+                    session.touch_client()
+                    await self._speak_caption(session, text)
             case "dev.transcript":
                 if self._deps.settings.voice.provider != "stub" or not isinstance(
                     stt, StubSpeechToText
@@ -238,6 +251,24 @@ class AudioSocketHandler:
                 self._transcribe(websocket, session, ctx, stt, utterance)
             )
         return utterance, stt_task
+
+    async def _maybe_greet(self, session: ActiveSession) -> None:
+        """Greet once the browser has subscribed to LiveKit A/V (avoids speaking into the void)."""
+        if session.greeted:
+            return
+        session.greeted = True
+        log.info("avatar.greeting", avatar_session_id=session.avatar_session_id)
+        await self._broker.greet(session)
+
+    async def _speak_caption(self, session: ActiveSession, text: str) -> None:
+        """Synthesize *text* and play it through the avatar (chat-mode speech bridge)."""
+        log.info(
+            "voice.client_speak",
+            avatar_session_id=session.avatar_session_id,
+            text_len=len(text),
+        )
+        pcm = b"".join([chunk async for chunk in self._deps.tts.synthesize_stream(text)])
+        await self._broker.speak_system(session, text, pcm, notify_caption=False)
 
     async def _barge_in(self, session: ActiveSession, utterance: _Utterance) -> None:
         get_metrics().barge_ins.add(1)

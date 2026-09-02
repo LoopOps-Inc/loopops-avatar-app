@@ -80,6 +80,34 @@ def test_voice_turn_over_websocket(client: TestClient, settings: Settings) -> No
         assert "livekit_agent_token" not in json.dumps(message)
 
 
+def test_client_speak_is_accepted(client: TestClient, settings: Settings) -> None:
+    _ack_all(client, settings)
+    session = create_session(client)
+    avatar = _start_avatar(client, session["thread_id"])
+    token = token_for(CLIENT)
+
+    with client.websocket_connect(f"{avatar['audio_ws_path']}?access_token={token}") as ws:
+        ws.send_text(json.dumps({"type": "client.ready", "has_video": True, "has_audio": True}))
+        greeting = json.loads(ws.receive_text())
+        assert greeting["type"] == "caption"
+        ws.send_text(json.dumps({"type": "client.speak", "text": "Tu portafolio va bien."}))
+        ws.send_text(json.dumps({"type": "client.foreground"}))
+
+
+def test_greeting_waits_for_client_ready(client: TestClient, settings: Settings) -> None:
+    _ack_all(client, settings)
+    session = create_session(client)
+    avatar = _start_avatar(client, session["thread_id"])
+    token = token_for(CLIENT)
+
+    with client.websocket_connect(f"{avatar['audio_ws_path']}?access_token={token}") as ws:
+        ws.send_text(json.dumps({"type": "client.foreground"}))
+        ws.send_text(json.dumps({"type": "client.ready", "has_video": True, "has_audio": True}))
+        greeting = json.loads(ws.receive_text())
+        assert greeting["type"] == "caption"
+        assert "Tino" in greeting["text"]
+
+
 def test_websocket_requires_owner(client: TestClient, settings: Settings) -> None:
     _ack_all(client, settings)
     session = create_session(client)
@@ -150,4 +178,4 @@ async def test_filler_bank_is_warm_and_rotates(deps: Dependencies) -> None:
     seen = {fillers.next_filler()[0] for _ in range(8)}
     assert len(seen) >= 4, "fillers rotate so they do not become a tic"
     text, pcm = await fillers.greeting("José")
-    assert "José" in text and pcm
+    assert "Tino" in text and pcm

@@ -57,6 +57,8 @@ docker compose up -d --build   # full stack: web on :8080 + agent on :8443
 docker compose logs -f web
 ```
 
+After changing auth env vars, recreate the agent and web-token containers so a fresh token is minted: `docker compose up -d --force-recreate agent web-token web`.
+
 Root scripts delegate to the `apps/web` workspace (`npm -w apps/web`). Run them from the repo root.
 
 Package manager: **npm**.

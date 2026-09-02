@@ -147,6 +147,7 @@ async def create_session(
     voice_settings = deps.settings.voice
     return SessionResponse(
         thread_id=thread.thread_id or thread_id_for(ctx.client_id, body.channel, salt),
+        thread_started_at=thread.created_at,
         capabilities=capabilities,
         disclosures_required=await disclosures_required(deps, ctx.client_id),
         client=SessionClient(

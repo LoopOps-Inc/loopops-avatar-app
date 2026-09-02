@@ -33,6 +33,7 @@ type SnapSheetProps = {
  * (Replaced a vaul drawer: its initial snap effect raced on mount and left
  * the sheet hidden at the CSS initial transform.)
  */
+const SHEET_CORNER_RADIUS_PX = 32;
 export function SnapSheet({
   snaps,
   activeIndex,
@@ -66,9 +67,9 @@ export function SnapSheet({
   }, []);
 
   const y = useMotionValue(0);
-  // The sheet is a full-height layer translated down by `y`: the exposed
-  // region above it is exactly `y` tall (0 at the full-screen snap).
-  const aboveHeight = useTransform(y, (value) => Math.max(0, value));
+  // Extend past the sheet top by the corner radius so video fills the curved
+  // cutouts in the sheet's rounded border (otherwise the frame bg shows through).
+  const aboveHeight = useTransform(y, (value) => Math.max(0, value + SHEET_CORNER_RADIUS_PX));
 
   // First measurement: start hidden below the fold, then slide in.
   useEffect(() => {
@@ -113,7 +114,7 @@ export function SnapSheet({
       {above && (
         <motion.div
           style={{ height: aboveHeight }}
-          className="absolute inset-x-0 top-0 overflow-hidden bg-black"
+          className="absolute -inset-x-8 top-0 overflow-hidden bg-black [&_video]:object-top"
         >
           {above}
         </motion.div>
