@@ -1,12 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import {
-  StyleSheet,
-  View,
-  Text,
-  ActivityIndicator,
-  PermissionsAndroid,
-  Platform,
-} from 'react-native';
+import { PermissionsAndroid, Platform, StyleSheet, View, Text, ActivityIndicator } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { theme } from '../styles/theme';
 
@@ -64,35 +57,10 @@ export const WebViewContainer: React.FC<WebViewContainerProps> = ({
 
   // Handle native Android permission requests on mount
   useEffect(() => {
-    const requestAndroidPermissions = async () => {
-      if (Platform.OS === 'android') {
-        try {
-          // Request mic permission upfront to ensure WebView doesn't experience race conditions
-          const granted = await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-            {
-              title: 'Permiso de Micrófono',
-              message:
-                'La aplicación requiere acceso a tu micrófono para poder interactuar por voz con el asesor virtual.',
-              buttonNeutral: 'Preguntar luego',
-              buttonNegative: 'Cancelar',
-              buttonPositive: 'Permitir',
-            },
-          );
-          if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-            console.log('Permiso de micrófono otorgado nativamente en Android.');
-          } else {
-            console.log('Permiso de micrófono denegado nativamente en Android.');
-          }
-        } catch (err) {
-          console.warn('Error al solicitar el permiso de micrófono nativo:', err);
-        } finally {
-          setHasPermissionChecked(true);
-        }
-      }
-    };
-
-    requestAndroidPermissions();
+    if (Platform.OS === 'android') {
+      PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO)
+        .finally(() => setHasPermissionChecked(true));
+    }
   }, []);
 
   // Public method to complete the NOM-151 signature and notify WebView
@@ -143,7 +111,6 @@ export const WebViewContainer: React.FC<WebViewContainerProps> = ({
         injectedJavaScript={injectedJavaScript}
         onMessage={handleMessage}
         mediaPlaybackRequiresUserAction={false}
-        androidCameraPermissionGrantType="grant"
         style={styles.webview}
         startInLoadingState={true}
         renderLoading={() => (
