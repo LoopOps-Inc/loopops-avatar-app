@@ -20,6 +20,7 @@ type DemoSession = {
   threadId: string;
   threadStartedAt: string;
   avatar: AvatarSessionResponse;
+  startedAt: number;
 };
 
 async function probeMic(): Promise<boolean> {
@@ -41,6 +42,7 @@ export function LiveSessionRoute() {
   const { t } = useTranslation();
   const { investors, selected, select, loading: investorsLoading } = useInvestors();
   const [demoSession, setDemoSession] = useState<DemoSession | null>(null);
+  const demoSessionRef = useRef<DemoSession | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [micUnavailable, setMicUnavailable] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -49,11 +51,42 @@ export function LiveSessionRoute() {
   const commandsRef = useRef<PanelCommands | null>(null);
   const audioUnlockedRef = useRef(false);
 
-  const handleEnded = useCallback((reason: 'user' | 'server' | 'error') => {
-    audioUnlockedRef.current = false;
-    setDemoSession(null);
-    setEndedByServer(reason === 'server');
+  const setSession = useCallback((session: DemoSession | null) => {
+    demoSessionRef.current = session;
+    setDemoSession(session);
   }, []);
+
+  const handleEnded = useCallback(
+    (reason: 'user' | 'server' | 'error') => {
+      const current = demoSessionRef.current;
+      if (reason === 'server' && current) {
+        const elapsedS = (Date.now() - current.startedAt) / 1000;
+        if (elapsedS >= current.avatar.max_session_duration_s - 10) {
+          avatarLog('session.renew', { elapsed_s: elapsedS });
+          void (async () => {
+            try {
+              const avatar = await createAvatarSession(current.threadId, 'portrait');
+              setSession({
+                threadId: current.threadId,
+                threadStartedAt: current.threadStartedAt,
+                avatar,
+                startedAt: Date.now(),
+              });
+            } catch {
+              audioUnlockedRef.current = false;
+              setSession(null);
+              setEndedByServer(true);
+            }
+          })();
+          return;
+        }
+      }
+      audioUnlockedRef.current = false;
+      setSession(null);
+      setEndedByServer(reason === 'server');
+    },
+    [setSession],
+  );
 
   const handleStart = useCallback(() => {
     audioUnlockedRef.current = true;
@@ -78,10 +111,11 @@ export function LiveSessionRoute() {
         await ackVoiceConsent();
         const avatar = await createAvatarSession(advisorSession.thread_id, 'portrait');
         setVoiceEnabled(micAvailable);
-        setDemoSession({
+        setSession({
           threadId: advisorSession.thread_id,
           threadStartedAt: advisorSession.thread_started_at,
           avatar,
+          startedAt: Date.now(),
         });
       } catch (err) {
         setError(err instanceof Error && err.message ? err.message : t('live.error_unknown'));
@@ -89,7 +123,7 @@ export function LiveSessionRoute() {
         setStarting(false);
       }
     })();
-  }, [t, selected]);
+  }, [t, selected, setSession]);
 
   const handleCommand = useCallback(
     (command: EmbedCommand) => {
@@ -125,7 +159,7 @@ export function LiveSessionRoute() {
         <div className="bg-surface-sub sm:border-outline relative h-dvh w-full overflow-hidden sm:my-auto sm:h-[min(853px,calc(100dvh-3rem))] sm:max-w-md sm:rounded-lg sm:border">
           {demoSession ? (
             <SessionPanel
-              key={demoSession.avatar.avatar_session_id}
+              key={demoSession.threadId}
               threadId={demoSession.threadId}
               threadStartedAt={demoSession.threadStartedAt}
               avatarSession={demoSession.avatar}

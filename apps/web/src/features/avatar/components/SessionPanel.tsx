@@ -149,14 +149,15 @@ export function SessionPanel({
     }
   }, [onEvent, advisor.messages]);
 
+  const endedKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    if (endReason) {
-      onEvent({ type: 'ended', payload: { reason: endReason } });
-      onEnded(endReason);
-    }
-    // onEnded is a stable callback owned by the route component.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [endReason, onEvent]);
+    if (!endReason) return;
+    const key = `${avatarSession.avatar_session_id}:${endReason}`;
+    if (endedKeyRef.current === key) return;
+    endedKeyRef.current = key;
+    onEvent({ type: 'ended', payload: { reason: endReason } });
+    onEnded(endReason);
+  }, [endReason, onEvent, avatarSession.avatar_session_id, onEnded]);
 
   const isPoorQuality = connectionQuality === 'BAD';
   const chatDayLabel = formatChatStartedAt(new Date(threadStartedAt).getTime(), locale);

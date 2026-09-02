@@ -84,13 +84,42 @@ describe('useAdvisorChat', () => {
     expect(result.current.isThinking).toBe(false);
   });
 
-  it('renders a fallback bubble when the turn stream fails', async () => {
+  it('shows and speaks the backend error message when a turn escalates without tokens', async () => {
     const service: AdvisorService = {
       sendTurn: async function* () {
-        yield { event: 'error', data: { code: 'ADVISOR_DOWN', message: 'down' } };
+        yield {
+          event: 'error',
+          data: {
+            code: 'NO_SUITABLE_PRODUCT',
+            message: 'Ninguno de los productos es congruente con tu perfil.',
+            escalate: true,
+          },
+        };
       },
     };
-    const { result } = renderAdvisor(service, { greet: false });
+    const { result, speak } = renderAdvisor(service, { greet: false });
+    act(() => result.current.send('¿Qué ETF me conviene?'));
+
+    await vi.waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+    });
+    expect(result.current.messages[1]).toMatchObject({
+      sender: 'avatar',
+      message: 'Ninguno de los productos es congruente con tu perfil.',
+    });
+    await vi.waitFor(() => {
+      expect(speak).toHaveBeenCalledTimes(1);
+    });
+    expect(speak.mock.calls[0][0]).toBe('Ninguno de los productos es congruente con tu perfil.');
+  });
+
+  it('renders a generic bubble and stays silent when the error has no message', async () => {
+    const service: AdvisorService = {
+      sendTurn: async function* () {
+        yield { event: 'error', data: { code: 'ADVISOR_DOWN', message: '' } };
+      },
+    };
+    const { result, speak } = renderAdvisor(service, { greet: false });
     act(() => result.current.send('hola'));
 
     await vi.waitFor(() => {
@@ -98,6 +127,7 @@ describe('useAdvisorChat', () => {
     });
     expect(result.current.messages[1]?.sender).toBe('avatar');
     expect(result.current.messages[1]?.message).toContain('ADVISOR_DOWN');
+    expect(speak).not.toHaveBeenCalled();
   });
 
   it('greets once when the session becomes enabled', async () => {

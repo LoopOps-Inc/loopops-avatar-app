@@ -65,6 +65,7 @@ export function useAdvisorChat({
       setIsThinking(true);
       voiceOpenRef.current = false;
       let speech = '';
+      let errorSpeech = '';
       try {
         for await (const event of stream) {
           if (disposedRef.current) return;
@@ -79,7 +80,12 @@ export function useAdvisorChat({
               return [...prev, { sender: 'avatar', message: text, timestamp: Date.now() }];
             });
           } else if (event.event === 'error') {
-            appendAvatarMessage(t('advisor.error_event', { code: event.data.code }));
+            const text =
+              event.data.message || t('advisor.error_event', { code: event.data.code });
+            appendAvatarMessage(text);
+            if (event.data.message && !speech.trim()) {
+              errorSpeech = event.data.message;
+            }
           } else {
             const component = toComponent(event);
             if (component) {
@@ -102,8 +108,9 @@ export function useAdvisorChat({
             }
           }
         }
-        if (!disposedRef.current && speech.trim()) {
-          speak(speech.trim());
+        const toSpeak = speech.trim() || errorSpeech.trim();
+        if (!disposedRef.current && toSpeak) {
+          speak(toSpeak);
         }
       } catch (err) {
         if (!disposedRef.current) {

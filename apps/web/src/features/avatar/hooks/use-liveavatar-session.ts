@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import type { AvatarSessionResponse, UIComponent } from '@loopops/contracts';
 import { useLivekitAvatarSession } from '@/features/advisor/hooks/use-livekit-avatar-session';
@@ -50,7 +50,11 @@ export function useLiveAvatarSession(
   const videoElementRef = videoRef as React.RefObject<HTMLVideoElement>;
   const userStoppedRef = useRef(false);
   const [isAvatarTalking, setIsAvatarTalking] = useState(false);
-  const [endReason, setEndReason] = useState<SessionEndReason | null>(null);
+  const [endedFor, setEndedFor] = useState<{ sessionId: string; reason: SessionEndReason } | null>(
+    null,
+  );
+  const sessionId = avatarSession.avatar_session_id;
+  const endReason = endedFor?.sessionId === sessionId ? endedFor.reason : null;
 
   const livekit = useLivekitAvatarSession({
     livekitUrl: avatarSession.livekit_url,
@@ -71,7 +75,7 @@ export function useLiveAvatarSession(
       onUi: (component) => onUi?.(component),
       onTurnComplete: () => setIsAvatarTalking(false),
       onClosed: () => {
-        if (!userStoppedRef.current) setEndReason('server');
+        if (!userStoppedRef.current) setEndedFor({ sessionId, reason: 'server' });
       },
     },
   });
@@ -94,9 +98,9 @@ export function useLiveAvatarSession(
 
   const stop = useCallback(async () => {
     userStoppedRef.current = true;
-    setEndReason('user');
+    setEndedFor({ sessionId, reason: 'user' });
     void stopAvatarSession(avatarSession.avatar_session_id, 'user').catch(() => {});
-  }, [avatarSession.avatar_session_id]);
+  }, [avatarSession.avatar_session_id, sessionId]);
 
   const attach = useCallback((element: HTMLMediaElement) => {
     videoRef.current = element as HTMLVideoElement;

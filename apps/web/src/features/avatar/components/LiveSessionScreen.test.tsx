@@ -219,6 +219,31 @@ describe('LiveSessionRoute', () => {
     expect(screen.getByRole('button', { name: 'Iniciar conversación' })).toBeInTheDocument();
   });
 
+  it('renews the avatar session in place when it closes at max duration', async () => {
+    vi.mocked(createAdvisorSession).mockResolvedValue(advisorSession);
+    vi.mocked(ackFirstTurnDisclosures).mockResolvedValue(undefined);
+    vi.mocked(ackVoiceConsent).mockResolvedValue(undefined);
+    vi.mocked(createAvatarSession).mockResolvedValue({
+      ...avatarSession,
+      max_session_duration_s: 0,
+    });
+    render(<LiveSessionRoute />);
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversación' }));
+    await screen.findByText('Conectando...');
+
+    act(() => {
+      stubState.set({ endReason: 'server' });
+    });
+
+    await vi.waitFor(() => {
+      expect(createAvatarSession).toHaveBeenCalledTimes(2);
+    });
+    expect(await screen.findByRole('region', { name: 'Consulta con Tino' })).toBeInTheDocument();
+    expect(
+      screen.queryByText('La sesión se cerró. Puedes iniciar otra.'),
+    ).not.toBeInTheDocument();
+  });
+
   it('toggles the sheet between chat and full screen snaps', async () => {
     await startSession();
     await screen.findByText('Conectando...');

@@ -1,6 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import type { InvestorSummary } from '@loopops/contracts';
-import { appEnv } from '@/config/env';
 import { useTranslation } from '@/i18n';
 import { listInvestors, mintDevToken } from '@/services/advisor-service';
 import { clearDevAuth, getDevAuth, setDevAuth } from '@/services/dev-auth';
@@ -32,8 +31,6 @@ export function InvestorPicker() {
       cancelled = true;
     };
   }, [locale, t]);
-
-  if (appEnv.isProd) return null;
 
   const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const clientId = event.target.value || null;
