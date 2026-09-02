@@ -1,8 +1,9 @@
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, Star } from 'lucide-react';
 import { actinverAvatar } from '@/config/avatar';
 import { useTranslation } from '@/i18n';
 
 type StartScreenProps = {
+  firstName: string | null;
   starting: boolean;
   error: string | null;
   endedByServer: boolean;
@@ -12,6 +13,7 @@ type StartScreenProps = {
 
 /** Pre-session CTA: start a live conversation with Tino, or return to login. */
 export function StartScreen({
+  firstName,
   starting,
   error,
   endedByServer,
@@ -23,7 +25,12 @@ export function StartScreen({
   return (
     <div className="bg-surface-sub flex h-full flex-col">
       <div className="flex-1" aria-hidden="true" />
-      <div className="px-safe pb-safe flex flex-col gap-3 p-4">
+      <div className="px-safe pb-safe flex flex-col justify-center gap-3 p-4">
+        {firstName && (
+          <p className="text-content font-heading text-center text-xl font-semibold">
+            ¡{t('live.welcome', { name: firstName })}!
+          </p>
+        )}
         <button
           type="button"
           onClick={onStart}
@@ -32,11 +39,13 @@ export function StartScreen({
           className="bg-filled-dark flex w-full cursor-pointer items-center gap-4 rounded-2xl p-4 text-left shadow-lg transition-opacity duration-200 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <div className="bg-outline h-14 w-14 shrink-0 overflow-hidden rounded-full">
-            <img
-              src={actinverAvatar.previewImageUrl}
-              alt=""
-              className="h-full w-full object-cover"
-            />
+            <div
+              className="bg-chat-agent flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-(--brand-gold) p-2"
+              aria-hidden="true"
+            >
+              <Star className="text-content h-4 w-4" />
+            </div>
+            |
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="font-heading text-lg font-semibold text-white">

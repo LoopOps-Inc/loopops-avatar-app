@@ -124,6 +124,7 @@
     "avatar": "Tino",
     "ended_by_server": "The session ended. You can start another.",
     "close_session": "Close session",
+    "welcome": "Hi, {{name}}",
     "error_unknown": "Unknown error",
     "expand": "Full screen",
     "collapse": "Exit full screen",
