@@ -12,7 +12,7 @@ import { setLocale } from '@/i18n';
 
 const stubState = vi.hoisted(() => {
   const state = {
-    sessionState: 'CONNECTING' as 'CONNECTING' | 'CONNECTED' | 'DISCONNECTED',
+    sessionState: 'INACTIVE' as 'INACTIVE' | 'CONNECTING' | 'CONNECTED' | 'DISCONNECTED',
     endReason: null as 'user' | 'server' | 'error' | null,
   };
   const listeners = new Set<() => void>();
@@ -98,7 +98,7 @@ async function startSession() {
 describe('LiveSessionRoute', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    stubState.set({ sessionState: 'CONNECTING', endReason: null });
+    stubState.set({ sessionState: 'INACTIVE', endReason: null });
     Object.defineProperty(window.navigator, 'mediaDevices', {
       configurable: true,
       value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [] }) },

@@ -143,9 +143,10 @@ export function useAdvisorChat({
 
   const appendCaption = useCallback((text: string) => {
     if (!text) return;
+    const continuesOpenTurn = voiceOpenRef.current;
     setMessages((prev) => {
       const last = prev[prev.length - 1];
-      if (voiceOpenRef.current && last && last.sender === 'avatar') {
+      if (continuesOpenTurn && last && last.sender === 'avatar') {
         return [...prev.slice(0, -1), { ...last, message: text }];
       }
       return [...prev, { sender: 'avatar', message: text, timestamp: Date.now() }];
@@ -154,9 +155,10 @@ export function useAdvisorChat({
   }, []);
 
   const appendUi = useCallback((component: UIComponent) => {
+    const continuesOpenTurn = voiceOpenRef.current;
     setMessages((prev) => {
       const last = prev[prev.length - 1];
-      if (voiceOpenRef.current && last && last.sender === 'avatar') {
+      if (continuesOpenTurn && last && last.sender === 'avatar') {
         const uiComponents = [...(last.uiComponents ?? []), component];
         return [...prev.slice(0, -1), { ...last, uiComponents }];
       }
