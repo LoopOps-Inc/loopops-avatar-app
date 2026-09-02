@@ -116,6 +116,6 @@ Remember avatar on/off and last input mode (chat vs voice) per session. Default:
 - **Never send user messages to HeyGen FULL mode** on the product path. `/demo` is for SDK testing only.
 - Voice mode must handle browser mic permissions (`getUserMedia` behind a user gesture). If installed-PWA mode is targeted, validate mic on iOS standalone PWAs first; Safari tabs work.
 - Do not block the UI while avatar video loads; show skeleton or last frame.
-- Stream tokens to the message list; send the final `speech` string to TTS. Do not stream raw tokens to the avatar.
+- Stream tokens to the message list. Send each complete sentence to TTS as it arrives so the avatar starts speaking before the rest of the turn is synthesised. Do not stream raw token fragments to the avatar.
 - Investment disclaimers appear below the composer in chat mode and as overlay when avatar is full-screen.
 - User-facing copy uses i18n keys under `advisor.*`.

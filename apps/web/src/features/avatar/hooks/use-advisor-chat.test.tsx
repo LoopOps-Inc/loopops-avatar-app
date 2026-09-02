@@ -147,6 +147,23 @@ describe('useAdvisorChat', () => {
     expect(result.current.messages).toHaveLength(1);
   });
 
+  it('speaks each complete sentence as tokens arrive instead of waiting for done', async () => {
+    const service = fakeService({
+      hola: [
+        { event: 'token', data: { text: 'Primera frase. ' } },
+        { event: 'token', data: { text: 'Segunda frase.' } },
+        { event: 'done', data: { turn_id: 't2', evidence_id: 'e2', service_type: 'advisory' } },
+      ],
+    });
+    const { result, speak } = renderAdvisor(service, { greet: false });
+    act(() => result.current.send('hola'));
+    await vi.waitFor(() => {
+      expect(speak).toHaveBeenCalledTimes(2);
+    });
+    expect(speak.mock.calls[0][0]).toBe('Primera frase.');
+    expect(speak.mock.calls[1][0]).toBe('Segunda frase.');
+  });
+
   it('ignores sends while a turn is in flight', async () => {
     let release: (() => void) | undefined;
     const gate = new Promise<void>((resolve) => {

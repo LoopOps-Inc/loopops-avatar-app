@@ -46,6 +46,7 @@ from actinver_agent.errors import ApiError
 from actinver_agent.observability.setup import get_metrics
 from actinver_agent.ports import SpeechToTextPort, Transcript
 from actinver_agent.voice.pipeline import VoiceTurnPipeline
+from actinver_agent.voice.segmentation import split_sentences
 from actinver_agent.voice.stub import StubSpeechToText
 
 log = structlog.get_logger(__name__)
@@ -270,22 +271,23 @@ class AudioSocketHandler:
         await self._broker.greet(session)
 
     async def _speak_caption(self, session: ActiveSession, text: str) -> None:
-        """Synthesize *text* and play it through the avatar (chat-mode speech bridge)."""
-        started = time.monotonic()
+        """Synthesize *text* per sentence so the first clip starts before the rest."""
         log.info(
             "voice.client_speak",
             avatar_session_id=session.avatar_session_id,
             text_len=len(text),
         )
-        pcm = b"".join([chunk async for chunk in self._deps.tts.synthesize_stream(sentence)])
-        log.info(
-            "voice.client_speak_synth",
-            avatar_session_id=session.avatar_session_id,
-            pcm_bytes=len(pcm),
-            text_len=len(sentence),
-            elapsed_ms=round((time.monotonic() - started) * 1000),
-        )
-        await self._broker.speak_system(session, sentence, pcm, notify_caption=False)
+        for sentence in split_sentences(text):
+            started = time.monotonic()
+            pcm = b"".join([chunk async for chunk in self._deps.tts.synthesize_stream(sentence)])
+            log.info(
+                "voice.client_speak_synth",
+                avatar_session_id=session.avatar_session_id,
+                pcm_bytes=len(pcm),
+                text_len=len(sentence),
+                elapsed_ms=round((time.monotonic() - started) * 1000),
+            )
+            await self._broker.speak_system(session, sentence, pcm, notify_caption=False)
 
     async def _barge_in(self, session: ActiveSession, utterance: _Utterance) -> None:
         get_metrics().barge_ins.add(1)
