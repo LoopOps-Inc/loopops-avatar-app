@@ -295,7 +295,7 @@ describe('investor switching', () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('/api/v1/auth/dev-token');
     expect(init.method).toBe('POST');
-    expect(JSON.parse(init.body)).toEqual({ client_id: '200001' });
+    expect(JSON.parse(init.body)).toEqual({ client_id: '200001', password: 'actinver123' });
   });
 
   it('sends the stored dev token as a bearer header on session calls', async () => {
