@@ -17,7 +17,7 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   beforeLoad: () => {
-    throw redirect({ to: '/advisor' });
+    throw redirect({ to: '/demo' });
   },
 });
 
@@ -30,7 +30,16 @@ const advisorRoute = createRoute({
   ),
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, advisorRoute]);
+const demoRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/demo',
+  component: lazyRouteComponent(
+    () => import('@/features/avatar/components/LiveSessionScreen'),
+    'LiveSessionRoute',
+  ),
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, advisorRoute, demoRoute]);
 
 export const router = createRouter({ routeTree, defaultPreload: 'intent' });
 

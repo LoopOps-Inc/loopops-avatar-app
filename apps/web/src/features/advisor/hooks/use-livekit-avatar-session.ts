@@ -2,7 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import type { UIComponent } from '@loopops/contracts';
 import { UIComponentSchema } from '@loopops/contracts';
-import { Room, RoomEvent, type RemoteTrack, type RemoteVideoTrack } from 'livekit-client';
+import {
+  ConnectionQuality,
+  Room,
+  RoomEvent,
+  type RemoteTrack,
+  type RemoteVideoTrack,
+} from 'livekit-client';
 import { appEnv } from '@/config/env';
 
 export type AvatarConnectionStatus =
@@ -58,6 +64,9 @@ export function useLivekitAvatarSession({
   handlers,
 }: LivekitAvatarSessionOptions) {
   const [status, setStatus] = useState<AvatarConnectionStatus>('connecting');
+  const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>(
+    ConnectionQuality.Unknown,
+  );
   const [micActive, setMicActive] = useState(false);
   const [micError, setMicError] = useState(false);
 
@@ -125,6 +134,10 @@ export function useLivekitAvatarSession({
     stopMic();
     sendJson({ type: 'client.barge_in' });
   }, [sendJson, stopMic]);
+
+  const sendKeepAlive = useCallback(() => {
+    sendJson({ type: 'client.foreground' });
+  }, [sendJson]);
 
   useEffect(() => {
     if (!videoTrackRef.current || !videoRef.current) return;
@@ -205,6 +218,9 @@ export function useLivekitAvatarSession({
       .on(RoomEvent.Reconnected, () => {
         if (!disposed) setStatus('connected');
       })
+      .on(RoomEvent.ConnectionQualityChanged, (quality: ConnectionQuality) => {
+        if (!disposed) setConnectionQuality(quality);
+      })
       .on(RoomEvent.Disconnected, () => {
         if (disposed) return;
         setStatus('disconnected');
@@ -265,10 +281,12 @@ export function useLivekitAvatarSession({
   return {
     status,
     isConnected: status === 'connected',
+    connectionQuality,
     micActive,
     micError,
     startMic,
     stopMic,
     sendBargeIn,
+    sendKeepAlive,
   };
 }

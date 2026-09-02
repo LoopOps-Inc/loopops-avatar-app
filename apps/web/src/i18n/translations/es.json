@@ -1,7 +1,8 @@
 {
   "nav": {
     "label": "Navegación principal",
-    "advisor": "Tino"
+    "advisor": "Tino",
+    "demo": "Demo avatar"
   },
   "advisor": {
     "title": "Tino",
@@ -46,5 +47,38 @@
     "citations": "Fuentes",
     "as_of_label": "Corte",
     "today": "hoy"
+  },
+  "live": {
+    "title": "Consulta con Tino",
+    "subtitle": "Tu asesor de IA financiero",
+    "greeting": "Hola, soy Tino. Pregúntame sobre tu portafolio o en qué invertir.",
+    "suggestion_1": "ETFs de deuda de bajo riesgo",
+    "suggestion_2": "¿Cómo empiezo a invertir?",
+    "suggestion_3": "Revisar mi portafolio",
+    "day_today": "Hoy",
+    "day_yesterday": "Ayer",
+    "start": "Iniciar conversación",
+    "starting": "Iniciando...",
+    "connecting": "Conectando...",
+    "transcript": "Transcripción",
+    "input_label": "Mensaje para el avatar",
+    "input_placeholder": "Escribe un mensaje",
+    "send": "Enviar",
+    "end": "Terminar",
+    "interrupt": "Interrumpir",
+    "avatar_talking": "Avatar hablando",
+    "listening": "Escuchando...",
+    "state_connected": "En vivo",
+    "state_disconnecting": "Cerrando",
+    "state_offline": "Sin conexión",
+    "quality_poor": "Señal débil",
+    "mic_mute": "Silenciar micro",
+    "mic_unmute": "Activar micro",
+    "mic_unavailable": "Micrófono no disponible: escribe tus mensajes.",
+    "avatar": "Tino",
+    "ended_by_server": "La sesión se cerró. Puedes iniciar otra.",
+    "error_unknown": "Error desconocido",
+    "expand": "Pantalla completa",
+    "collapse": "Salir de pantalla completa"
   }
 }

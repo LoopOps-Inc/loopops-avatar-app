@@ -1,7 +1,8 @@
 {
   "nav": {
     "label": "Main navigation",
-    "advisor": "Tino"
+    "advisor": "Tino",
+    "demo": "Avatar demo"
   },
   "advisor": {
     "title": "Tino",
@@ -46,5 +47,38 @@
     "citations": "Sources",
     "as_of_label": "As of",
     "today": "today"
+  },
+  "live": {
+    "title": "Talk with Tino",
+    "subtitle": "Your AI financial advisor",
+    "greeting": "Hi, I'm Tino. Ask me about your portfolio or where to invest.",
+    "suggestion_1": "Low-risk debt ETFs",
+    "suggestion_2": "How do I start investing?",
+    "suggestion_3": "Review my portfolio",
+    "day_today": "Today",
+    "day_yesterday": "Yesterday",
+    "start": "Start conversation",
+    "starting": "Starting...",
+    "connecting": "Connecting...",
+    "transcript": "Transcript",
+    "input_label": "Message for the avatar",
+    "input_placeholder": "Type a message",
+    "send": "Send",
+    "end": "End",
+    "interrupt": "Interrupt",
+    "avatar_talking": "Avatar speaking",
+    "listening": "Listening...",
+    "state_connected": "Live",
+    "state_disconnecting": "Ending",
+    "state_offline": "Offline",
+    "quality_poor": "Weak signal",
+    "mic_mute": "Mute mic",
+    "mic_unmute": "Turn on mic",
+    "mic_unavailable": "Microphone unavailable: type your messages.",
+    "avatar": "Tino",
+    "ended_by_server": "The session ended. You can start another.",
+    "error_unknown": "Unknown error",
+    "expand": "Full screen",
+    "collapse": "Exit full screen"
   }
 }
