@@ -9,7 +9,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
-from actinver_agent.api.schemas import StepUpChallengeRequest, StepUpChallengeResponse
+from actinver_agent.api.schemas import (
+    DevTokenRequest,
+    DevTokenResponse,
+    StepUpChallengeRequest,
+    StepUpChallengeResponse,
+)
 from actinver_agent.auth.context import RequestContext
 from actinver_agent.auth.dependencies import (
     IdempotencyGuard,
@@ -17,11 +22,47 @@ from actinver_agent.auth.dependencies import (
     idempotency_key,
     require_client,
 )
-from actinver_agent.auth.devkeys import amount_hash
+from actinver_agent.auth.devkeys import amount_hash, mint_dev_access_token
 from actinver_agent.deps import Dependencies
 from actinver_agent.errors import api_error
 
 router = APIRouter(prefix="/v1", tags=["auth"])
+
+
+@router.post(
+    "/auth/dev-token",
+    response_model=DevTokenResponse,
+    summary="Mint a dev access token for testing and frontend investor switcher",
+    description="Development-only token generator for frontend investor switching without CLI.",
+)
+async def mint_dev_token(
+    body: DevTokenRequest,
+    deps: Dependencies = Depends(get_deps),
+) -> DevTokenResponse:
+    key: str | None = None
+    if deps.settings.auth.dev_signing_key_ref:
+        try:
+            key = await deps.secrets.resolve(deps.settings.auth.dev_signing_key_ref)
+        except Exception:
+            pass
+    if not key:
+        import os
+
+        key = os.environ.get("DEV_SIGNING_KEY", "test-dev-signing-key-32-bytes-long!")
+
+    token = mint_dev_access_token(
+        key,
+        body.client_id,
+        roles=body.roles,
+        ttl_s=body.ttl_s,
+        issuer=deps.settings.auth.issuer,
+        audience=deps.settings.auth.audience,
+    )
+    return DevTokenResponse(
+        access_token=token,
+        client_id=body.client_id,
+        expires_in=body.ttl_s,
+    )
 
 
 @router.post(

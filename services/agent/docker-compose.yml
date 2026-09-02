@@ -72,6 +72,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./ops/sql/00-roles.sql:/docker-entrypoint-initdb.d/00-roles.sql:ro
+      - ./ops/sql/01-investmentoffice.sql:/docker-entrypoint-initdb.d/01-investmentoffice.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d actinver_agent"]
       interval: 5s
@@ -148,6 +149,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      floci-init:
+        condition: service_completed_successfully
     restart: "no"
 
   # ── Fail-closed controls (separate processes, separate key material) ────────
