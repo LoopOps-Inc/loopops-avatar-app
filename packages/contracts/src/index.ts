@@ -31,7 +31,7 @@ export const SessionResponseSchema = z.object({
   client: z.object({
     first_name: z.string(),
     risk_category: z.string(),
-    profile_expires_at: z.string().optional(),
+    profile_expires_at: z.string().nullish(),
     register: z.enum(['tu', 'usted']).optional(),
   }),
   mode_defaults: z

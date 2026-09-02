@@ -34,3 +34,6 @@ yarn-error.log*
 
 # temporary files
 *.atl
+
+# LoopOps data (generated)
+.loopops/
