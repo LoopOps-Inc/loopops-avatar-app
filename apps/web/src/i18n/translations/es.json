@@ -79,6 +79,10 @@
     "ended_by_server": "La sesión se cerró. Puedes iniciar otra.",
     "error_unknown": "Error desconocido",
     "expand": "Pantalla completa",
-    "collapse": "Salir de pantalla completa"
+    "collapse": "Salir de pantalla completa",
+    "investor_label": "Actuar como",
+    "investor_default": "Cliente demo",
+    "investor_load_error": "No se pudo cargar los clientes",
+    "investor_switch_error": "No se pudo cambiar de cliente"
   }
 }
