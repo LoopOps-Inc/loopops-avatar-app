@@ -38,13 +38,22 @@ type LivekitAvatarSessionOptions = {
   audioUnlockedRef?: RefObject<boolean>;
 };
 
-export function buildAudioWsUrl(audioWsPath: string): string {
+export function buildAudioWsUrl(
+  audioWsPath: string,
+  accessToken: string | null | undefined = getDevAuth()?.accessToken,
+): string {
   const base = appEnv.advisorApiBase;
-  const root = /^https?:\/\//i.test(base)
-    ? `${base.replace(/\/$/, '').replace(/^http/i, 'ws')}${audioWsPath}`
-    : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}${base.startsWith('/') ? base.replace(/\/$/, '') : `/${base.replace(/\/$/, '')}`}${audioWsPath}`;
-  const auth = getDevAuth();
-  return auth ? `${root}?access_token=${encodeURIComponent(auth.accessToken)}` : root;
+  let url: string;
+  if (/^https?:\/\//i.test(base)) {
+    url = `${base.replace(/\/$/, '').replace(/^http/i, 'ws')}${audioWsPath}`;
+  } else {
+    const prefix = base.startsWith('/') ? base.replace(/\/$/, '') : `/${base.replace(/\/$/, '')}`;
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    url = `${protocol}://${window.location.host}${prefix}${audioWsPath}`;
+  }
+  if (!accessToken) return url;
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}access_token=${encodeURIComponent(accessToken)}`;
 }
 
 function pickRecorderMime(): string {

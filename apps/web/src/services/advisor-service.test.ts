@@ -244,13 +244,23 @@ describe('investor switching', () => {
       numero_cliente_unico: 200001,
       perfil_riesgo: 'Agresivo',
     });
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/config/investors');
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/config/investors',
+      expect.objectContaining({ headers: {} }),
+    );
   });
 
   it('mints a dev token for the selected client_id', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({ access_token: 'tok', client_id: '200001', token_type: 'Bearer', expires_in: 900 }),
-    );
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({
+          access_token: 'tok',
+          client_id: '200001',
+          token_type: 'Bearer',
+          expires_in: 900,
+        }),
+      );
     vi.stubGlobal('fetch', fetchMock);
 
     const token = await mintDevToken('200001');

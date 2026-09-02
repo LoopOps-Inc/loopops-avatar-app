@@ -80,9 +80,11 @@
     "error_unknown": "Unknown error",
     "expand": "Full screen",
     "collapse": "Exit full screen",
-    "investor_label": "Act as",
+    "investor_label": "Investor",
     "investor_default": "Demo client",
     "investor_load_error": "Could not load clients",
-    "investor_switch_error": "Could not switch client"
+    "investor_switch_error": "Could not switch client",
+    "investor_loading": "Loading investors...",
+    "investor_option": "{{name}}, {{risk}}"
   }
 }

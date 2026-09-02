@@ -8,6 +8,7 @@ import {
   createAdvisorSession,
   createAvatarSession,
   listInvestors,
+  mintDevToken,
 } from '@/services/advisor-service';
 import { setLocale } from '@/i18n';
 
@@ -44,6 +45,7 @@ vi.mock('@/services/advisor-service', async (importOriginal) => {
     stopAvatarSession: vi.fn(),
     sendAdvisorMessage: vi.fn(),
     listInvestors: vi.fn(),
+    mintDevToken: vi.fn(),
   };
 });
 
@@ -91,12 +93,32 @@ const avatarSession = {
   audio_ws_path: '/ws/avatar',
 } as AvatarSessionResponse;
 
+const investorFixture = {
+  id_cliente_pk: 1,
+  numero_cliente_unico: 200001,
+  nombre_completo: 'Mariano Gonzales Santiago',
+  rfc: 'DAXI800214FE8',
+  correo_electronico: 'mariano.gonzales@gmail.com',
+  perfil_riesgo: 'Agresivo',
+  total_contratos: 4,
+};
+
+const secondInvestor = {
+  ...investorFixture,
+  id_cliente_pk: 2,
+  numero_cliente_unico: 200002,
+  nombre_completo: 'Marisol Farías Trejo',
+  rfc: 'DUCS581214R21',
+  perfil_riesgo: 'Agresivo',
+};
+
 async function startSession() {
   vi.mocked(createAdvisorSession).mockResolvedValue(advisorSession);
   vi.mocked(ackFirstTurnDisclosures).mockResolvedValue(undefined);
   vi.mocked(ackVoiceConsent).mockResolvedValue(undefined);
   vi.mocked(createAvatarSession).mockResolvedValue(avatarSession);
   render(<LiveSessionRoute />);
+  await screen.findByRole('combobox', { name: 'Inversionista' });
   fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversación' }));
 }
 
@@ -110,13 +132,24 @@ describe('LiveSessionRoute', () => {
       value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [] }) },
     });
     vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(800);
+    sessionStorage.clear();
     setLocale('es');
+    vi.mocked(listInvestors).mockResolvedValue({
+      investors: [investorFixture, secondInvestor],
+      total: 2,
+    });
+    vi.mocked(mintDevToken).mockResolvedValue({
+      access_token: 'minted',
+      client_id: '200001',
+      expires_in: 900,
+    });
   });
 
-  it('renders the welcome screen with a single start action', () => {
+  it('renders the welcome screen with an investor picker and start action', async () => {
     render(<LiveSessionRoute />);
     expect(screen.getByRole('heading', { name: 'Habla con Tino' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Iniciar conversación' })).toBeInTheDocument();
+    expect(await screen.findByRole('combobox', { name: 'Inversionista' })).toBeInTheDocument();
   });
 
   it('starts a session through the advisor backend after the start action', async () => {
@@ -125,9 +158,23 @@ describe('LiveSessionRoute', () => {
     expect(await screen.findByRole('region', { name: 'Consulta con Tino' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Terminar' })).toBeInTheDocument();
     expect(createAdvisorSession).toHaveBeenCalledTimes(1);
+    expect(mintDevToken).toHaveBeenCalledWith('200001');
     expect(ackFirstTurnDisclosures).toHaveBeenCalledTimes(1);
     expect(ackVoiceConsent).toHaveBeenCalledTimes(1);
     expect(createAvatarSession).toHaveBeenCalledWith('thread-1', 'portrait');
+  });
+
+  it('mints a token for the investor chosen in the picker', async () => {
+    vi.mocked(createAdvisorSession).mockResolvedValue(advisorSession);
+    vi.mocked(ackFirstTurnDisclosures).mockResolvedValue(undefined);
+    vi.mocked(ackVoiceConsent).mockResolvedValue(undefined);
+    vi.mocked(createAvatarSession).mockResolvedValue(avatarSession);
+    render(<LiveSessionRoute />);
+    const picker = await screen.findByRole('combobox', { name: 'Inversionista' });
+    fireEvent.change(picker, { target: { value: '200002' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversación' }));
+    await screen.findByText('Conectando...');
+    expect(mintDevToken).toHaveBeenCalledWith('200002');
   });
 
   it('shows a compact loading state while the live session connects', async () => {
@@ -140,6 +187,7 @@ describe('LiveSessionRoute', () => {
   it('shows the error message when the session creation fails', async () => {
     vi.mocked(createAdvisorSession).mockRejectedValue(new Error('boom'));
     render(<LiveSessionRoute />);
+    await screen.findByRole('combobox', { name: 'Inversionista' });
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversación' }));
     expect(await screen.findByText('boom')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Iniciar conversación' })).toBeInTheDocument();

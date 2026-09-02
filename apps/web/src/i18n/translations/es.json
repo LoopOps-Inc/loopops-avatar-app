@@ -80,9 +80,11 @@
     "error_unknown": "Error desconocido",
     "expand": "Pantalla completa",
     "collapse": "Salir de pantalla completa",
-    "investor_label": "Actuar como",
+    "investor_label": "Inversionista",
     "investor_default": "Cliente demo",
     "investor_load_error": "No se pudo cargar los clientes",
-    "investor_switch_error": "No se pudo cambiar de cliente"
+    "investor_switch_error": "No se pudo cambiar de cliente",
+    "investor_loading": "Cargando inversionistas...",
+    "investor_option": "{{name}}, {{risk}}"
   }
 }

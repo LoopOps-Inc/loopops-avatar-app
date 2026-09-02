@@ -1,0 +1,9 @@
+map $http_authorization $api_authorization {
+    ""      "Bearer ${AGENT_DEV_TOKEN}";
+    default $http_authorization;
+}
+
+map $arg_access_token $audio_query {
+    ""      "access_token=${AGENT_DEV_TOKEN}";
+    default $args;
+}

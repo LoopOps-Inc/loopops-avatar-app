@@ -46,11 +46,9 @@ describe('InvestorPicker', () => {
 
     render(<InvestorPicker />);
 
-    const select = await screen.findByLabelText('Actuar como');
+    const select = await screen.findByLabelText('Inversionista');
     expect(select).toBeInTheDocument();
-    expect(
-      screen.getByText('200001 · Mariano Gonzales Santiago · Agresivo'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('200001 · Mariano Gonzales Santiago · Agresivo')).toBeInTheDocument();
     expect(screen.getByText('200002 · Marisol Farías Trejo · Agresivo')).toBeInTheDocument();
   });
 
@@ -64,7 +62,9 @@ describe('InvestorPicker', () => {
     });
 
     render(<InvestorPicker />);
-    fireEvent.change(await screen.findByLabelText('Actuar como'), { target: { value: '200001' } });
+    fireEvent.change(await screen.findByLabelText('Inversionista'), {
+      target: { value: '200001' },
+    });
 
     await waitFor(() => expect(mintDevToken).toHaveBeenCalledWith('200001'));
     await waitFor(() => expect(getDevAuth()?.accessToken).toBe('tok'));
@@ -81,7 +81,7 @@ describe('InvestorPicker', () => {
     });
 
     render(<InvestorPicker />);
-    const select = await screen.findByLabelText('Actuar como');
+    const select = await screen.findByLabelText('Inversionista');
     fireEvent.change(select, { target: { value: '200001' } });
     await waitFor(() => expect(getDevAuth()).not.toBeNull());
 
@@ -103,7 +103,7 @@ describe('InvestorPicker', () => {
       .mockRejectedValueOnce(new Error('mint failed'));
 
     render(<InvestorPicker />);
-    const select = await screen.findByLabelText('Actuar como');
+    const select = await screen.findByLabelText('Inversionista');
     fireEvent.change(select, { target: { value: '200001' } });
     await waitFor(() => expect(getDevAuth()?.accessToken).toBe('tok'));
 

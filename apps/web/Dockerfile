@@ -12,6 +12,6 @@ RUN npm run build -w apps/web
 
 FROM nginx:1.27-alpine
 COPY --from=build /repo/apps/web/dist /usr/share/nginx/html
-COPY apps/web/nginx/default.conf.template /etc/nginx/templates/default.conf.template
+COPY apps/web/nginx/ /etc/nginx/templates/
 COPY apps/web/docker-entrypoint.sh /docker-entrypoint.d/15-read-token.envsh
 EXPOSE 8080

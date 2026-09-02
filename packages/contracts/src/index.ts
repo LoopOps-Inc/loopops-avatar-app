@@ -240,8 +240,8 @@ export const InvestorSummarySchema = z.object({
   numero_cliente_unico: z.number(),
   nombre_completo: z.string(),
   rfc: z.string(),
-  correo_electronico: z.string().nullable().optional(),
-  perfil_riesgo: z.string().nullable().optional(),
+  correo_electronico: z.string().nullish(),
+  perfil_riesgo: z.string().nullish(),
   total_contratos: z.number().optional(),
 });
 export type InvestorSummary = z.infer<typeof InvestorSummarySchema>;

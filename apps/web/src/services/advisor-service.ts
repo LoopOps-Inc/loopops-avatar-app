@@ -194,7 +194,9 @@ export async function ackVoiceConsent(): Promise<void> {
 }
 
 export async function getClientConfig(): Promise<ClientConfigResponse> {
-  const res = await fetch(`${appEnv.advisorApiBase}/v1/config`);
+  const res = await fetch(`${appEnv.advisorApiBase}/v1/config`, {
+    headers: { ...authHeaders() },
+  });
   if (!res.ok) {
     await throwProblem(res);
   }
@@ -203,7 +205,9 @@ export async function getClientConfig(): Promise<ClientConfigResponse> {
 }
 
 export async function listInvestors(): Promise<InvestorsListResponse> {
-  const res = await fetch(`${appEnv.advisorApiBase}/v1/config/investors`);
+  const res = await fetch(`${appEnv.advisorApiBase}/v1/config/investors`, {
+    headers: { ...authHeaders() },
+  });
   if (!res.ok) {
     await throwProblem(res);
   }
@@ -231,7 +235,9 @@ const AvatarPreflightResponseSchema = z.object({
 });
 
 export async function avatarPreflight(): Promise<z.infer<typeof AvatarPreflightResponseSchema>> {
-  const res = await fetch(`${appEnv.advisorApiBase}/v1/avatar/preflight`);
+  const res = await fetch(`${appEnv.advisorApiBase}/v1/avatar/preflight`, {
+    headers: { ...authHeaders() },
+  });
   if (!res.ok) {
     await throwProblem(res);
   }
