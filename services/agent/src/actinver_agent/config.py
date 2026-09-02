@@ -182,6 +182,9 @@ class LimitsSettings(BaseSettings):
     step_up_challenge_ttl_s: int = 120
     idempotency_ttl_s: int = 86_400
     thread_history_page_size: int = 50
+    #: Beyond this, a figure on screen is labelled with its valuation date
+    #: instead of being narrated as if it were current.
+    stale_valuation_days: int = 45
 
 
 class ServiceEndpoints(BaseSettings):
@@ -251,7 +254,10 @@ class Settings(BaseSettings):
     #: ``postgres`` for the LangGraph checkpointer; ``memory`` for unit tests.
     checkpointer_provider: Literal["postgres", "memory"] = "postgres"
 
-    core_provider: Literal["synthetic", "http"] = "synthetic"
+    #: ``sql`` serves client data from the seeded InvestmentOffice dataset and
+    #: delegates the product catalogue and committee limits to the synthetic
+    #: core, which is local-only. ``http`` is the real core.
+    core_provider: Literal["synthetic", "http", "sql"] = "synthetic"
     core_api_base_url: str = "https://core.internal.actinver.local"
     core_api_mtls_cert_path: str = "/etc/certs/agent.crt"
     core_api_mtls_key_path: str = "/etc/certs/agent.key"
@@ -313,8 +319,8 @@ class Settings(BaseSettings):
             problems.append("memory cache/checkpointer are test-only")
         if self.environment is Environment.PROD and self.object_store.lock_mode != "COMPLIANCE":
             problems.append("OBJECT_STORE_LOCK_MODE must be COMPLIANCE in prod (ADR-0012)")
-        if self.environment is Environment.PROD and self.core_provider == "synthetic":
-            problems.append("CORE_PROVIDER=synthetic is not allowed in prod")
+        if self.environment is Environment.PROD and self.core_provider in {"synthetic", "sql"}:
+            problems.append(f"CORE_PROVIDER={self.core_provider} is not allowed in prod")
         if problems:
             raise RuntimeError("Invalid configuration posture: " + "; ".join(problems))
 

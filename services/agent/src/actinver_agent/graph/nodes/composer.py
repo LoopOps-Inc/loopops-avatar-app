@@ -8,6 +8,7 @@ escalation on every refusal (control DP-07).
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -71,10 +72,48 @@ _PROVENANCE_EXEMPT: frozenset[str] = frozenset(
     }
 )
 
+STALE_VALUATION_ES = (
+    "Las cifras de tu portafolio están valuadas al {fecha}; podrían no reflejar tu posición actual."
+)
+
+
+def _stale_valuation_warning(
+    ui: list[UIComponent], *, today: datetime, max_age_days: int
+) -> UIComponent | None:
+    """Name the oldest valuation on screen when it is no longer current.
+
+    ``UIComponent.as_of`` exists so staleness can be rendered. When components
+    carry different cut-offs (trap T2 of the InvestmentOffice schema: balances
+    and positions are valued on different days) the client must be told about
+    the OLDEST figure, which is the one that could mislead.
+    """
+    # Tool results carry naive datetimes; ``now`` is aware. Comparing them
+    # raises, and a raise here fails the whole turn.
+    dates = [
+        c.as_of if c.as_of.tzinfo is not None else c.as_of.replace(tzinfo=UTC)
+        for c in ui
+        if c.as_of is not None
+    ]
+    if not dates:
+        return None
+    oldest = min(dates)
+    if (today - oldest).days <= max_age_days:
+        return None
+    return UIComponent(
+        type="warning_banner",
+        payload={
+            "severity": "warning",
+            "message": STALE_VALUATION_ES.format(fecha=oldest.date().isoformat()),
+        },
+        as_of=oldest,
+        source="system:valuation_date",
+    )
+
+
 ESCALATION_CTA_ES = "Hablar con mi asesor"
 
 
-async def response_composer(state: AdvisorState, deps: Dependencies) -> dict[str, Any]:  # noqa: ARG001
+async def response_composer(state: AdvisorState, deps: Dependencies) -> dict[str, Any]:
     with node_span("response_composer", turn_id=state.get("turn_id")):
         if (error := state.get("error")) is not None:
             get_metrics().escalations.add(1, {"reason": error.code})
@@ -192,6 +231,16 @@ async def response_composer(state: AdvisorState, deps: Dependencies) -> dict[str
                     source="tool:citations",
                 )
             )
+
+        if (
+            stale := _stale_valuation_warning(
+                ui,
+                today=datetime.now(UTC),
+                max_age_days=deps.settings.limits.stale_valuation_days,
+            )
+        ) is not None:
+            log.info("composer.stale_valuation", as_of=str(stale.as_of))
+            ui.append(stale)
 
         if state.get("degraded_from") is not None:
             ui.append(_escalation_offer("DEGRADED_ADVISORY"))
