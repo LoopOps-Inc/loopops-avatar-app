@@ -354,7 +354,7 @@ class AvatarControlChannel:
                         elif self._state in (SessionState.CLOSED, SessionState.CLOSING):
                             self._ready.clear()
                         log.info("avatar.state", state=str(self._state))
-                    case "agent.speak_started":
+                    case "agent.speak_started" | "agent.audio_buffer_appended" | "agent.audio_buffer_committed":
                         self._avatar_state = AvatarState.SPEAKING
                         self._speak_started_event.set()
                         self._pending_started.pop(str(event.get("event_id", "")), None)
@@ -362,7 +362,7 @@ class AvatarControlChannel:
                             self._first_frame_ms = (
                                 time.perf_counter() - self._first_speak_at
                             ) * 1000
-                    case "agent.speak_ended":
+                    case "agent.speak_ended" | "agent.idle_started":
                         self._avatar_state = AvatarState.IDLE
                     case _:
                         log.debug("avatar.unhandled_event", type=event.get("type"))
