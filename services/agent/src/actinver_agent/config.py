@@ -123,7 +123,7 @@ class VoiceSettings(BaseSettings):
     stt_model: str = "latest_long"
     stt_min_confidence: float = 0.60
     stt_sample_rate_hz: int = 16_000
-    gemini_stt_model: str = "gemini-2.5-flash-lite"
+    gemini_stt_model: str = "gemini-3.5-flash-lite"
     tts_voice_name: str = "es-MX-Neural2-A"
     gemini_tts_voice: str = "Puck"
     tts_speaking_rate: float = 1.0

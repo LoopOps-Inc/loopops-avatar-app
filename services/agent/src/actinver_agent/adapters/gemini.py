@@ -427,7 +427,6 @@ class GeminiSpeechToText:
                     config=types.GenerateContentConfig(
                         temperature=0.0,
                         max_output_tokens=1024,
-                        thinking_config=_thinking_config(self._model),
                         http_options=types.HttpOptions(timeout=config_timeout_ms),
                     ),
                 )
