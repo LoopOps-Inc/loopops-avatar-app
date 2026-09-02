@@ -15,5 +15,4 @@ export type AdvisorStreamEvent =
 
 export interface AdvisorService {
   sendTurn(message: string): AsyncIterable<AdvisorStreamEvent>;
-  sendGreeting?(): AsyncIterable<AdvisorStreamEvent>;
 }

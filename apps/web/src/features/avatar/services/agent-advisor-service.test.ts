@@ -63,18 +63,4 @@ describe('createAgentAdvisorService', () => {
     await expect(consume()).rejects.toThrow('HTTP_503');
     expect(events).toHaveLength(0);
   });
-
-  it('greets with a single static localized message', async () => {
-    const service = createAgentAdvisorService('thread-1');
-    const events: AdvisorStreamEvent[] = [];
-    for await (const event of service.sendGreeting!()) {
-      events.push(event);
-    }
-    expect(events).toHaveLength(1);
-    const [first] = events;
-    expect(first?.event).toBe('token');
-    if (first?.event === 'token') {
-      expect(first.data.text.length).toBeGreaterThan(0);
-    }
-  });
 });

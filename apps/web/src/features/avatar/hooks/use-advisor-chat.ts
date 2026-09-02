@@ -7,9 +7,7 @@ import { createSpeechSplitter } from '../lib/split-speech';
 
 type UseAdvisorChatOptions = {
   speak: (text: string) => void;
-  enabled: boolean;
   service?: AdvisorService;
-  greet?: boolean;
 };
 
 type UseAdvisorChatResult = {
@@ -30,23 +28,12 @@ function toComponent(event: AdvisorStreamEvent): UIComponent | null {
   return null;
 }
 
-export function useAdvisorChat({
-  speak,
-  enabled,
-  service,
-  greet = true,
-}: UseAdvisorChatOptions): UseAdvisorChatResult {
+export function useAdvisorChat({ speak, service }: UseAdvisorChatOptions): UseAdvisorChatResult {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   const busyRef = useRef(false);
-  const greetedRef = useRef(false);
   const disposedRef = useRef(false);
   const voiceOpenRef = useRef(false);
-  const messagesRef = useRef(messages);
-
-  useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
 
   useEffect(() => {
     disposedRef.current = false;
@@ -141,13 +128,6 @@ export function useAdvisorChat({
     },
     [runTurn, service],
   );
-
-  useEffect(() => {
-    if (!enabled || !greet || !service?.sendGreeting) return;
-    if (greetedRef.current && messagesRef.current.length > 0) return;
-    greetedRef.current = true;
-    void runTurn(service.sendGreeting());
-  }, [enabled, greet, runTurn, service]);
 
   const appendUserMessage = useCallback((text: string) => {
     const trimmed = text.trim();

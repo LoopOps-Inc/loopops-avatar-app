@@ -89,8 +89,6 @@ def test_client_speak_is_accepted(client: TestClient, settings: Settings) -> Non
 
     with client.websocket_connect(f"{avatar['audio_ws_path']}?access_token={token}") as ws:
         ws.send_text(json.dumps({"type": "client.ready", "has_video": True, "has_audio": True}))
-        greeting = json.loads(ws.receive_text())
-        assert greeting["type"] == "caption"
         ws.send_text(json.dumps({"type": "client.speak", "text": "Tu portafolio va bien."}))
         ws.send_text(json.dumps({"type": "client.foreground"}))
 
@@ -107,18 +105,24 @@ def test_client_speak_is_accepted(client: TestClient, settings: Settings) -> Non
     assert speaks and sum(s["bytes"] for s in speaks) > 0, "client.speak must reach the vendor"
 
 
-def test_greeting_waits_for_client_ready(client: TestClient, settings: Settings) -> None:
+def test_avatar_waits_for_the_user_to_speak_first(client: TestClient, settings: Settings) -> None:
+    """No greeting after client.ready: the first message must be the user's transcript."""
     _ack_all(client, settings)
     session = create_session(client)
     avatar = _start_avatar(client, session["thread_id"])
     token = token_for(CLIENT)
 
     with client.websocket_connect(f"{avatar['audio_ws_path']}?access_token={token}") as ws:
-        ws.send_text(json.dumps({"type": "client.foreground"}))
         ws.send_text(json.dumps({"type": "client.ready", "has_video": True, "has_audio": True}))
-        greeting = json.loads(ws.receive_text())
-        assert greeting["type"] == "caption"
-        assert "Tino" in greeting["text"]
+        ws.send_text(
+            json.dumps(
+                {"type": "dev.transcript", "text": "¿Cómo va mi portafolio?", "confidence": 0.95}
+            )
+        )
+        ws.send_text(json.dumps({"type": "utterance_end"}))
+        messages = _collect(ws, until="turn.complete")
+
+    assert messages[0]["type"] == "transcript.final", "the avatar must not speak before the user"
 
 
 def test_websocket_query_token_wins_over_injected_authorization(
@@ -139,9 +143,15 @@ def test_websocket_query_token_wins_over_injected_authorization(
         f"{avatar['audio_ws_path']}?access_token={owner}",
         headers={"Authorization": f"Bearer {injected}"},
     ) as ws:
-        ws.send_text(json.dumps({"type": "client.ready", "has_video": True, "has_audio": True}))
-        greeting = json.loads(ws.receive_text())
-        assert greeting["type"] == "caption"
+        ws.send_text(
+            json.dumps(
+                {"type": "dev.transcript", "text": "¿Cómo va mi portafolio?", "confidence": 0.95}
+            )
+        )
+        ws.send_text(json.dumps({"type": "utterance_end"}))
+        messages = _collect(ws, until="transcript.final")
+
+    assert messages, "the owner query token must win over the injected header"
 
 
 def test_websocket_requires_owner(client: TestClient, settings: Settings) -> None:
@@ -213,5 +223,3 @@ async def test_filler_bank_is_warm_and_rotates(deps: Dependencies) -> None:
     assert fillers is not None
     seen = {fillers.next_filler()[0] for _ in range(8)}
     assert len(seen) >= 4, "fillers rotate so they do not become a tic"
-    text, pcm = await fillers.greeting("José")
-    assert "Tino" in text and pcm

@@ -42,8 +42,9 @@ const FULL_SNAP = 2;
  * (Motion) docked over it. Snap points control how much of the frame the
  * sheet occupies — the video layer resizes to the space left free and
  * collapses at the full-screen snap (future forms/firma). The advisor
- * service owns the transcript; the backend greets on the audio WebSocket and
- * drives avatar speech for voice turns and chat replies via client.speak.
+ * service owns the transcript; the avatar never speaks first — the backend
+ * only speaks in reply, via the audio WebSocket (voice turns and chat
+ * replies through client.speak).
  */
 export function SessionPanel({
   threadId,
@@ -101,7 +102,7 @@ export function SessionPanel({
 
   const isConnected = sessionState === 'CONNECTED';
   const service = useMemo(() => createAgentAdvisorService(threadId), [threadId]);
-  const advisor = useAdvisorChat({ speak, enabled: isConnected, service, greet: false });
+  const advisor = useAdvisorChat({ speak, service });
 
   const sendMessage = useCallback(
     (message: string) => {

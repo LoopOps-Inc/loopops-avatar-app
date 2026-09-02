@@ -6,7 +6,7 @@ from collections.abc import AsyncIterator
 
 import pytest
 
-from actinver_agent.avatar.fillers import FillerBank, filler_cache_voice_id
+from actinver_agent.avatar.fillers import FILLER_PHRASES_ES, FillerBank, filler_cache_voice_id
 from actinver_agent.persistence.memory import MemoryCache
 from actinver_agent.voice.framing import is_silent_pcm
 
@@ -45,14 +45,14 @@ class _CountingTts:
 @pytest.mark.asyncio
 async def test_silent_cache_is_ignored_when_rejecting_silence() -> None:
     cache = MemoryCache()
-    tts = _CountingTts(pcm=b"\x01\x00" * 240)
-    key = "filler:gemini_api:Puck:greet:opening"
+    tts = _CountingTts(pcm=b"\x7f\x00" * 240)  # every sample is 127, above the silence floor
+    key = "filler:gemini_api:Puck:0"
     await cache.set(key, bytes(31_680), ttl_s=None)
 
     bank = FillerBank(tts=tts, cache=cache, voice_id="gemini_api:Puck", reject_silence=True)
-    text, pcm = await bank.greeting("Ada")
-    assert "Tino" in text
-    assert tts.calls == 1
+    await bank.warm()
+    assert tts.calls == len(FILLER_PHRASES_ES) + 3, "the silent cached clip is re-synthesised"
+    _, pcm = bank.next_filler()
     assert pcm == tts.pcm
     assert await cache.get(key) == tts.pcm
 
@@ -60,10 +60,11 @@ async def test_silent_cache_is_ignored_when_rejecting_silence() -> None:
 @pytest.mark.asyncio
 async def test_non_silent_cache_is_reused() -> None:
     cache = MemoryCache()
-    cached = b"\x10\x00" * 120
+    cached = b"\x80\x00" * 120  # every sample is 128, above the silence floor
     tts = _CountingTts(pcm=b"\xff\x7f" * 120)
-    await cache.set("filler:gemini_api:Puck:greet:opening", cached, ttl_s=None)
+    await cache.set("filler:gemini_api:Puck:0", cached, ttl_s=None)
     bank = FillerBank(tts=tts, cache=cache, voice_id="gemini_api:Puck", reject_silence=True)
-    _, pcm = await bank.greeting("Ada")
-    assert tts.calls == 0
+    await bank.warm()
+    assert tts.calls == len(FILLER_PHRASES_ES) + 3 - 1, "only the cached clip is skipped"
+    _, pcm = bank.next_filler()
     assert pcm == cached

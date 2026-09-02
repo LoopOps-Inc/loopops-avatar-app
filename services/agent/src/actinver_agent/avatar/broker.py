@@ -87,7 +87,6 @@ class ActiveSession:
     idle_prompted: bool = False
     duration_warned: bool = False
     refreshed: bool = False
-    greeted: bool = False
     ended: bool = False
     end_reason: str | None = None
     tasks: set[asyncio.Task[None]] = field(default_factory=set)
@@ -270,12 +269,6 @@ class AvatarBroker:
                 await asyncio.sleep(0.2)
         assert last is not None
         raise last
-
-    async def greet(self, session: ActiveSession) -> None:
-        if self._fillers is None:
-            return
-        text, pcm = await self._fillers.greeting(session.first_name)
-        await self.speak_system(session, text, pcm)
 
     async def speak_system(
         self, session: ActiveSession, text: str, pcm: bytes, *, notify_caption: bool = True

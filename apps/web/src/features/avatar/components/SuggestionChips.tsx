@@ -24,7 +24,7 @@ function SparkIcon({ className }: { className?: string }) {
   );
 }
 
-/** Topic chips shown with the initial greeting; tapping one sends it as the user message. */
+/** Topic chips that help the user open the conversation; tapping one sends it as the user message. */
 export function SuggestionChips({ onSend, disabled = false }: SuggestionChipsProps) {
   const { t } = useTranslation();
   return (

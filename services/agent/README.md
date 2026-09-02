@@ -58,7 +58,7 @@ src/actinver_agent/
 | Model | `LLM_PROVIDER=stub` — deterministic templated es-MX generator, rules-based router. Also the documented fallback when the model provider is down. | `LLM_PROVIDER=vertex` (Gemini 2.5 Flash/Pro via `google-genai`, workload identity). `gemini_api` (AI Studio key) is accepted in `ENVIRONMENT=local` only. |
 | Core banking / market / news / CRM / OMS | `CORE_PROVIDER=synthetic` — deterministic demo clients and catalogue, fault injection for outage tests | `CORE_PROVIDER=http` — contract-first mTLS clients in `clients/*_http.py`, pending the core API inventory |
 | Avatar vendor | `LIVEAVATAR_PROVIDER=stub` — emulated LITE session and control channel | `LIVEAVATAR_PROVIDER=real` — `clients/liveavatar.py` (sandbox or production) |
-| Voice | `VOICE_PROVIDER=stub` — text transcripts via the dev-only `dev.transcript` WS message, silent PCM | `VOICE_PROVIDER=google` — streaming STT + 24 kHz TTS |
+| Voice | `VOICE_PROVIDER=stub` — text transcripts via the dev-only `dev.transcript` WS message, silent PCM. `gemini_api` adds AI Studio TTS and utterance-level STT (one Gemini call per `utterance_end`, no interim results). | `VOICE_PROVIDER=google` — streaming STT + 24 kHz TTS |
 | Object store / secrets | floci (S3 Object Lock, Secrets Manager) | AWS or any S3-compatible store; External Secrets Operator |
 | Suitability, guardrail, audit, transaction | Separate containers over HTTP (`SVC_*_URL`), or `inprocess` for tests | Separate deployments, separate key material |
 

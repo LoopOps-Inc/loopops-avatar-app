@@ -228,7 +228,6 @@ class AudioSocketHandler:
                     has_video=bool(payload.get("has_video")),
                     has_audio=bool(payload.get("has_audio")),
                 )
-                await self._maybe_greet(session)
             case "client.speak":
                 text = str(payload.get("text", "")).strip()
                 if text:
@@ -261,14 +260,6 @@ class AudioSocketHandler:
                 self._transcribe(websocket, session, ctx, stt, utterance)
             )
         return utterance, stt_task
-
-    async def _maybe_greet(self, session: ActiveSession) -> None:
-        """Greet once the browser has subscribed to LiveKit A/V (avoids speaking into the void)."""
-        if session.greeted:
-            return
-        session.greeted = True
-        log.info("avatar.greeting", avatar_session_id=session.avatar_session_id)
-        await self._broker.greet(session)
 
     async def _speak_caption(self, session: ActiveSession, text: str) -> None:
         """Synthesize *text* per sentence so the first clip starts before the rest."""
