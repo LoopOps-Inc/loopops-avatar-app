@@ -32,7 +32,7 @@ from actinver_agent.config import Settings
 from actinver_agent.graph.state import AdvisorState, Intent
 from actinver_agent.llm.redaction import RedactionProxy
 from actinver_agent.llm.speech_format import sanitize_generated_speech
-from actinver_agent.ports import ClassificationResult, GenerationResult, ToolCall
+from actinver_agent.ports import ClassificationResult, GenerationResult, ToolCall, Transcript
 
 log = structlog.get_logger(__name__)
 
@@ -397,6 +397,65 @@ class GeminiTextToSpeech:
         for offset in range(0, len(pcm), step):
             yield pcm[offset : offset + step]
             await asyncio.sleep(0)
+
+
+_STT_MIN_AUDIO_BYTES = 2048
+_STT_PROMPT = (
+    "Transcribe literalmente el audio en español de México. Devuelve únicamente "
+    "el texto transcrito, sin comentarios ni comillas. Si el audio no contiene "
+    "habla, devuelve una línea vacía."
+)
+
+
+class GeminiSpeechToText:
+    """Utterance-level STT through the AI Studio key (local only, ADR-0003).
+
+    The browser sends MediaRecorder WebM/Opus chunks; Gemini accepts the
+    container natively, so one utterance's frames are concatenated and
+    transcribed with a single call once the client sends ``utterance_end``
+    (the frame iterator ends). No interim results.
+    """
+
+    def __init__(self, factory: GeminiClientFactory, settings: Settings) -> None:
+        self._factory = factory
+        self._settings = settings
+        self._language = settings.voice.stt_language
+        self._model = settings.voice.gemini_stt_model
+
+    async def stream(self, audio_frames: AsyncIterator[bytes]) -> AsyncIterator[Transcript]:
+        buffer = bytearray()
+        async for frame in audio_frames:
+            buffer.extend(frame)
+        if len(buffer) < _STT_MIN_AUDIO_BYTES:
+            return
+        mime = "audio/wav" if buffer[:4] == b"RIFF" else "audio/webm"
+        text = (await self._transcribe(bytes(buffer), mime)).strip()
+        if not text:
+            return
+        yield Transcript(text=text, is_final=True, confidence=0.95, language=self._language)
+
+    async def _transcribe(self, audio: bytes, mime: str) -> str:
+        config_timeout_ms = int(max(30.0, self._settings.vertex.timeout_s) * 1000)
+        for attempt, backoff in ((1, 0.5), (2, 1.5), (3, 0.0)):
+            try:
+                response = await self._factory.client().aio.models.generate_content(
+                    model=self._model,
+                    contents=[
+                        types.Part.from_bytes(data=audio, mime_type=mime),
+                        types.Part.from_text(text=_STT_PROMPT),
+                    ],
+                    config=types.GenerateContentConfig(
+                        temperature=0.0,
+                        max_output_tokens=1024,
+                        http_options=types.HttpOptions(timeout=config_timeout_ms),
+                    ),
+                )
+                return response.text or ""
+            except Exception:
+                if attempt == 3:
+                    raise
+                await asyncio.sleep(backoff)
+        return ""
 
 
 def _schema(parameters: dict[str, Any]) -> dict[str, Any]:

@@ -1,4 +1,4 @@
-"""Cached filler utterances and greeting (docs/01-architecture/01 §6, 03-mobile/03 §6).
+"""Cached filler utterances (docs/01-architecture/01 §6, 03-mobile/03 §6).
 
 About eight approved acknowledgement phrases, pre-synthesised once so they cost
 zero TTS latency, rotated so they never become a tic, and logged as
@@ -103,9 +103,3 @@ class FillerBank:
 
     def duration_warning(self) -> tuple[str, bytes]:
         return DURATION_WARNING_ES, self._special.get("duration", b"")
-
-    async def greeting(self, first_name: str) -> tuple[str, bytes]:
-        """Opening line for a live session; cached per avatar/voice."""
-        _ = first_name
-        text = "Hola, soy Tino. Pregúntame sobre tu portafolio o en qué invertir."
-        return text, await self._synth_cached(f"filler:{self._voice}:greet:opening", text)

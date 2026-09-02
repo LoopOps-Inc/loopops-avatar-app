@@ -16,13 +16,13 @@ The architecture names nine logical services. Locally (and in `ops/k8s`) they ar
 one image and five processes, chosen so that the controls that must not share a
 process with the agent do not:
 
-| Process (`serve --role`) | Logical services it contains | Why separate |
-|---|---|---|
-| `agent` | bff-mobile, agent-orchestrator, avatar-broker, voice-pipeline, tool-gateway | The product surface. Session-affine only for the avatar WebSocket. |
-| `suitability` | suitability-service | Owns the verdict HMAC key. The agent process cannot read it (startup assertion). Compliance owns the rules. |
-| `guardrail` | guardrail-service | Fail-closed input/output filters; policy changes independently of the agent. |
-| `audit` | audit-service | WORM evidence writer, hash chain, spool, anchor. Must survive the agent failing. |
-| `transaction` | transaction-service | Step-up verification, independent re-validation, idempotent execution. The agent is untrusted input to it. |
+| Process (`serve --role`) | Logical services it contains                                                | Why separate                                                                                                |
+| ------------------------ | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `agent`                  | bff-mobile, agent-orchestrator, avatar-broker, voice-pipeline, tool-gateway | The product surface. Session-affine only for the avatar WebSocket.                                          |
+| `suitability`            | suitability-service                                                         | Owns the verdict HMAC key. The agent process cannot read it (startup assertion). Compliance owns the rules. |
+| `guardrail`              | guardrail-service                                                           | Fail-closed input/output filters; policy changes independently of the agent.                                |
+| `audit`                  | audit-service                                                               | WORM evidence writer, hash chain, spool, anchor. Must survive the agent failing.                            |
+| `transaction`            | transaction-service                                                         | Step-up verification, independent re-validation, idempotent execution. The agent is untrusted input to it.  |
 
 Backing services: PostgreSQL 16 with pgvector (checkpoints, sessions, forms, rules,
 audit index, retrieval), Redis 7 (cache at the freshness ceilings, rate limits,
@@ -53,14 +53,14 @@ src/actinver_agent/
 
 ## What is real and what is a stub
 
-| Component | Default (local/CI) | Production binding |
-|---|---|---|
-| Model | `LLM_PROVIDER=stub` — deterministic templated es-MX generator, rules-based router. Also the documented fallback when the model provider is down. | `LLM_PROVIDER=vertex` (Gemini 2.5 Flash/Pro via `google-genai`, workload identity). `gemini_api` (AI Studio key) is accepted in `ENVIRONMENT=local` only. |
-| Core banking / market / news / CRM / OMS | `CORE_PROVIDER=synthetic` — deterministic demo clients and catalogue, fault injection for outage tests | `CORE_PROVIDER=http` — contract-first mTLS clients in `clients/*_http.py`, pending the core API inventory |
-| Avatar vendor | `LIVEAVATAR_PROVIDER=stub` — emulated LITE session and control channel | `LIVEAVATAR_PROVIDER=real` — `clients/liveavatar.py` (sandbox or production) |
-| Voice | `VOICE_PROVIDER=stub` — text transcripts via the dev-only `dev.transcript` WS message, silent PCM | `VOICE_PROVIDER=google` — streaming STT + 24 kHz TTS |
-| Object store / secrets | floci (S3 Object Lock, Secrets Manager) | AWS or any S3-compatible store; External Secrets Operator |
-| Suitability, guardrail, audit, transaction | Separate containers over HTTP (`SVC_*_URL`), or `inprocess` for tests | Separate deployments, separate key material |
+| Component                                  | Default (local/CI)                                                                                                                                                                                                    | Production binding                                                                                                                                        |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Model                                      | `LLM_PROVIDER=stub` — deterministic templated es-MX generator, rules-based router. Also the documented fallback when the model provider is down.                                                                      | `LLM_PROVIDER=vertex` (Gemini 2.5 Flash/Pro via `google-genai`, workload identity). `gemini_api` (AI Studio key) is accepted in `ENVIRONMENT=local` only. |
+| Core banking / market / news / CRM / OMS   | `CORE_PROVIDER=synthetic` — deterministic demo clients and catalogue, fault injection for outage tests                                                                                                                | `CORE_PROVIDER=http` — contract-first mTLS clients in `clients/*_http.py`, pending the core API inventory                                                 |
+| Avatar vendor                              | `LIVEAVATAR_PROVIDER=stub` — emulated LITE session and control channel                                                                                                                                                | `LIVEAVATAR_PROVIDER=real` — `clients/liveavatar.py` (sandbox or production)                                                                              |
+| Voice                                      | `VOICE_PROVIDER=stub` — text transcripts via the dev-only `dev.transcript` WS message, silent PCM. `gemini_api` adds AI Studio TTS and utterance-level STT (one Gemini call per `utterance_end`, no interim results). | `VOICE_PROVIDER=google` — streaming STT + 24 kHz TTS                                                                                                      |
+| Object store / secrets                     | floci (S3 Object Lock, Secrets Manager)                                                                                                                                                                               | AWS or any S3-compatible store; External Secrets Operator                                                                                                 |
+| Suitability, guardrail, audit, transaction | Separate containers over HTTP (`SVC_*_URL`), or `inprocess` for tests                                                                                                                                                 | Separate deployments, separate key material                                                                                                               |
 
 ## Quickstart (Docker)
 
@@ -81,12 +81,12 @@ Host ports: agent `8443`; Postgres `15432`, Redis `16379`, floci `14566`, OTLP `
 
 ### Demo clients (synthetic core)
 
-| `client_id` | Name | Profile | Contracts | Use it to see |
-|---|---|---|---|---|
-| `cl_demo_moderado` | José | moderado, 24 m, intermedio | advisory + execution | full advisory path, suitability stripping, transactions |
-| `cl_demo_conservador` | Ana | conservador | execution only | advisory degrades to generic discovery with `NOT_A_RECOMMENDATION` |
-| `cl_demo_agresivo` | Luis | agresivo, avanzado | advisory + execution | high-risk products APTO, simulations |
-| `cl_demo_vencido` | Marta | moderado, profile expired | advisory + execution | `PROFILE_EXPIRED` refusal + profile-update offer |
+| `client_id`           | Name  | Profile                    | Contracts            | Use it to see                                                      |
+| --------------------- | ----- | -------------------------- | -------------------- | ------------------------------------------------------------------ |
+| `cl_demo_moderado`    | José  | moderado, 24 m, intermedio | advisory + execution | full advisory path, suitability stripping, transactions            |
+| `cl_demo_conservador` | Ana   | conservador                | execution only       | advisory degrades to generic discovery with `NOT_A_RECOMMENDATION` |
+| `cl_demo_agresivo`    | Luis  | agresivo, avanzado         | advisory + execution | high-risk products APTO, simulations                               |
+| `cl_demo_vencido`     | Marta | moderado, profile expired  | advisory + execution | `PROFILE_EXPIRED` refusal + profile-update offer                   |
 
 Products: `ACTIGOB-BF` (bajo), `ACTICETES-BF` (bajo), `ACTICORP-BF` (medio), `ACTIMIX-BF`
 (medio), `ACTIUSD-BF` (bajo, USD), `ACTIVAR-RV` (alto), `ACTIGLOB-RV` (alto), `ACTIREAL-BF` (alto).
@@ -193,13 +193,13 @@ suitability deployment only.
 
 ## Deviations from the reference documents (and why)
 
-| Topic | Documents say | Here | Why |
-|---|---|---|---|
-| Runtime base image | distroless `python3-debian12` | `python:3.12-slim` non-root, read-only rootfs, no pip | The distroless image ships Python 3.11; the service pins 3.12. Swap to a 3.12 distroless base when available (comment in `Dockerfile`). |
-| Transcripts | one `transcripts/{y}/{m}/{thread}.jsonl` | one object per turn under the thread prefix | S3 objects are immutable under Object Lock; appending is not possible. |
-| DPoP | required everywhere | required outside `local`; optional (verified when present) in `local` | plain curls for developers. `AUTH_DPOP_REQUIRED=true` restores the strict posture. |
-| Checkpoint partitioning | monthly partitions | DDL provided in `ops/sql/checkpoint_partitioning.sql` as a DBA runbook | LangGraph creates its tables itself; partitioning is a deployment-time operation. |
-| Object Lock | AWS compliance mode | floci emulation locally; `OBJECT_STORE_LOCK_MODE=GOVERNANCE` in local/staging, `COMPLIANCE` enforced in prod by posture validation | records written in error must be recoverable outside production (ADR-0012). |
-| Legal texts | legal-approved | `api/disclosure_docs.py` placeholders marked for Legal approval; disclosure texts from the reference `disclosures.es-MX.md` | Legal sign-off is an `[ACTINVER-INPUT]` item in the docs. |
-| Structured plan completeness | model plans the full tool set and emits `<candidatos>`/`<monto>` blocks | the graph enforces it: `mode=ANY` returns a single call and a real model does not always emit the blocks, so the graph structurally forces `get_transaction_requirements`/`check_suitability`/`search_investment_products` and falls back to tool results and the client's stated amount (`graph/nodes/agent_core.py`) | the compliance flow must not depend on model prose compliance; the deterministic gates (suitability, guardrail, audit) still decide. |
-| LiveAvatar session length | `max_session_duration` 1800 s | the broker honours the vendor's cap when a sandbox/trial account rejects 1800 s (retries once with the cap) | sandbox accounts cap sessions at 60 s; the session must still start (`clients/liveavatar.py`). |
+| Topic                        | Documents say                                                           | Here                                                                                                                                                                                                                                                                                                                   | Why                                                                                                                                     |
+| ---------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime base image           | distroless `python3-debian12`                                           | `python:3.12-slim` non-root, read-only rootfs, no pip                                                                                                                                                                                                                                                                  | The distroless image ships Python 3.11; the service pins 3.12. Swap to a 3.12 distroless base when available (comment in `Dockerfile`). |
+| Transcripts                  | one `transcripts/{y}/{m}/{thread}.jsonl`                                | one object per turn under the thread prefix                                                                                                                                                                                                                                                                            | S3 objects are immutable under Object Lock; appending is not possible.                                                                  |
+| DPoP                         | required everywhere                                                     | required outside `local`; optional (verified when present) in `local`                                                                                                                                                                                                                                                  | plain curls for developers. `AUTH_DPOP_REQUIRED=true` restores the strict posture.                                                      |
+| Checkpoint partitioning      | monthly partitions                                                      | DDL provided in `ops/sql/checkpoint_partitioning.sql` as a DBA runbook                                                                                                                                                                                                                                                 | LangGraph creates its tables itself; partitioning is a deployment-time operation.                                                       |
+| Object Lock                  | AWS compliance mode                                                     | floci emulation locally; `OBJECT_STORE_LOCK_MODE=GOVERNANCE` in local/staging, `COMPLIANCE` enforced in prod by posture validation                                                                                                                                                                                     | records written in error must be recoverable outside production (ADR-0012).                                                             |
+| Legal texts                  | legal-approved                                                          | `api/disclosure_docs.py` placeholders marked for Legal approval; disclosure texts from the reference `disclosures.es-MX.md`                                                                                                                                                                                            | Legal sign-off is an `[ACTINVER-INPUT]` item in the docs.                                                                               |
+| Structured plan completeness | model plans the full tool set and emits `<candidatos>`/`<monto>` blocks | the graph enforces it: `mode=ANY` returns a single call and a real model does not always emit the blocks, so the graph structurally forces `get_transaction_requirements`/`check_suitability`/`search_investment_products` and falls back to tool results and the client's stated amount (`graph/nodes/agent_core.py`) | the compliance flow must not depend on model prose compliance; the deterministic gates (suitability, guardrail, audit) still decide.    |
+| LiveAvatar session length    | `max_session_duration` 1800 s                                           | the broker honours the vendor's cap when a sandbox/trial account rejects 1800 s (retries once with the cap)                                                                                                                                                                                                            | sandbox accounts cap sessions at 60 s; the session must still start (`clients/liveavatar.py`).                                          |

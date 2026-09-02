@@ -1,4 +1,4 @@
-import { getLocale, t } from '@/i18n';
+import { getLocale } from '@/i18n';
 import type { AdvisorSseHandlers } from '@/services/advisor-types';
 import { sendAdvisorMessage } from '@/services/advisor-service';
 import type { AdvisorService, AdvisorStreamEvent } from './types';
@@ -60,8 +60,5 @@ export function createAgentAdvisorService(threadId: string): AdvisorService {
           handlers,
         ),
       ),
-    sendGreeting: async function* () {
-      yield { event: 'token', data: { text: t('live.greeting') } };
-    },
   };
 }

@@ -3,32 +3,17 @@ import { act, renderHook } from '@testing-library/react';
 import { useAdvisorChat } from './use-advisor-chat';
 import type { AdvisorService, AdvisorStreamEvent } from '../services/types';
 
-function fakeService(
-  turns: Record<string, AdvisorStreamEvent[]>,
-  greeting?: AdvisorStreamEvent[],
-): AdvisorService {
+function fakeService(turns: Record<string, AdvisorStreamEvent[]>): AdvisorService {
   return {
     sendTurn: async function* (message: string) {
       yield* turns[message] ?? [];
     },
-    sendGreeting: greeting
-      ? async function* () {
-          yield* greeting;
-        }
-      : undefined,
   };
 }
 
-function renderAdvisor(
-  service: AdvisorService,
-  overrides: Partial<Parameters<typeof useAdvisorChat>[0]> = {},
-) {
+function renderAdvisor(service: AdvisorService) {
   const speak = vi.fn();
-  const view = renderHook(
-    ({ enabled }: { enabled: boolean }) =>
-      useAdvisorChat({ speak, enabled, service, ...overrides }),
-    { initialProps: { enabled: false } },
-  );
+  const view = renderHook(() => useAdvisorChat({ speak, service }));
   return { speak, ...view };
 }
 
@@ -58,7 +43,7 @@ describe('useAdvisorChat', () => {
         },
       ],
     });
-    const { result, speak } = renderAdvisor(service, { greet: false });
+    const { result, speak } = renderAdvisor(service);
     act(() => result.current.send('¿Cómo va mi portafolio?'));
 
     await vi.waitFor(() => {
@@ -97,7 +82,7 @@ describe('useAdvisorChat', () => {
         };
       },
     };
-    const { result, speak } = renderAdvisor(service, { greet: false });
+    const { result, speak } = renderAdvisor(service);
     act(() => result.current.send('¿Qué ETF me conviene?'));
 
     await vi.waitFor(() => {
@@ -119,7 +104,7 @@ describe('useAdvisorChat', () => {
         yield { event: 'error', data: { code: 'ADVISOR_DOWN', message: '' } };
       },
     };
-    const { result, speak } = renderAdvisor(service, { greet: false });
+    const { result, speak } = renderAdvisor(service);
     act(() => result.current.send('hola'));
 
     await vi.waitFor(() => {
@@ -130,23 +115,6 @@ describe('useAdvisorChat', () => {
     expect(speak).not.toHaveBeenCalled();
   });
 
-  it('greets once when the session becomes enabled', async () => {
-    const service = fakeService({}, [{ event: 'token', data: { text: 'Hola, soy Tino.' } }]);
-    const { result, speak, rerender } = renderAdvisor(service, { greet: true });
-    rerender({ enabled: true });
-    await vi.waitFor(() => {
-      expect(result.current.messages).toHaveLength(1);
-    });
-    expect(result.current.messages[0]?.sender).toBe('avatar');
-    expect(result.current.messages[0]?.message).toBe('Hola, soy Tino.');
-    await vi.waitFor(() => {
-      expect(speak).toHaveBeenCalledTimes(1);
-    });
-    rerender({ enabled: false });
-    rerender({ enabled: true });
-    expect(result.current.messages).toHaveLength(1);
-  });
-
   it('speaks each complete sentence as tokens arrive instead of waiting for done', async () => {
     const service = fakeService({
       hola: [
@@ -155,7 +123,7 @@ describe('useAdvisorChat', () => {
         { event: 'done', data: { turn_id: 't2', evidence_id: 'e2', service_type: 'advisory' } },
       ],
     });
-    const { result, speak } = renderAdvisor(service, { greet: false });
+    const { result, speak } = renderAdvisor(service);
     act(() => result.current.send('hola'));
     await vi.waitFor(() => {
       expect(speak).toHaveBeenCalledTimes(2);
@@ -175,7 +143,7 @@ describe('useAdvisorChat', () => {
         yield { event: 'token', data: { text: 'respuesta' } };
       },
     };
-    const { result } = renderAdvisor(service, { greet: false });
+    const { result } = renderAdvisor(service);
     act(() => {
       result.current.send('primera');
       result.current.send('segunda');
@@ -194,7 +162,7 @@ describe('useAdvisorChat', () => {
 
   it('appends voice turns: user transcript, replacing captions, attached ui', async () => {
     const service = fakeService({});
-    const { result } = renderAdvisor(service, { greet: false });
+    const { result } = renderAdvisor(service);
 
     act(() => result.current.appendUserMessage('¿Qué opinas del mercado?'));
     expect(result.current.messages).toHaveLength(1);
