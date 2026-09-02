@@ -9,7 +9,6 @@ service; ``client_id`` scopes client rows.
 from __future__ import annotations
 
 import base64
-import hashlib
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -22,6 +21,7 @@ from actinver_agent.graph.state import ConsentRecord, ConsentType, FormSpec
 from actinver_agent.persistence import models as m
 from actinver_agent.persistence.db import health as db_health
 from actinver_agent.persistence.db import identity_scope
+from actinver_agent.persistence.thread_id import derive_thread_id
 from actinver_agent.ports import (
     AvatarSessionRecord,
     DeviceBinding,
@@ -81,10 +81,9 @@ class SqlThreadRepository(_Base):
         self._salt = salt
 
     async def get_or_create(self, *, client_id: str, channel: str) -> ThreadRecord:
-        # threads.thread_id = sha256(client_id || channel || salt) - docs/01-architecture/04 §3.1
-        thread_id = (
-            "th_" + hashlib.sha256(f"{client_id}|{channel}|{self._salt}".encode()).hexdigest()[:24]
-        )
+        # One thread per client; ``channel`` records where it started, not who
+        # it belongs to (persistence/thread_id.py).
+        thread_id = derive_thread_id(client_id, salt=self._salt)
         async with self._scope(client_id) as s:
             stmt = (
                 insert(m.Thread)

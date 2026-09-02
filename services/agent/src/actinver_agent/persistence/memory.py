@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from actinver_agent.graph.state import ConsentRecord, ConsentType, FormSpec
+from actinver_agent.persistence.thread_id import derive_thread_id
 from actinver_agent.ports import (
     AvatarSessionRecord,
     DeviceBinding,
@@ -230,13 +231,9 @@ class MemoryThreadRepository:
 
     async def get_or_create(self, *, client_id: str, channel: str) -> ThreadRecord:
         for t in self.threads.values():
-            if t.client_id == client_id and t.channel == channel:
+            if t.client_id == client_id:
                 return t
-        import hashlib
-
-        thread_id = (
-            "th_" + hashlib.sha256(f"{client_id}|{channel}|memory".encode()).hexdigest()[:24]
-        )
+        thread_id = derive_thread_id(client_id, salt="memory")
         record = ThreadRecord(
             thread_id=thread_id,
             client_id=client_id,
