@@ -23,7 +23,7 @@ type UseLiveAvatarSessionResult = {
   isMicMuted: boolean;
   micError: boolean;
   endReason: SessionEndReason | null;
-  videoRef: React.RefObject<HTMLVideoElement | null>;
+  videoRef: React.RefObject<HTMLVideoElement>;
   start: () => Promise<void>;
   stop: () => Promise<void>;
   attach: (element: HTMLMediaElement) => void;
@@ -47,6 +47,7 @@ export function useLiveAvatarSession(
   { audioUnlockedRef, onTranscriptFinal, onCaption, onUi }: UseLiveAvatarSessionOptions = {},
 ): UseLiveAvatarSessionResult {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoElementRef = videoRef as React.RefObject<HTMLVideoElement>;
   const userStoppedRef = useRef(false);
   const [isAvatarTalking, setIsAvatarTalking] = useState(false);
   const [endReason, setEndReason] = useState<SessionEndReason | null>(null);
@@ -55,7 +56,7 @@ export function useLiveAvatarSession(
     livekitUrl: avatarSession.livekit_url,
     livekitToken: avatarSession.livekit_client_token,
     audioWsPath: avatarSession.audio_ws_path,
-    videoRef,
+    videoRef: videoElementRef,
     audioUnlockedRef,
     handlers: {
       onTranscriptPartial: () => {},
@@ -146,7 +147,7 @@ export function useLiveAvatarSession(
     isMicMuted: !livekit.micActive,
     micError: livekit.micError,
     endReason: resolvedEndReason,
-    videoRef,
+    videoRef: videoElementRef,
     start,
     stop,
     attach,

@@ -11,6 +11,7 @@ import {
 } from 'livekit-client';
 import { appEnv } from '@/config/env';
 import { avatarLog } from '@/features/avatar/lib/avatar-debug';
+import { getDevAuth } from '@/services/dev-auth';
 
 export type AvatarConnectionStatus =
   'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'failed';
@@ -39,12 +40,11 @@ type LivekitAvatarSessionOptions = {
 
 export function buildAudioWsUrl(audioWsPath: string): string {
   const base = appEnv.advisorApiBase;
-  if (/^https?:\/\//i.test(base)) {
-    return `${base.replace(/\/$/, '').replace(/^http/i, 'ws')}${audioWsPath}`;
-  }
-  const prefix = base.startsWith('/') ? base.replace(/\/$/, '') : `/${base.replace(/\/$/, '')}`;
-  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  return `${protocol}://${window.location.host}${prefix}${audioWsPath}`;
+  const root = /^https?:\/\//i.test(base)
+    ? `${base.replace(/\/$/, '').replace(/^http/i, 'ws')}${audioWsPath}`
+    : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}${base.startsWith('/') ? base.replace(/\/$/, '') : `/${base.replace(/\/$/, '')}`}${audioWsPath}`;
+  const auth = getDevAuth();
+  return auth ? `${root}?access_token=${encodeURIComponent(auth.accessToken)}` : root;
 }
 
 function pickRecorderMime(): string {

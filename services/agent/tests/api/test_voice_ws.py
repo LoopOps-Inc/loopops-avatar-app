@@ -4,6 +4,7 @@ avatar broker lifecycle, against the emulated vendor."""
 from __future__ import annotations
 
 import json
+import time
 import uuid
 from typing import Any
 
@@ -92,6 +93,18 @@ def test_client_speak_is_accepted(client: TestClient, settings: Settings) -> Non
         assert greeting["type"] == "caption"
         ws.send_text(json.dumps({"type": "client.speak", "text": "Tu portafolio va bien."}))
         ws.send_text(json.dumps({"type": "client.foreground"}))
+
+    broker = client.app.state.deps.broker
+    assert broker is not None
+    active = broker.get(avatar["avatar_session_id"])
+    assert active is not None
+    deadline = time.monotonic() + 3.0
+    while time.monotonic() < deadline:
+        if any(s["type"] == "agent.speak" for s in active.channel.sent):  # type: ignore[attr-defined]
+            break
+        time.sleep(0.05)
+    speaks = [s for s in active.channel.sent if s["type"] == "agent.speak"]  # type: ignore[attr-defined]
+    assert speaks and sum(s["bytes"] for s in speaks) > 0, "client.speak must reach the vendor"
 
 
 def test_greeting_waits_for_client_ready(client: TestClient, settings: Settings) -> None:

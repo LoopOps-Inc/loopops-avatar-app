@@ -259,7 +259,8 @@ class AvatarBroker:
             )
             return
         try:
-            await session.notify({"type": "agent.speaking"})
+            if notify_caption:
+                await session.notify({"type": "caption", "text": text, "system": True})
             event_id = await session.channel.speak(pcm, flush=True)
             if event_id:
                 await session.channel.speak_end(event_id)
@@ -271,8 +272,7 @@ class AvatarBroker:
                 text_len=len(text),
                 notify_caption=notify_caption,
             )
-            if notify_caption:
-                await session.notify({"type": "caption", "text": text, "system": True})
+            await session.notify({"type": "agent.speaking"})
         except Exception as exc:
             log.warning("avatar.system_speech_failed", reason=type(exc).__name__)
 

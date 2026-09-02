@@ -96,7 +96,8 @@ export default defineConfig(({ mode }) => {
     ws: true,
     rewrite: (requestPath) => requestPath.replace(/^\/api/, ''),
     configure: (proxy) => {
-      proxy.on('proxyReq', (proxyReq) => {
+      proxy.on('proxyReq', (proxyReq, req) => {
+        if (req.headers.authorization) return;
         const devToken = resolveAgentDevToken(mode);
         if (devToken) {
           proxyReq.setHeader('Authorization', `Bearer ${devToken}`);

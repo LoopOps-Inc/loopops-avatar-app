@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from actinver_agent.adapters.gemini import _schema, _thinking_config
+from types import SimpleNamespace
+
+from actinver_agent.adapters.gemini import _schema, _thinking_config, extract_audio_pcm
 
 
 def test_schema_keeps_property_names_and_strips_unsupported_keywords() -> None:
@@ -48,3 +50,16 @@ def test_thinking_is_disabled_only_where_the_model_allows_it() -> None:
     assert _thinking_config("gemini-2.5-flash") is not None
     assert _thinking_config("gemini-2.5-flash").thinking_budget == 0
     assert _thinking_config("gemini-2.5-pro") is None
+
+
+def test_extract_audio_pcm_reads_inline_data() -> None:
+    part = SimpleNamespace(inline_data=SimpleNamespace(data=b"\x01\x00\x02\x00"))
+    response = SimpleNamespace(candidates=[SimpleNamespace(content=SimpleNamespace(parts=[part]))])
+    assert extract_audio_pcm(response) == b"\x01\x00\x02\x00"
+
+
+def test_extract_audio_pcm_returns_empty_without_audio() -> None:
+    assert extract_audio_pcm(SimpleNamespace(candidates=[])) == b""
+    part = SimpleNamespace(inline_data=None)
+    response = SimpleNamespace(candidates=[SimpleNamespace(content=SimpleNamespace(parts=[part]))])
+    assert extract_audio_pcm(response) == b""

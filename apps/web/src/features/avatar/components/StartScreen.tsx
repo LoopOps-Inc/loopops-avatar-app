@@ -1,6 +1,7 @@
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { actinverAvatar } from '@/config/avatar';
 import { useTranslation } from '@/i18n';
+import { InvestorPicker } from './InvestorPicker';
 
 type StartScreenProps = {
   starting: boolean;
@@ -17,6 +18,7 @@ export function StartScreen({ starting, error, endedByServer, onStart }: StartSc
     <div className="bg-surface-sub flex h-full flex-col">
       <div className="flex-1" aria-hidden="true" />
       <div className="px-safe pb-safe flex flex-col gap-3 p-4">
+        <InvestorPicker />
         <button
           type="button"
           onClick={onStart}

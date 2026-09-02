@@ -16,8 +16,10 @@ requested in the task prompt (no second call, no extra latency).
 
 from __future__ import annotations
 
+import asyncio
 import re
 import time
+from collections.abc import AsyncIterator
 from typing import Any
 
 import orjson
@@ -29,6 +31,7 @@ from pydantic import BaseModel
 from actinver_agent.config import Settings
 from actinver_agent.graph.state import AdvisorState, Intent
 from actinver_agent.llm.redaction import RedactionProxy
+from actinver_agent.llm.speech_format import sanitize_generated_speech
 from actinver_agent.ports import ClassificationResult, GenerationResult, ToolCall
 
 log = structlog.get_logger(__name__)
@@ -252,6 +255,7 @@ class GeminiGenerator:
             top_p=self._settings.vertex.top_p,
             seed=self._settings.vertex.seed,
             max_output_tokens=max_tokens,
+            thinking_config=_thinking_config(model),
             http_options=types.HttpOptions(timeout=int(self._settings.vertex.timeout_s * 1000)),
         )
         started = time.perf_counter()
@@ -276,6 +280,10 @@ class GeminiGenerator:
                 blocked = True
         raw = "".join(chunks)
         speech, candidates, amount = _split_structured(raw)
+        if speech:
+            # Split-channel enforcement (ADR-0006): rounded, traceable figures
+            # only. The egress guardrail remains the fail-closed authority.
+            speech = sanitize_generated_speech(speech, set(state.get("provenance", {}).keys()))
         return GenerationResult(
             speech=speech,
             candidate_product_ids=candidates,
@@ -304,6 +312,71 @@ class GeminiEmbedder:
             config=types.EmbedContentConfig(output_dimensionality=768),
         )
         return [list(e.values or []) for e in (response.embeddings or [])]
+
+
+_TTS_MODEL = "gemini-2.5-flash-preview-tts"
+_TTS_PROMPT_PREFIX = (
+    "Lee el siguiente texto en voz alta, en español de México, tono profesional y "
+    "cálido, a ritmo natural, sin cifras inventadas ni listas: "
+)
+
+
+def extract_audio_pcm(response: Any) -> bytes:
+    """Raw PCM (s16le, 24 kHz, mono) from a TTS generate_content response."""
+    for candidate in response.candidates or []:
+        content = getattr(candidate, "content", None)
+        for part in (content.parts if content else []) or []:
+            data = getattr(getattr(part, "inline_data", None), "data", None)
+            if data:
+                return bytes(data)
+    return b""
+
+
+class GeminiTextToSpeech:
+    """Synthesis through an AI Studio key (local only, ADR-0003).
+
+    The model returns PCM s16le mono at 24 kHz - exactly the LiveAvatar audio
+    contract - so the bytes are pushed to the avatar channel unmodified.
+    """
+
+    def __init__(self, factory: GeminiClientFactory, settings: Settings) -> None:
+        self._factory = factory
+        self._settings = settings
+        self._voice = settings.voice.gemini_tts_voice
+
+    async def synthesize_stream(self, text: str) -> AsyncIterator[bytes]:
+        pcm = b""
+        # Preview TTS occasionally 5xxes under load and long inputs take well
+        # over the generic model timeout; the bridge is fire-and-forget, so a
+        # generous budget with two retries costs nothing to the chat stream.
+        config_timeout_ms = int(max(45.0, self._settings.vertex.timeout_s) * 1000)
+        for attempt, backoff in ((1, 0.5), (2, 1.5), (3, 0.0)):
+            try:
+                response = await self._factory.client().aio.models.generate_content(
+                    model=_TTS_MODEL,
+                    contents=_TTS_PROMPT_PREFIX + text,
+                    config=types.GenerateContentConfig(
+                        response_modalities=["AUDIO"],
+                        speech_config=types.SpeechConfig(
+                            voice_config=types.VoiceConfig(
+                                prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                                    voice_name=self._voice
+                                )
+                            )
+                        ),
+                        http_options=types.HttpOptions(timeout=config_timeout_ms),
+                    ),
+                )
+                pcm = extract_audio_pcm(response)
+                break
+            except Exception:
+                if attempt == 3:
+                    raise
+                await asyncio.sleep(backoff)
+        step = 48_000  # one-second slices
+        for offset in range(0, len(pcm), step):
+            yield pcm[offset : offset + step]
+            await asyncio.sleep(0)
 
 
 def _schema(parameters: dict[str, Any]) -> dict[str, Any]:
