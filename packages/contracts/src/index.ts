@@ -737,6 +737,7 @@ export type InvestorsListResponse = z.infer<typeof InvestorsListResponseSchema>;
 
 export const DevTokenRequestSchema = z.object({
   client_id: z.string(),
+  password: z.string(),
   roles: z.array(z.string()).optional(),
   ttl_s: z.number().min(60).max(86400).optional(),
 });

@@ -7,8 +7,9 @@ pre-commit:
       stage_fixed: true
 
     eslint:
-      glob: '*.{js,ts,jsx,tsx}'
-      run: npx eslint --fix --config apps/web/eslint.config.js {staged_files}
+      # Root ESLint must be v10+ (see root package.json). Native still nests ESLint 8.
+      glob: 'apps/web/**/*.{js,ts,jsx,tsx}'
+      run: npx eslint --fix {staged_files}
 
 # CI runs lint + check + build. Pre-push only verifies the production build once
 # (includes tsc) — avoids duplicate full-project typecheck on every commit/push.
