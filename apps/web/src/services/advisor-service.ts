@@ -219,7 +219,7 @@ export async function mintDevToken(clientId: string): Promise<DevTokenResponse> 
   const res = await fetch(`${appEnv.advisorApiBase}/v1/auth/dev-token`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ client_id: clientId }),
+    body: JSON.stringify({ client_id: clientId, password: appEnv.devPassword }),
   });
   if (!res.ok) {
     await throwProblem(res);
