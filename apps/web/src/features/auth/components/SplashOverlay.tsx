@@ -31,7 +31,7 @@ export function SplashOverlay({ skip = false }: SplashOverlayProps) {
       className="bg-surface absolute inset-0 z-10 flex items-center justify-center"
       aria-hidden="true"
     >
-      <img src={actinverLogoUrl} alt="" className="h-16 w-auto max-w-[70%] object-contain" />
+      <img src={actinverLogoUrl} alt="" className="h-40 w-auto object-contain" />
     </div>
   );
 }
