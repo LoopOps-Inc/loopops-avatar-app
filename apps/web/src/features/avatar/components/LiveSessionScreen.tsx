@@ -1,6 +1,6 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import type { AvatarSessionResponse, EmbedCommand } from '@loopops/contracts';
+import type { AvatarSessionResponse, EmbedCommand, SessionResponse } from '@loopops/contracts';
 import { AppShell } from '@/components/AppShell';
 import { useEmbedBridge } from '@/features/embed/hooks/use-embed-bridge';
 import {
@@ -42,6 +42,8 @@ export function LiveSessionRoute() {
   const navigate = useNavigate();
   const [demoSession, setDemoSession] = useState<DemoSession | null>(null);
   const demoSessionRef = useRef<DemoSession | null>(null);
+  const advisorSessionRef = useRef<SessionResponse | null>(null);
+  const [firstName, setFirstName] = useState<string | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [micUnavailable, setMicUnavailable] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -53,6 +55,23 @@ export function LiveSessionRoute() {
   const setSession = useCallback((session: DemoSession | null) => {
     demoSessionRef.current = session;
     setDemoSession(session);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const session = await createAdvisorSession();
+        if (cancelled) return;
+        advisorSessionRef.current = session;
+        setFirstName(session.client.first_name);
+      } catch {
+        // Start screen still works; Start will create a session then.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleEnded = useCallback(
@@ -97,7 +116,9 @@ export function LiveSessionRoute() {
       const micAvailable = await probeMic();
       setMicUnavailable(!micAvailable);
       try {
-        const advisorSession = await createAdvisorSession();
+        const advisorSession = advisorSessionRef.current ?? (await createAdvisorSession());
+        advisorSessionRef.current = null;
+        setFirstName(advisorSession.client.first_name);
         await ackFirstTurnDisclosures();
         await ackVoiceConsent();
         const avatar = await createAvatarSession(advisorSession.thread_id, 'portrait');
@@ -118,6 +139,8 @@ export function LiveSessionRoute() {
 
   const handleCloseSession = useCallback(() => {
     clearDevAuth();
+    advisorSessionRef.current = null;
+    setFirstName(null);
     setSession(null);
     setError(null);
     setEndedByServer(false);
@@ -171,6 +194,7 @@ export function LiveSessionRoute() {
             />
           ) : (
             <StartScreen
+              firstName={firstName}
               starting={starting}
               error={error}
               endedByServer={endedByServer}
