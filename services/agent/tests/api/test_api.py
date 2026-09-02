@@ -75,6 +75,7 @@ def test_health_and_openapi(client: TestClient) -> None:
         "/v1/avatar/session",
         "/v1/avatar/session/stop",
         "/v1/avatar/preflight",
+        "/v1/auth/dev-token",
         "/v1/auth/step-up/challenge",
         "/v1/consents",
         "/v1/config",
@@ -98,6 +99,42 @@ def test_unauthenticated_is_rfc9457(client: TestClient) -> None:
     problem = response.json()
     assert problem["code"] == "UNAUTHENTICATED"
     assert problem["message"] and problem["trace_id"] and problem["status"] == 401
+
+
+def test_dev_token_accepts_the_configured_password(client: TestClient, settings: Settings) -> None:
+    response = client.post(
+        "/v1/auth/dev-token",
+        json={"client_id": CLIENT, "password": settings.auth.dev_password.get_secret_value()},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["client_id"] == CLIENT
+
+
+def test_dev_token_rejects_an_incorrect_password(client: TestClient) -> None:
+    submitted_password = "wrong-password"
+    response = client.post(
+        "/v1/auth/dev-token",
+        json={"client_id": CLIENT, "password": submitted_password},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["code"] == "UNAUTHENTICATED"
+    assert submitted_password not in response.text
+
+
+def test_dev_token_requires_a_password(client: TestClient) -> None:
+    response = client.post("/v1/auth/dev-token", json={"client_id": CLIENT})
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "VALIDATION_ERROR"
+
+
+def test_dev_token_requires_a_client_id(client: TestClient) -> None:
+    response = client.post("/v1/auth/dev-token", json={"password": "actinver123"})
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "VALIDATION_ERROR"
 
 
 def test_dpop_bound_request_is_accepted(client: TestClient) -> None:

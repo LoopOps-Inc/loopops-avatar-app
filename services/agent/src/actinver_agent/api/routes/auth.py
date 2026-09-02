@@ -7,6 +7,8 @@ back as ``step_up_assertion`` on the form submission.
 
 from __future__ import annotations
 
+from hmac import compare_digest
+
 from fastapi import APIRouter, Depends
 
 from actinver_agent.api.schemas import (
@@ -39,6 +41,11 @@ async def mint_dev_token(
     body: DevTokenRequest,
     deps: Dependencies = Depends(get_deps),
 ) -> DevTokenResponse:
+    if not compare_digest(
+        body.password.get_secret_value(), deps.settings.auth.dev_password.get_secret_value()
+    ):
+        raise api_error("UNAUTHENTICATED")
+
     key: str | None = None
     if deps.settings.auth.dev_signing_key_ref:
         try:

@@ -36,6 +36,7 @@ class AuthSettings(BaseSettings):
     audience: str = "actinver-ai-advisor"
     jwks_url: str = ""
     dev_signing_key_ref: str = "env://AUTH_DEV_SIGNING_KEY"
+    dev_password: SecretStr = SecretStr("actinver123")
     #: DPoP proof (RFC 9449). Required outside local; in local a bearer-only
     #: request is accepted so plain curls work, but a present proof is verified.
     dpop_required: bool = False

@@ -23,6 +23,7 @@ TEST_ENV: dict[str, str] = {
     "AUTH_MODE": "dev",
     "AUTH_DEV_SIGNING_KEY_REF": "env://AUTH_DEV_SIGNING_KEY",
     "AUTH_DEV_SIGNING_KEY": "local-dev-signing-key-not-a-secret-value",
+    "AUTH_DEV_PASSWORD": "actinver123",
     "CLIENT_HASH_SALT_REF": "env://CLIENT_HASH_SALT",
     "CLIENT_HASH_SALT": "test-salt",
     "FORM_SPEC_SIGNING_KEY_REF": "env://FORM_SPEC_SIGNING_KEY",

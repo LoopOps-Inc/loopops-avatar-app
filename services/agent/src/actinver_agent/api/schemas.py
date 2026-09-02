@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from actinver_agent.graph.state import (
     ConsentType,
@@ -280,7 +280,8 @@ class DisclosureText(BaseModel):
 class DevTokenRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    client_id: str = Field(default="200001", description="Client ID or numero_cliente_unico")
+    client_id: str = Field(description="Client ID or numero_cliente_unico")
+    password: SecretStr = Field(description="Shared development password")
     roles: list[str] = Field(default_factory=list, description="Roles to grant")
     ttl_s: int = Field(
         default=86400, ge=60, le=604800, description="Token lifetime in seconds (default 24h)"
