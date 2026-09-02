@@ -73,7 +73,7 @@ vi.mock('../hooks/use-liveavatar-session', async () => {
         keepAlive: async () => {},
         setMicMuted: () => {},
         speak: () => {},
-        unlockPlayback: async () => {},
+        unlockPlayback: async () => true,
       };
     },
   };
@@ -239,9 +239,7 @@ describe('LiveSessionRoute', () => {
       expect(createAvatarSession).toHaveBeenCalledTimes(2);
     });
     expect(await screen.findByRole('region', { name: 'Consulta con Tino' })).toBeInTheDocument();
-    expect(
-      screen.queryByText('La sesión se cerró. Puedes iniciar otra.'),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText('La sesión se cerró. Puedes iniciar otra.')).not.toBeInTheDocument();
   });
 
   it('toggles the sheet between chat and full screen snaps', async () => {

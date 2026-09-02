@@ -3,6 +3,7 @@ import type { UIComponent } from '@loopops/contracts';
 import { t } from '@/i18n';
 import type { AdvisorService, AdvisorStreamEvent } from '../services/types';
 import type { ChatMessage } from '../types';
+import { createSpeechSplitter } from '../lib/split-speech';
 
 type UseAdvisorChatOptions = {
   speak: (text: string) => void;
@@ -66,6 +67,7 @@ export function useAdvisorChat({
       voiceOpenRef.current = false;
       let speech = '';
       let errorSpeech = '';
+      const splitter = createSpeechSplitter();
       try {
         for await (const event of stream) {
           if (disposedRef.current) return;
@@ -79,9 +81,11 @@ export function useAdvisorChat({
               }
               return [...prev, { sender: 'avatar', message: text, timestamp: Date.now() }];
             });
+            for (const sentence of splitter.feed(event.data.text)) {
+              speak(sentence);
+            }
           } else if (event.event === 'error') {
-            const text =
-              event.data.message || t('advisor.error_event', { code: event.data.code });
+            const text = event.data.message || t('advisor.error_event', { code: event.data.code });
             appendAvatarMessage(text);
             if (event.data.message && !speech.trim()) {
               errorSpeech = event.data.message;
@@ -108,9 +112,10 @@ export function useAdvisorChat({
             }
           }
         }
-        const toSpeak = speech.trim() || errorSpeech.trim();
-        if (!disposedRef.current && toSpeak) {
-          speak(toSpeak);
+        const remainder = splitter.flush();
+        if (!disposedRef.current && remainder) speak(remainder);
+        else if (!disposedRef.current && !speech.trim() && errorSpeech.trim()) {
+          speak(errorSpeech.trim());
         }
       } catch (err) {
         if (!disposedRef.current) {

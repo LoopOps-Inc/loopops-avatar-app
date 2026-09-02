@@ -69,3 +69,17 @@ def strip_wav_header(data: bytes) -> bytes:
 def looks_like_pcm16(data: bytes) -> bool:
     """Local sanity check before a re-send (docs/01-architecture/05 §8)."""
     return bool(data) and len(data) % SAMPLE_WIDTH_BYTES == 0 and data[:4] != b"RIFF"
+
+
+def is_silent_pcm(data: bytes, *, max_abs: int = 64) -> bool:
+    """True when every sampled int16 is near zero (stub TTS yields ``bytes(n)``)."""
+    if not data or len(data) < SAMPLE_WIDTH_BYTES:
+        return True
+    import array
+
+    samples = array.array("h")
+    samples.frombytes(data[: len(data) - (len(data) % SAMPLE_WIDTH_BYTES)])
+    if not samples:
+        return True
+    step = max(1, len(samples) // 2000)
+    return max(abs(samples[i]) for i in range(0, len(samples), step)) <= max_abs

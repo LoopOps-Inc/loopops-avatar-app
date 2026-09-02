@@ -110,6 +110,7 @@ Live Avatar session tokens use `LIVEAVATAR_API_KEY` from [app.liveavatar.com](ht
 `use-liveavatar-session.ts` adapts the official demo wrapper:
 
 - The session instance is created once per mount via a lazy `useState` initializer. Never create it inside an effect: React StrictMode double-invokes effects and would spawn two LiveKit rooms (one orphaned session still running server-side).
+- LITE LiveKit + audio WebSocket effects defer teardown (~150ms) and reuse the same connection when the path or room token is unchanged. Immediate cleanup on StrictMode's connect → cleanup → connect cycle aborts WebRTC before tracks attach and races `video.play()` (`AbortError`).
 - `start()` is idempotent (guard ref) so StrictMode's double effect run cannot double-start.
 - Consumers remount with a fresh token per session; session tokens are one-shot.
 - User transcription chunks are cumulative (full phrase so far) — replace the last user message.
@@ -125,7 +126,9 @@ FULL mode answers typed messages with voice and transcripts. Voice input (`voice
 
 - **Sandbox voices**: `voice_id` must exist in the LiveAvatar space. HeyGen catalog voice IDs (e.g. Actinver's Jorge) are rejected at `/v1/sessions/start` with `Voice not found` (validation is lazy: token minting succeeds, start fails 400). In sandbox, omit `voice_id` to use Wayne's default voice.
 - Test on real devices/browsers; simulators and headless environments may lack WebRTC codecs.
-- Video autoplay requires a user gesture (the demo starts the session from a button click).
+- Video autoplay requires a user gesture (the demo starts the session from a button click). HeyGen LITE muxes speech into the **video** track; keep the element unmuted after that gesture. Do not send `client.ready` until `video.play()` succeeds, or the greeting is spoken into a paused element.
+- `VOICE_PROVIDER=stub` synthesizes silence. LiveAvatar lip-syncs that PCM, so the face stays still and there is no audible speech even when LiveKit is connected. Use `gemini_api` (or `google`) locally to hear and see motion.
+- Filler and greeting PCM is cached in Redis under the voice id. Include the TTS **provider** in that key. After switching from stub to `gemini_api`, a key that only names the voice will keep serving all-zero stub audio (`pcm_bytes` matching `words * 60ms * 48_000`). The greeting then appears as a caption with no sound. Do not cache silent PCM for real TTS providers.
 - The SDK is v0.x — API may change; check the [demo app](https://github.com/heygen-com/liveavatar-web-sdk/tree/master/apps/demo) when upgrading.
 - `avatar_persona` is deprecated upstream in favor of `voice_agent`; sandbox docs still use it. Plan the swap before production.
 - Coordinate avatar `speaking` state with voice mode mic (disable mic while avatar talks to avoid echo).

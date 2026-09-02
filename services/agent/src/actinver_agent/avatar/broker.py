@@ -28,6 +28,7 @@ import structlog
 
 from actinver_agent.auth.context import RequestContext
 from actinver_agent.avatar.fillers import FillerBank
+from actinver_agent.voice.framing import is_silent_pcm
 from actinver_agent.deps import Dependencies
 from actinver_agent.errors import api_error
 from actinver_agent.observability.setup import client_hash, get_metrics
@@ -37,6 +38,36 @@ log = structlog.get_logger(__name__)
 
 SLOT_KEY = "avatar:slots"
 Notifier = Callable[[dict[str, Any]], Awaitable[None]]
+
+# Duration warning is a 60 s heads-up for 30-minute sessions. Sandbox/trial
+# accounts cap at ~60 s; warning at ``cap - 60`` would fire on the first tick.
+DURATION_WARNING_LEAD_S = 60
+MIN_CAP_FOR_DURATION_WARNING_S = 120
+# Vendor refresh needs enough TTL left to mint, connect, and play audio.
+MIN_REMAINING_FOR_REFRESH_S = 30
+
+
+def should_emit_duration_warning(*, cap_s: float, elapsed_s: float, already: bool) -> bool:
+    if already or cap_s < MIN_CAP_FOR_DURATION_WARNING_S:
+        return False
+    return elapsed_s >= cap_s - DURATION_WARNING_LEAD_S
+
+
+def should_refresh_vendor(*, cap_s: float, elapsed_s: float, refresh_at: float, already: bool) -> bool:
+    if already or cap_s < MIN_CAP_FOR_DURATION_WARNING_S:
+        return False
+    if cap_s - elapsed_s < MIN_REMAINING_FOR_REFRESH_S:
+        return False
+    return elapsed_s >= refresh_at
+
+
+def should_recover_disconnected_vendor(*, cap_s: float, elapsed_s: float, already: bool) -> bool:
+    """Start a new vendor session only when the current cap still has room."""
+    if already or cap_s < MIN_CAP_FOR_DURATION_WARNING_S:
+        return False
+    if elapsed_s >= cap_s - 5:
+        return False
+    return cap_s - elapsed_s >= MIN_REMAINING_FOR_REFRESH_S
 
 
 @dataclass
@@ -258,6 +289,15 @@ class AvatarBroker:
                 pcm_bytes=len(pcm),
             )
             return
+        if self._deps.settings.voice.provider != "stub" and is_silent_pcm(pcm):
+            log.warning(
+                "avatar.speak_system_skipped",
+                avatar_session_id=session.avatar_session_id,
+                reason="silent_pcm",
+                pcm_bytes=len(pcm),
+                text_len=len(text),
+            )
+            return
         try:
             if notify_caption:
                 await session.notify({"type": "caption", "text": text, "system": True})
@@ -312,7 +352,9 @@ class AvatarBroker:
             if not session.channel.connected:
                 # Vendor closed the session (idle timeout, error or cap). Under the
                 # cap we transparently start a new vendor session and keep the thread.
-                if elapsed < cap - 5 and not session.refreshed:
+                if should_recover_disconnected_vendor(
+                    cap_s=cap, elapsed_s=elapsed, already=session.refreshed
+                ):
                     await self._refresh(session)
                 else:
                     await self.stop(session.avatar_session_id, reason="vendor_closed")
@@ -320,7 +362,9 @@ class AvatarBroker:
             if elapsed >= cap:
                 await self.stop(session.avatar_session_id, reason="max_duration")
                 return
-            if elapsed >= cap - 60 and not session.duration_warned:
+            if should_emit_duration_warning(
+                cap_s=cap, elapsed_s=elapsed, already=session.duration_warned
+            ):
                 session.duration_warned = True
                 await session.notify(
                     {"type": "session.expiring", "seconds_left": int(cap - elapsed)}
@@ -328,7 +372,12 @@ class AvatarBroker:
                 if self._fillers is not None:
                     text, pcm = self._fillers.duration_warning()
                     await self.speak_system(session, text, pcm)
-            if elapsed >= refresh_at and not session.refreshed:
+            if should_refresh_vendor(
+                cap_s=cap,
+                elapsed_s=elapsed,
+                refresh_at=refresh_at,
+                already=session.refreshed,
+            ):
                 # Refresh at 80 % of the TTL so a session never outlives its credential.
                 await self._refresh(session)
 

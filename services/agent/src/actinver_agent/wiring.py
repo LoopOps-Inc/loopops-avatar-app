@@ -9,6 +9,7 @@ which.
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import secrets as pysecrets
 from collections.abc import Awaitable, Callable
@@ -32,6 +33,11 @@ from actinver_agent.secrets import SecretResolutionError, SecretResolver
 log = structlog.get_logger(__name__)
 
 Closer = Callable[[], Awaitable[None]]
+
+
+async def _warm_fillers(fillers: Any) -> None:
+    with contextlib.suppress(Exception):
+        await fillers.warm()
 
 
 async def _resolve_or_local_default(
@@ -364,15 +370,28 @@ async def build_dependencies(settings: Settings) -> Dependencies:
 
     if settings.service_role == "agent":
         from actinver_agent.avatar.broker import AvatarBroker
-        from actinver_agent.avatar.fillers import FillerBank
+        from actinver_agent.avatar.fillers import FillerBank, filler_cache_voice_id
         from actinver_agent.graph.builder import build_graph
         from actinver_agent.graph.runtime import TurnRunner
 
         deps.graph = build_graph(deps, checkpointer)
         deps.runner = TurnRunner(deps)
-        fillers = FillerBank(tts=tts, cache=cache, voice_id=settings.voice.tts_voice_name)
-        with contextlib.suppress(Exception):
-            await fillers.warm()
+        fillers = FillerBank(
+            tts=tts,
+            cache=cache,
+            voice_id=filler_cache_voice_id(
+                provider=settings.voice.provider,
+                tts_voice_name=settings.voice.tts_voice_name,
+                gemini_tts_voice=settings.voice.gemini_tts_voice,
+            ),
+            reject_silence=settings.voice.provider != "stub",
+        )
+        if settings.voice.provider == "stub":
+            with contextlib.suppress(Exception):
+                await fillers.warm()
+        else:
+            # Gemini TTS is slow; do not block process startup or the first session.
+            asyncio.create_task(_warm_fillers(fillers))
         deps.broker = AvatarBroker(deps, fillers=fillers)
 
     log.info(

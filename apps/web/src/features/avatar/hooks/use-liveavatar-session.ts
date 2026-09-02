@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import type { AvatarSessionResponse, UIComponent } from '@loopops/contracts';
 import { useLivekitAvatarSession } from '@/features/advisor/hooks/use-livekit-avatar-session';
@@ -33,7 +33,7 @@ type UseLiveAvatarSessionResult = {
   interrupt: () => void;
   keepAlive: () => Promise<void>;
   setMicMuted: (muted: boolean) => void;
-  unlockPlayback: (unmute?: boolean) => Promise<void>;
+  unlockPlayback: (unmute?: boolean) => Promise<boolean>;
 };
 
 const LIVEKIT_QUALITY_MAP: Record<string, ConnectionQuality> = {

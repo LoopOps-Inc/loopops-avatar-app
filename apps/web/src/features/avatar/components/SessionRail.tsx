@@ -1,6 +1,5 @@
-import { AudioLines, Maximize2, Minimize2, PhoneOff, Square } from 'lucide-react';
+import { Maximize2, Minimize2, PhoneOff, Square } from 'lucide-react';
 import { useTranslation } from '@/i18n';
-import { StatusPill } from './StatusPill';
 
 type SessionRailProps = {
   stateText: string;
@@ -21,9 +20,6 @@ type SessionRailProps = {
  * Radix dialog always hides outside content from the a11y tree.
  */
 export function SessionRail({
-  stateText,
-  stateClass,
-  showQualityPill,
   isAvatarTalking,
   isFullScreen,
   canEnd,
@@ -33,7 +29,7 @@ export function SessionRail({
 }: SessionRailProps) {
   const { t } = useTranslation();
   const actionButton =
-    'flex h-10 w-10 cursor-pointer items-center justify-center rounded-full  bg-[#041e41] text-icon-muted transition-colors duration-200 hover:bg-outline/30';
+    'flex h-10 w-10 cursor-pointer items-center justify-center rounded-full  bg-[#041e41] text-icon-muted transition-colors duration-200';
   return (
     <div className="flex items-center justify-between gap-2 px-4 pt-2">
       <div className="flex min-w-0 flex-wrap items-center gap-2"></div>
@@ -66,7 +62,7 @@ export function SessionRail({
           aria-label={t('live.end')}
           onClick={onEnd}
           disabled={!canEnd}
-          className={`${actionButton} border-error/40 bg-error/90 hover:bg-error disabled:cursor-not-allowed disabled:opacity-40`}
+          className={`${actionButton} border-error/40 bg-error/90 hover:bg-error/30 disabled:cursor-not-allowed disabled:opacity-40`}
         >
           <PhoneOff className="h-4 w-4 text-white" aria-hidden="true" />
         </button>
