@@ -92,6 +92,7 @@ vi.mock('../hooks/use-liveavatar-session', async () => {
 const advisorSession = {
   thread_id: 'thread-1',
   thread_started_at: '2026-08-02T04:00:00.000Z',
+  client: { first_name: 'Mariano', risk_category: 'Agresivo' },
 } as SessionResponse;
 
 const avatarSession = {
@@ -109,6 +110,7 @@ async function startSession() {
   vi.mocked(ackVoiceConsent).mockResolvedValue(undefined);
   vi.mocked(createAvatarSession).mockResolvedValue(avatarSession);
   render(<LiveSessionRoute />);
+  expect(await screen.findByText('Hola, Mariano')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversación' }));
 }
 
@@ -124,6 +126,7 @@ describe('LiveSessionRoute', () => {
     vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(800);
     sessionStorage.clear();
     setLocale('es');
+    vi.mocked(createAdvisorSession).mockResolvedValue(advisorSession);
     vi.mocked(mintDevToken).mockResolvedValue({
       access_token: 'minted',
       client_id: '200001',
@@ -131,21 +134,23 @@ describe('LiveSessionRoute', () => {
     });
   });
 
-  it('renders the welcome screen with a start action and no investor picker', () => {
+  it('renders the welcome screen with the client first name', async () => {
     render(<LiveSessionRoute />);
+    expect(await screen.findByText('Hola, Mariano')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Habla con Tino' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Iniciar conversación' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
-  it('clears auth and returns to login when closing the session', () => {
+  it('clears auth and returns to login when closing the session', async () => {
     setDevAuth({
       clientId: '200001',
       accessToken: 'tok',
       expiresAt: Date.now() + 60_000,
     });
     render(<LiveSessionRoute />);
+    expect(await screen.findByText('Hola, Mariano')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
     expect(getDevAuth()).toBeNull();
     expect(navigateMock).toHaveBeenCalledWith({ to: '/' });
@@ -170,6 +175,7 @@ describe('LiveSessionRoute', () => {
       stubState.set({ endReason: 'server' });
     });
     expect(await screen.findByText('La sesión se cerró. Puedes iniciar otra.')).toBeInTheDocument();
+    expect(screen.getByText('Hola, Mariano')).toBeInTheDocument();
     act(() => {
       stubState.set({ sessionState: 'INACTIVE', endReason: null });
     });
@@ -223,7 +229,6 @@ describe('LiveSessionRoute', () => {
   });
 
   it('renews the avatar session in place when it closes at max duration', async () => {
-    vi.mocked(createAdvisorSession).mockResolvedValue(advisorSession);
     vi.mocked(ackFirstTurnDisclosures).mockResolvedValue(undefined);
     vi.mocked(ackVoiceConsent).mockResolvedValue(undefined);
     vi.mocked(createAvatarSession).mockResolvedValue({
@@ -231,6 +236,7 @@ describe('LiveSessionRoute', () => {
       max_session_duration_s: 0,
     });
     render(<LiveSessionRoute />);
+    expect(await screen.findByText('Hola, Mariano')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversación' }));
     await screen.findByText('Conectando...');
 
@@ -259,9 +265,10 @@ describe('LiveSessionRoute', () => {
     expect(screen.getByRole('button', { name: 'Pantalla completa' })).toBeInTheDocument();
   });
 
-  it('renders copy in english when the locale changes', () => {
+  it('renders copy in english when the locale changes', async () => {
     setLocale('en');
     render(<LiveSessionRoute />);
+    expect(await screen.findByText('Hi, Mariano')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Talk with Tino' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start conversation' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Close session' })).toBeInTheDocument();
