@@ -15,6 +15,7 @@ in-stream 200s, never HTTP errors.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -135,15 +136,23 @@ async def send_message(
 
     async def stream() -> AsyncIterator[dict[str, str]]:
         done_sent = False
+        speech_parts: list[str] = []
+        errored = False
         try:
             async for event in runner.run_turn(
                 ctx, thread_id=thread_id, text=body.text, channel="chat", locale=body.locale
             ):
                 if event.kind in ("thinking", "filler"):
                     continue
+                if event.kind == "token":
+                    speech_parts.append(str(event.data.get("text", "")))
+                elif event.kind == "error":
+                    errored = True
                 if event.kind == "done":
                     done_sent = True
                 yield _sse(event.kind, event.data)
+            if speech_parts and not errored:
+                _speak_to_avatar(deps, ctx, thread_id, " ".join(speech_parts))
         except Exception:
             log.exception("chat.turn_failed")
             yield _sse(
@@ -163,6 +172,18 @@ async def send_message(
     return EventSourceResponse(
         stream(), headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
     )
+
+
+def _speak_to_avatar(deps: Dependencies, ctx: RequestContext, thread_id: str, speech: str) -> None:
+    """Speech bridge (docs/01-architecture/05 §2): with an avatar session live
+    on this thread, the final approved speech is synthesised and spoken."""
+    broker = deps.broker
+    if broker is None or not speech.strip():
+        return
+    for session in broker.sessions_for_client(ctx.client_id):
+        if session.thread_id == thread_id:
+            task = asyncio.create_task(broker.speak_turn(session, speech))
+            task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
 
 
 @router.get(

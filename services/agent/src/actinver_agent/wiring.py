@@ -281,6 +281,20 @@ async def build_dependencies(settings: Settings) -> Dependencies:
             speaking_rate=settings.voice.tts_speaking_rate,
             sample_rate_hz=settings.voice.tts_sample_rate_hz,
         )
+    elif settings.voice.provider == "gemini_api":
+        # Local-only speech bridge: real synthesis with the AI Studio key,
+        # transcription stays on the dev-only text path (ADR-0003).
+        from actinver_agent.adapters.gemini import GeminiClientFactory, GeminiTextToSpeech
+        from actinver_agent.voice.stub import StubSpeechToText
+
+        voice_key = (
+            await resolver.resolve(settings.llm.gemini_api_key_ref)
+            if settings.llm.gemini_api_key_ref
+            else None
+        )
+        voice_factory = GeminiClientFactory(settings, api_key=voice_key)
+        stt = StubSpeechToText()
+        tts = GeminiTextToSpeech(voice_factory, settings)
     else:
         from actinver_agent.voice.stub import StubSpeechToText, StubTextToSpeech
 

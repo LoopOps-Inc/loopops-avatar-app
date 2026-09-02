@@ -259,6 +259,37 @@ class AvatarBroker:
         except Exception as exc:
             log.warning("avatar.system_speech_failed", reason=type(exc).__name__)
 
+    async def speak_turn(self, session: ActiveSession, text: str) -> None:
+        """Speak a completed chat turn's approved speech (speech bridge, docs
+        01-architecture/05 §2): typed turns share the thread, the avatar speaks
+        the final answer instead of streaming raw tokens."""
+        if session.ended or not text.strip():
+            return
+        pcm = bytearray()
+        try:
+            async for chunk in self._deps.tts.synthesize_stream(text):
+                pcm.extend(chunk)
+        except Exception as exc:
+            log.warning("avatar.turn_tts_failed", reason=type(exc).__name__)
+            return
+        if not pcm:
+            return
+        try:
+            with contextlib.suppress(Exception):
+                await session.channel.interrupt()
+            event_id = await session.channel.speak(bytes(pcm), flush=True)
+            if event_id:
+                await session.channel.speak_end(event_id)
+            session.touch_avatar()
+            log.info(
+                "avatar.turn_spoken",
+                avatar_session_id=session.avatar_session_id,
+                chars=len(text),
+                bytes=len(pcm),
+            )
+        except Exception as exc:
+            log.warning("avatar.turn_speech_failed", reason=type(exc).__name__)
+
     # ── Lifecycle loops ──────────────────────────────────────────────────────
 
     async def _keep_alive_loop(self, session: ActiveSession) -> None:
