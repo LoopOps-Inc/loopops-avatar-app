@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import type { UIComponent } from '@loopops/contracts';
-import { UIComponentSchema } from '@loopops/contracts';
+import {
+  SseCitationsEventSchema,
+  SseErrorEventSchema,
+  SseFormSpecEventSchema,
+  UIComponentSchema,
+} from '@loopops/contracts';
 import {
   ConnectionQuality,
   Room,
@@ -72,6 +77,59 @@ function prepareVideoElement(video: HTMLVideoElement, unlocked: boolean): void {
   video.autoplay = true;
   video.muted = !unlocked;
   video.defaultMuted = !unlocked;
+}
+
+/**
+ * Extract the component from a voice-socket `ui` frame.
+ *
+ * The wire format is `{"type":"ui","component":{...UIComponent}}` (ws_handler.py).
+ * Parsing the frame itself used to "succeed": the envelope satisfied the
+ * permissive variant of UIComponentSchema, so every voice turn delivered a
+ * component of type `"ui"` and no card ever rendered.
+ */
+export function parseUiFrame(frame: Record<string, unknown>): UIComponent | null {
+  const parsed = UIComponentSchema.safeParse(frame.component);
+  return parsed.success ? parsed.data : null;
+}
+
+/**
+ * Normalise every renderable voice frame into a `UIComponent`.
+ *
+ * Only `ui` nests its component; `citations`, `form_spec` and `error` are
+ * spread flat into the frame (voice/pipeline.py: `{"type": kind, **event.data}`).
+ * All of them already have a card, so routing them through the same handler
+ * needs no plumbing of its own. An `error` becomes a warning banner because its
+ * `message` is a client-facing Spanish sentence meant to be shown; it is also
+ * spoken as a caption, so dropping it left the user hearing something with
+ * nothing on screen.
+ */
+export function frameToComponent(frame: Record<string, unknown>): UIComponent | null {
+  switch (frame.type) {
+    case 'ui':
+      return parseUiFrame(frame);
+    case 'citations': {
+      const parsed = SseCitationsEventSchema.safeParse(frame);
+      return parsed.success ? { type: 'citations', payload: parsed.data } : null;
+    }
+    case 'form_spec': {
+      const parsed = SseFormSpecEventSchema.safeParse(frame);
+      if (!parsed.success) return null;
+      const payload = { ...parsed.data };
+      delete payload.type;
+      return { type: 'form_spec', payload } as UIComponent;
+    }
+    case 'error': {
+      const parsed = SseErrorEventSchema.safeParse(frame);
+      return parsed.success
+        ? {
+            type: 'warning_banner',
+            payload: { severity: 'warning', message: parsed.data.message },
+          }
+        : null;
+    }
+    default:
+      return null;
+  }
 }
 
 export function useLivekitAvatarSession({
@@ -392,9 +450,12 @@ export function useLivekitAvatarSession({
           handlersRef.current.onCaption(text);
           if (videoRef.current?.paused) void tryStartPlayback(true);
           break;
-        case 'ui': {
-          const parsed = UIComponentSchema.safeParse(frame);
-          if (parsed.success) handlersRef.current.onUi(parsed.data);
+        case 'ui':
+        case 'citations':
+        case 'form_spec':
+        case 'error': {
+          const component = frameToComponent(frame);
+          if (component) handlersRef.current.onUi(component);
           break;
         }
         case 'turn.complete':
