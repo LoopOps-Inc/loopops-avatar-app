@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import type { AvatarSessionResponse, EmbedCommand } from '@loopops/contracts';
 import { AppShell } from '@/components/AppShell';
 import { useEmbedBridge } from '@/features/embed/hooks/use-embed-bridge';
@@ -7,11 +8,9 @@ import {
   ackVoiceConsent,
   createAdvisorSession,
   createAvatarSession,
-  mintDevToken,
 } from '@/services/advisor-service';
-import { setDevAuth } from '@/services/dev-auth';
+import { clearDevAuth } from '@/services/dev-auth';
 import { useTranslation } from '@/i18n';
-import { useInvestors } from '../hooks/use-investors';
 import { SessionPanel, type PanelCommands } from './SessionPanel';
 import { StartScreen } from './StartScreen';
 import { avatarLog } from '../lib/avatar-debug';
@@ -40,7 +39,7 @@ async function probeMic(): Promise<boolean> {
  */
 export function LiveSessionRoute() {
   const { t } = useTranslation();
-  const { investors, selected, select, loading: investorsLoading } = useInvestors();
+  const navigate = useNavigate();
   const [demoSession, setDemoSession] = useState<DemoSession | null>(null);
   const demoSessionRef = useRef<DemoSession | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
@@ -98,14 +97,6 @@ export function LiveSessionRoute() {
       const micAvailable = await probeMic();
       setMicUnavailable(!micAvailable);
       try {
-        if (selected) {
-          const token = await mintDevToken(String(selected.numero_cliente_unico));
-          setDevAuth({
-            clientId: token.client_id,
-            accessToken: token.access_token,
-            expiresAt: Date.now() + token.expires_in * 1000,
-          });
-        }
         const advisorSession = await createAdvisorSession();
         await ackFirstTurnDisclosures();
         await ackVoiceConsent();
@@ -123,7 +114,15 @@ export function LiveSessionRoute() {
         setStarting(false);
       }
     })();
-  }, [t, selected, setSession]);
+  }, [t, setSession]);
+
+  const handleCloseSession = useCallback(() => {
+    clearDevAuth();
+    setSession(null);
+    setError(null);
+    setEndedByServer(false);
+    void navigate({ to: '/' });
+  }, [navigate, setSession]);
 
   const handleCommand = useCallback(
     (command: EmbedCommand) => {
@@ -176,10 +175,7 @@ export function LiveSessionRoute() {
               error={error}
               endedByServer={endedByServer}
               onStart={() => void handleStart()}
-              investors={investors}
-              selectedInvestorId={selected?.numero_cliente_unico ?? null}
-              onSelectInvestor={select}
-              investorsLoading={investorsLoading}
+              onCloseSession={handleCloseSession}
             />
           )}
         </div>

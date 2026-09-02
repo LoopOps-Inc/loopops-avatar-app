@@ -99,14 +99,15 @@ describe('parseSseStream', () => {
   });
 
   it('parses CRLF-framed events', async () => {
-    const text = [
-      'event: token\r',
-      'data: {"text":"Hola"}\r',
-      '\r',
-      'event: done\r',
-      'data: {"turn_id":"tn_1","evidence_id":"ev_1","service_type":"asesorado"}\r',
-      '\r',
-    ].join('\n') + '\n';
+    const text =
+      [
+        'event: token\r',
+        'data: {"text":"Hola"}\r',
+        '\r',
+        'event: done\r',
+        'data: {"turn_id":"tn_1","evidence_id":"ev_1","service_type":"asesorado"}\r',
+        '\r',
+      ].join('\n') + '\n';
     const stream = new ReadableStream({
       start(controller) {
         controller.enqueue(new TextEncoder().encode(text));
@@ -277,25 +278,23 @@ describe('investor switching', () => {
   });
 
   it('mints a dev token for the selected client_id', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(
-        jsonResponse({
-          access_token: 'tok',
-          client_id: '200001',
-          token_type: 'Bearer',
-          expires_in: 900,
-        }),
-      );
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        access_token: 'tok',
+        client_id: '200001',
+        token_type: 'Bearer',
+        expires_in: 900,
+      }),
+    );
     vi.stubGlobal('fetch', fetchMock);
 
-    const token = await mintDevToken('200001');
+    const token = await mintDevToken('200001', 'secret');
 
     expect(token.access_token).toBe('tok');
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('/api/v1/auth/dev-token');
     expect(init.method).toBe('POST');
-    expect(JSON.parse(init.body)).toEqual({ client_id: '200001' });
+    expect(JSON.parse(init.body)).toEqual({ client_id: '200001', password: 'secret' });
   });
 
   it('sends the stored dev token as a bearer header on session calls', async () => {

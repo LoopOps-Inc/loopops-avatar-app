@@ -123,6 +123,7 @@
     "mic_unavailable": "Microphone unavailable: type your messages.",
     "avatar": "Tino",
     "ended_by_server": "The session ended. You can start another.",
+    "close_session": "Close session",
     "error_unknown": "Unknown error",
     "expand": "Full screen",
     "collapse": "Exit full screen",
@@ -132,5 +133,14 @@
     "investor_switch_error": "Could not switch client",
     "investor_loading": "Loading investors...",
     "investor_option": "{{name}}, {{risk}}"
+  },
+  "auth": {
+    "client_id": "Client ID",
+    "password": "Password",
+    "submit": "Sign in",
+    "error_unauthenticated": "Incorrect client or password",
+    "error_validation": "Check the details and try again",
+    "error_unknown": "Could not sign in. Try again.",
+    "client_id_invalid": "Use numbers only"
   }
 }

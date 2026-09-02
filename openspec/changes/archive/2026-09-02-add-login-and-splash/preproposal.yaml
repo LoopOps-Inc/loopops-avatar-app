@@ -1,0 +1,27 @@
+schema: gentle-ai.sdd-preproposal/v1
+revision: 1
+change: add-login-and-splash
+exploration:
+  outcome: done
+  reference: openspec/changes/add-login-and-splash/exploration.md
+research:
+  selected: false
+  request: null
+  classes: []
+  admission: unselected
+  outcome: unselected
+  reason: Backend contract is already on this branch (commit c4e620af). Design tokens and router live in-repo. No external evidence lane.
+product_decisions: confirmed
+proposal_ready: true
+confirmed_decisions:
+  - Splash is a timed navy/gold overlay on `/` using existing tokens. Skip when prefers-reduced-motion or a valid token already exists. No `/splash` route.
+  - Login lives at `/` with numeric ClientId, password string, and filled-dark submit.
+  - Successful mint stores the token via setDevAuth and navigates to `/demo`.
+  - Unauthenticated `/demo` redirects to `/`. Authenticated `/` redirects to `/demo`.
+  - Remove InvestorSelect from StartScreen. Stop minting on Start. Login is the identity switcher.
+  - mintDevToken POSTs `{ client_id, password }`. ClientId is digits sent as a string.
+  - Map UNAUTHENTICATED and VALIDATION_ERROR to i18n. Do not persist the password.
+  - Web-only. Native inherits via WebView at `/`. Do not change services/agent.
+  - Add password to DevTokenRequestSchema in packages/contracts.
+handoff_source: user request plus exploration recommendation
+last_updated: 2026-09-02T16:50:00Z

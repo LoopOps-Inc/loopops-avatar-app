@@ -65,9 +65,9 @@ export async function* parseSseStream(
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-      buffer += decoder.decode(value, { stream: true });
+    buffer += decoder.decode(value, { stream: true });
 
-      const parts = buffer.split(/\r?\n\r?\n/);
+    const parts = buffer.split(/\r?\n\r?\n/);
     buffer = parts.pop() ?? '';
 
     for (const part of parts) {
@@ -215,11 +215,11 @@ export async function listInvestors(): Promise<InvestorsListResponse> {
   return InvestorsListResponseSchema.parse(json);
 }
 
-export async function mintDevToken(clientId: string): Promise<DevTokenResponse> {
+export async function mintDevToken(clientId: string, password: string): Promise<DevTokenResponse> {
   const res = await fetch(`${appEnv.advisorApiBase}/v1/auth/dev-token`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ client_id: clientId }),
+    body: JSON.stringify({ client_id: clientId, password }),
   });
   if (!res.ok) {
     await throwProblem(res);
