@@ -130,6 +130,41 @@ def test_dev_token_requires_a_password(client: TestClient) -> None:
     assert response.json()["code"] == "VALIDATION_ERROR"
 
 
+def test_dev_token_never_exceeds_the_validator_ttl_ceiling(
+    client: TestClient, settings: Settings
+) -> None:
+    """A token this service mints must be a token this service accepts."""
+    settings.auth.access_token_max_ttl_s = 900
+
+    minted = client.post(
+        "/v1/auth/dev-token",
+        json={"client_id": CLIENT, "password": settings.auth.dev_password.get_secret_value()},
+    )
+
+    assert minted.status_code == 200, minted.text
+    assert minted.json()["expires_in"] == 900
+    accepted = client.post(
+        "/v1/sessions",
+        json={"channel": "chat"},
+        headers={"Authorization": f"Bearer {minted.json()['access_token']}"},
+    )
+    assert accepted.status_code == 200, accepted.text
+
+
+def test_dev_token_honours_a_shorter_requested_ttl(client: TestClient, settings: Settings) -> None:
+    response = client.post(
+        "/v1/auth/dev-token",
+        json={
+            "client_id": CLIENT,
+            "password": settings.auth.dev_password.get_secret_value(),
+            "ttl_s": 120,
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["expires_in"] == 120
+
+
 def test_dev_token_requires_a_client_id(client: TestClient) -> None:
     response = client.post("/v1/auth/dev-token", json={"password": "actinver123"})
 

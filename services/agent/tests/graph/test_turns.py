@@ -97,6 +97,25 @@ async def test_advisory_turn_is_gated_and_strips_incongruent_products(deps: Depe
         assert disclosure in result["disclosures_shown"]
 
 
+async def test_advisory_without_an_amount_asks_for_it_instead_of_refusing(
+    deps: Dependencies,
+) -> None:
+    """R-014 (minimum_investment) needs a real operation amount. Evaluating it
+    with a fabricated zero rejected every product and told the client their
+    profile did not fit, which is false: the amount was simply never given."""
+    events = await run(deps, "cl_demo_moderado", "¿me conviene invertir?")
+
+    result = done(events)
+    assert result.get("error_code") != "NO_SUITABLE_PRODUCT"
+    assert "escalation_offer" not in ui_types(events)
+    said = speech(events)
+    assert said, "the turn still speaks"
+    assert "monto" in said.lower(), said
+    # No product may be named before a verdict exists.
+    for product in synthetic.PRODUCTS.values():
+        assert product["name"].lower() not in said.lower()
+
+
 async def test_advisory_without_contract_degrades_to_generic(deps: Dependencies) -> None:
     events = await run(deps, "cl_demo_conservador", "¿Qué fondo me conviene para mis 100 mil?")
     result = done(events)

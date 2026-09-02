@@ -4,7 +4,15 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from actinver_agent.adapters.gemini import _schema, _thinking_config, extract_audio_pcm
+from google.genai import types
+
+from actinver_agent.adapters.gemini import (
+    GeminiClassifier,
+    _schema,
+    _thinking_config,
+    extract_audio_pcm,
+)
+from actinver_agent.config import Settings
 
 
 def test_schema_keeps_property_names_and_strips_unsupported_keywords() -> None:
@@ -47,9 +55,29 @@ def test_schema_collapses_optional_anyof_to_nullable() -> None:
 
 
 def test_thinking_is_disabled_only_where_the_model_allows_it() -> None:
-    assert _thinking_config("gemini-2.5-flash") is not None
-    assert _thinking_config("gemini-2.5-flash").thinking_budget == 0
-    assert _thinking_config("gemini-2.5-pro") is None
+    fast = _thinking_config("gemini-2.5-flash", types.ThinkingLevel.MINIMAL)
+    assert fast is not None
+    assert fast.thinking_budget == 0
+    assert fast.thinking_level is None
+    assert _thinking_config("gemini-2.5-pro", types.ThinkingLevel.MINIMAL) is None
+
+
+def test_gemini_3_uses_thinking_level_because_the_budget_is_deprecated() -> None:
+    """Gemini 3.x rejects the numeric budget and cannot disable reasoning; depth
+    is expressed with ``thinking_level`` and mixing both is a 400."""
+    for model in ("gemini-3.7-flash", "gemini-3-flash", "gemini-3.1-pro-preview"):
+        config = _thinking_config(model, types.ThinkingLevel.MINIMAL)
+
+        assert config is not None, model
+        assert config.thinking_level is types.ThinkingLevel.MINIMAL, model
+        assert config.thinking_budget is None, model
+
+
+def test_gemini_3_honours_the_requested_thinking_level() -> None:
+    config = _thinking_config("gemini-3.7-flash", types.ThinkingLevel.LOW)
+
+    assert config is not None
+    assert config.thinking_level is types.ThinkingLevel.LOW
 
 
 def test_extract_audio_pcm_reads_inline_data() -> None:
@@ -63,3 +91,40 @@ def test_extract_audio_pcm_returns_empty_without_audio() -> None:
     part = SimpleNamespace(inline_data=None)
     response = SimpleNamespace(candidates=[SimpleNamespace(content=SimpleNamespace(parts=[part]))])
     assert extract_audio_pcm(response) == b""
+
+
+class _CapturingFactory:
+    """Records the config the adapter builds without reaching the network."""
+
+    def __init__(self) -> None:
+        self.config: object = None
+
+    def client(self) -> SimpleNamespace:
+        async def generate_content(*, model: str, contents: str, config: object) -> object:
+            self.config = config
+            return SimpleNamespace(
+                text='{"intent": "portfolio_inspect", "confidence": 0.9}',
+                usage_metadata=None,
+            )
+
+        return SimpleNamespace(
+            aio=SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))
+        )
+
+
+def test_router_asks_for_a_thinking_level_the_model_accepts() -> None:
+    """Regression: MINIMAL is rejected by gemini-3.7-flash with 400
+    INVALID_ARGUMENT, which silently degraded every turn to the fallback
+    router and answered ``out_of_scope``."""
+    import asyncio
+
+    settings = Settings()
+    settings.vertex.model_fast = "gemini-3.7-flash"
+    factory = _CapturingFactory()
+    classifier = GeminiClassifier(factory, settings, "router prompt")
+
+    asyncio.run(classifier.classify(text="que inversiones tengo?", history=[], locale="es-MX"))
+
+    level = factory.config.thinking_config.thinking_level
+    assert level is not types.ThinkingLevel.MINIMAL
+    assert level is types.ThinkingLevel(settings.vertex.thinking_level_structured)

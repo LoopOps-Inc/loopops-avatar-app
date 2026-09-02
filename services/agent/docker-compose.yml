@@ -243,15 +243,22 @@ services:
       AUTH_MODE: dev
       AUTH_DEV_SIGNING_KEY_REF: env://AUTH_DEV_SIGNING_KEY
       AUTH_DEV_SIGNING_KEY: ${DEV_SIGNING_KEY:-local-dev-signing-key-not-a-secret}
-      AUTH_ACCESS_TOKEN_MAX_TTL_S: ${AUTH_ACCESS_TOKEN_MAX_TTL_S:-900}
+      AUTH_ACCESS_TOKEN_MAX_TTL_S: ${AUTH_ACCESS_TOKEN_MAX_TTL_S:-86400}
       AUTH_DPOP_REQUIRED: "false"
       AUTH_ISSUER: https://idp.local.actinver/
       AUTH_AUDIENCE: actinver-ai-advisor
       # Model, voice and avatar bindings default to deterministic stubs.
+      # Offline by default (README) and the documented degradation path when the
+      # model provider is down (ADR mapping 4.6). Set LLM_PROVIDER=gemini_api in
+      # the repo-root .env to route this service through Gemini; the key ref
+      # already points at the secret floci-init seeds from GEMINI_API_KEY.
       LLM_PROVIDER: ${LLM_PROVIDER:-stub}
-      LLM_GEMINI_API_KEY_REF: ${LLM_GEMINI_API_KEY_REF:-}
+      LLM_GEMINI_API_KEY_REF: ${LLM_GEMINI_API_KEY_REF:-secretsmanager://actinver/gemini-api-key}
       VERTEX_PROJECT_ID: ${VERTEX_PROJECT_ID:-}
       VERTEX_LOCATION: ${VERTEX_LOCATION:-us-central1}
+      VERTEX_MODEL_FAST: ${VERTEX_MODEL_FAST:-gemini-3.7-flash}
+      VERTEX_MODEL_DEEP: ${VERTEX_MODEL_DEEP:-gemini-3.7-flash}
+      VERTEX_THINKING_LEVEL: ${VERTEX_THINKING_LEVEL:-LOW}
       VOICE_PROVIDER: ${VOICE_PROVIDER:-stub}
       LIVEAVATAR_PROVIDER: ${LIVEAVATAR_PROVIDER:-stub}
       LIVEAVATAR_BASE_URL: https://api.liveavatar.com
@@ -310,8 +317,9 @@ services:
       AUTH_DPOP_REQUIRED: "false"
       LLM_PROVIDER: gemini_api
       LLM_GEMINI_API_KEY_REF: secretsmanager://actinver/gemini-api-key
-      VERTEX_MODEL_FAST: ${VERTEX_MODEL_FAST:-gemini-2.5-flash}
-      VERTEX_MODEL_DEEP: ${VERTEX_MODEL_DEEP:-gemini-2.5-pro}
+      VERTEX_MODEL_FAST: ${VERTEX_MODEL_FAST:-gemini-3.7-flash}
+      VERTEX_MODEL_DEEP: ${VERTEX_MODEL_DEEP:-gemini-3.7-flash}
+      VERTEX_THINKING_LEVEL: ${VERTEX_THINKING_LEVEL:-LOW}
       VOICE_PROVIDER: stub
       LIVEAVATAR_PROVIDER: ${LIVEAVATAR_PROVIDER:-stub}
       LIVEAVATAR_API_KEY_REF: secretsmanager://actinver/liveavatar/api-key

@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { UIComponent } from '@loopops/contracts';
+import { UI_COMPONENT_TYPES } from '@loopops/contracts';
 import { setLocale } from '@/i18n';
 import { UIPayloadCards } from './ui-payload-cards';
 
@@ -102,5 +103,89 @@ describe('UIPayloadCards', () => {
   it('renders nothing when there are no components', () => {
     const { container } = render(<UIPayloadCards components={[]} />);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('closed component registry', () => {
+  beforeEach(() => {
+    setLocale('es');
+  });
+
+  it.each(UI_COMPONENT_TYPES)('has a renderer case for %s', (type) => {
+    // An empty payload fails every schema, so a type WITH a case renders
+    // nothing while a type WITHOUT one falls through to the unsupported card.
+    render(<UIPayloadCards components={[{ type, payload: {} } as UIComponent]} />);
+
+    expect(screen.queryByText(/Componente no soportado/)).not.toBeInTheDocument();
+  });
+
+  it('surfaces a type the client has not shipped instead of dropping it', () => {
+    render(
+      <UIPayloadCards components={[{ type: 'not_shipped_yet', payload: {} } as UIComponent]} />,
+    );
+
+    expect(screen.getByText(/Componente no soportado: not_shipped_yet/)).toBeInTheDocument();
+  });
+});
+
+describe('real server payloads', () => {
+  beforeEach(() => {
+    setLocale('es');
+  });
+
+  // Captured verbatim from a live /v1/threads/{id}/messages SSE stream.
+  const portfolioPositions: UIComponent = {
+    type: 'portfolio_positions',
+    payload: {
+      as_of: '2026-09-02T11:21:46-06:00',
+      total_market_value: { amount: '12650000.00', currency: 'MXN' },
+      cash: { amount: '632500.00', currency: 'MXN' },
+      liquid_pct: 1.0,
+      positions: [
+        {
+          product_id: 'ACTIVAR-RV',
+          name: 'Actinver Renta Variable México',
+          asset_class: 'renta_variable_local',
+          quantity: 1804859.1578,
+          market_value: { amount: '4427500.00', currency: 'MXN' },
+          cost_basis: { amount: '4176886.79', currency: 'MXN' },
+          weight_pct: 35.0,
+          currency: 'MXN',
+        },
+      ],
+    },
+    as_of: '2026-09-02T11:21:46-06:00',
+    source: 'tool:get_portfolio_positions',
+  };
+
+  const cashSummary: UIComponent = {
+    type: 'cash_summary',
+    payload: {
+      as_of: '2026-09-02T11:22:37-06:00',
+      available: { amount: '556600.00', currency: 'MXN' },
+      pending: { amount: '75900.00', currency: 'MXN' },
+      settlements: [{ date: '2026-09-03', amount: { amount: '75900.00', currency: 'MXN' } }],
+    },
+    as_of: '2026-09-02T11:22:37-06:00',
+    source: 'tool:get_cash_balance',
+  };
+
+  it('renders the positions the server actually sent', () => {
+    render(<UIPayloadCards components={[portfolioPositions]} />);
+
+    expect(screen.getByText('Actinver Renta Variable México')).toBeInTheDocument();
+    expect(screen.getByText(/4,427,500/)).toBeInTheDocument();
+    expect(screen.getByText(/Peso 35.0%/)).toBeInTheDocument();
+    expect(screen.queryByText(/Componente no soportado/)).not.toBeInTheDocument();
+  });
+
+  it('renders the cash balance the server actually sent', () => {
+    render(<UIPayloadCards components={[cashSummary]} />);
+
+    expect(screen.getByText('Disponible')).toBeInTheDocument();
+    expect(screen.getByText(/556,600/)).toBeInTheDocument();
+    // Once as the pending balance, once as the 2026-09-03 settlement.
+    expect(screen.getAllByText(/75,900/)).toHaveLength(2);
+    expect(screen.getByText('Liquidaciones')).toBeInTheDocument();
   });
 });

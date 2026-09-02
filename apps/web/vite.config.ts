@@ -13,6 +13,9 @@ const repoRoot = path.resolve(__dirname, '../..');
 const DEV_ISSUER = 'https://idp.local.actinver/';
 const DEV_AUDIENCE = 'actinver-ai-advisor';
 const DEV_CLIENT_ID = 'cl_demo_moderado';
+// Must not exceed the agent's AUTH_ACCESS_TOKEN_MAX_TTL_S, which rejects longer
+// lifetimes with `token_ttl_too_long`. Same default as AuthSettings.
+const DEFAULT_TOKEN_TTL_S = 86400;
 
 function parseEnvFile(filePath: string): Record<string, string> {
   if (!fs.existsSync(filePath)) return {};
@@ -80,10 +83,10 @@ function mintDevToken(signingKey: string, ttlS: number): string {
  */
 function resolveAgentDevToken(mode: string): string {
   const env = loadRepoEnv(mode);
-  const ttl = Number.parseInt(env.AUTH_ACCESS_TOKEN_MAX_TTL_S ?? '604800', 10);
+  const ttl = Number.parseInt(env.AUTH_ACCESS_TOKEN_MAX_TTL_S ?? String(DEFAULT_TOKEN_TTL_S), 10);
   const signingKey = env.DEV_SIGNING_KEY || env.AUTH_DEV_SIGNING_KEY;
   if (signingKey) {
-    return mintDevToken(signingKey, Number.isFinite(ttl) ? ttl : 604800);
+    return mintDevToken(signingKey, Number.isFinite(ttl) ? ttl : DEFAULT_TOKEN_TTL_S);
   }
   return env.AGENT_DEV_TOKEN ?? '';
 }

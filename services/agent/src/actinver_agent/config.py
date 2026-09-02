@@ -57,8 +57,19 @@ class VertexSettings(BaseSettings):
     temperature: float = 0.2
     top_p: float = 0.9
     seed: int = 7
-    max_output_tokens_voice: int = 400
-    max_output_tokens_chat: int = 800
+    #: Reasoning depth for the generation call on Gemini 3.x, where thinking
+    #: cannot be disabled and the numeric budget is deprecated. Ignored by 2.5.
+    thinking_level: Literal["MINIMAL", "LOW", "MEDIUM", "HIGH"] = "LOW"
+    #: Depth for the router and planner. They only emit structured output, so
+    #: the shallowest level the model accepts is enough. Not every Gemini 3.x
+    #: model supports ``MINIMAL`` (gemini-3.7-flash answers 400 INVALID_ARGUMENT),
+    #: so the default stays at the level the whole family accepts.
+    thinking_level_structured: Literal["MINIMAL", "LOW", "MEDIUM", "HIGH"] = "LOW"
+    #: Reasoning tokens count against these budgets, so they carry headroom for
+    #: a model that thinks before answering. Too small truncates the response.
+    max_output_tokens_router: int = 768
+    max_output_tokens_voice: int = 1024
+    max_output_tokens_chat: int = 2048
     timeout_s: float = 20.0
 
 

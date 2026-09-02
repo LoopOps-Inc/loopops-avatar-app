@@ -57,18 +57,23 @@ async def mint_dev_token(
 
         key = os.environ.get("DEV_SIGNING_KEY", "test-dev-signing-key-32-bytes-long!")
 
+    # The verifier rejects any token whose lifetime exceeds the configured
+    # ceiling ("token_ttl_too_long"), so never mint one this service would
+    # refuse: the ceiling is the upper bound, the request only shortens it.
+    ttl_s = min(body.ttl_s, deps.settings.auth.access_token_max_ttl_s)
+
     token = mint_dev_access_token(
         key,
         body.client_id,
         roles=body.roles,
-        ttl_s=body.ttl_s,
+        ttl_s=ttl_s,
         issuer=deps.settings.auth.issuer,
         audience=deps.settings.auth.audience,
     )
     return DevTokenResponse(
         access_token=token,
         client_id=body.client_id,
-        expires_in=body.ttl_s,
+        expires_in=ttl_s,
     )
 
 

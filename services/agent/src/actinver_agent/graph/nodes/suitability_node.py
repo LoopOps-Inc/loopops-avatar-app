@@ -30,6 +30,10 @@ NO_SUITABLE_ES = (
     "inversionista. Prefiero que lo veas con tu asesor para encontrar una "
     "alternativa adecuada. ¿Te comunico?"
 )
+AMOUNT_REQUIRED_ES = (
+    "Para decirte si un producto es congruente con tu perfil necesito saber "
+    "qué monto tienes en mente. ¿De cuánto sería la inversión?"
+)
 SUITABILITY_DOWN_ES = (
     "No puedo validar una recomendación en este momento. Te comunico con tu "
     "asesor para revisarlo juntos."
@@ -45,6 +49,20 @@ async def suitability_gate(state: AdvisorState, deps: Dependencies) -> dict[str,
         return {"error": AgentError(code="NO_PROFILE", message_es=NO_PROFILE_ES, escalate=True)}
     if not candidates:
         return {}
+
+    if state.get("proposed_amount") is None:
+        # R-014 (minimum_investment) compares the operation amount against the
+        # product minimum. With no amount the caller used to fabricate a zero,
+        # which rejected every product and reported it as "your profile does not
+        # fit" - false, and it blamed the client for a missing input. Ask for the
+        # amount instead. The candidates are stripped, not evaluated, so no
+        # product can be named before a verdict exists (ADR-0005).
+        log.info("suitability.amount_required", turn_id=state.get("turn_id"))
+        return {
+            "speech": AMOUNT_REQUIRED_ES,
+            "candidate_products": [],
+            "stripped_products": candidates,
+        }
 
     client_id = state["client_id"]
     positions_result = await deps.gateway.call(

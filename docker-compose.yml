@@ -1,8 +1,14 @@
 include:
-  - services/agent/docker-compose.yml
+  # `env_file` makes the included file interpolate ${VAR} from the agent's own
+  # .env. Without it Compose only reads ./.env here, so every model, vendor and
+  # auth setting kept in services/agent/.env was silently ignored from the root.
+  - path: services/agent/docker-compose.yml
+    env_file: services/agent/.env
 
-# Full-stack dev: web-token TTL follows AUTH_ACCESS_TOKEN_MAX_TTL_S (default 900s,
-# matching services/agent/.env). Set 604800 in repo-root .env for a 7-day dev token.
+# Full-stack dev: every dev-token issuer (this service, the agent dev-token
+# endpoint and the Vite proxy) reads the same AUTH_ACCESS_TOKEN_MAX_TTL_S the
+# agent validates against, so a minted token is never rejected as
+# "token_ttl_too_long". Default 86400s; override in repo-root .env.
 
 services:
   web-token:
@@ -12,7 +18,7 @@ services:
     environment:
       SECRETS_MANAGER_ENDPOINT: http://floci:4566
       SECRETS_MANAGER_REGION: us-east-1
-      AUTH_ACCESS_TOKEN_MAX_TTL_S: ${AUTH_ACCESS_TOKEN_MAX_TTL_S:-900}
+      AUTH_ACCESS_TOKEN_MAX_TTL_S: ${AUTH_ACCESS_TOKEN_MAX_TTL_S:-86400}
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       AWS_DEFAULT_REGION: us-east-1
@@ -55,7 +61,7 @@ services:
                 time.sleep(3)
         if not key:
             sys.exit("[web-token] secret not available at " + endpoint)
-        ttl_s = int(os.environ.get("AUTH_ACCESS_TOKEN_MAX_TTL_S", "900"))
+        ttl_s = int(os.environ.get("AUTH_ACCESS_TOKEN_MAX_TTL_S", "86400"))
         token = devkeys.mint_dev_access_token(key, "cl_demo_moderado", ttl_s=ttl_s)
         with open("/tokens/token", "w") as handle:
             handle.write(token)

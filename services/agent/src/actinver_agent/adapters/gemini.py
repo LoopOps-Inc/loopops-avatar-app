@@ -72,13 +72,25 @@ class _RouterOutput(BaseModel):
     profile_filtered: bool = False
 
 
-def _thinking_config(model: str) -> types.ThinkingConfig | None:
-    """Router and planner are structured-output calls: no visible reasoning.
+#: ``gemini-3-...``, ``gemini-3.7-flash``, ``gemini-3.1-pro-preview`` — the
+#: family that replaced the numeric thinking budget with ``thinking_level``.
+_GEMINI_3 = re.compile(r"^gemini-3(\.\d+)?-", re.IGNORECASE)
+
+
+def _thinking_config(model: str, level: types.ThinkingLevel) -> types.ThinkingConfig | None:
+    """Keep reasoning from eating ``max_output_tokens``, per model family.
 
     Gemini 2.5 Flash spends the output budget on thinking unless told not to,
-    which truncated the router JSON. Pro models cannot disable thinking, so the
-    budget is left to the model there.
+    which truncated the router JSON; 2.5 Pro cannot disable it, so the budget is
+    left to the model there.
+
+    Gemini 3.x deprecated the numeric ``thinking_budget`` and cannot disable
+    reasoning at all: depth is a relative ``thinking_level``, and sending both
+    parameters in one request is a 400. Structured calls ask for the shallowest
+    level rather than none.
     """
+    if _GEMINI_3.match(model):
+        return types.ThinkingConfig(thinking_level=level)
     return types.ThinkingConfig(thinking_budget=0) if "flash" in model.lower() else None
 
 
@@ -116,8 +128,11 @@ class GeminiClassifier:
             temperature=0.0,
             response_mime_type="application/json",
             response_schema=_RouterOutput,
-            max_output_tokens=256,
-            thinking_config=_thinking_config(self._settings.vertex.model_fast),
+            max_output_tokens=self._settings.vertex.max_output_tokens_router,
+            thinking_config=_thinking_config(
+                self._settings.vertex.model_fast,
+                types.ThinkingLevel(self._settings.vertex.thinking_level_structured),
+            ),
             http_options=types.HttpOptions(timeout=int(self._settings.vertex.timeout_s * 1000)),
         )
         response = await self._factory.client().aio.models.generate_content(
@@ -177,7 +192,10 @@ class GeminiPlanner:
             tool_config=types.ToolConfig(
                 function_calling_config=types.FunctionCallingConfig(mode="ANY")
             ),
-            thinking_config=_thinking_config(self._settings.vertex.model_fast),
+            thinking_config=_thinking_config(
+                self._settings.vertex.model_fast,
+                types.ThinkingLevel(self._settings.vertex.thinking_level_structured),
+            ),
             http_options=types.HttpOptions(timeout=int(self._settings.vertex.timeout_s * 1000)),
         )
         response = await self._factory.client().aio.models.generate_content(
@@ -255,7 +273,9 @@ class GeminiGenerator:
             top_p=self._settings.vertex.top_p,
             seed=self._settings.vertex.seed,
             max_output_tokens=max_tokens,
-            thinking_config=_thinking_config(model),
+            thinking_config=_thinking_config(
+                model, types.ThinkingLevel(self._settings.vertex.thinking_level)
+            ),
             http_options=types.HttpOptions(timeout=int(self._settings.vertex.timeout_s * 1000)),
         )
         started = time.perf_counter()

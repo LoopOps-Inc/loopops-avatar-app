@@ -284,7 +284,13 @@ class DevTokenRequest(BaseModel):
     password: SecretStr = Field(description="Shared development password")
     roles: list[str] = Field(default_factory=list, description="Roles to grant")
     ttl_s: int = Field(
-        default=86400, ge=60, le=604800, description="Token lifetime in seconds (default 24h)"
+        default=86400,
+        ge=60,
+        le=604800,
+        description=(
+            "Requested token lifetime in seconds (default 24h). Capped at "
+            "AUTH_ACCESS_TOKEN_MAX_TTL_S; see `expires_in` for the granted lifetime."
+        ),
     )
 
 
